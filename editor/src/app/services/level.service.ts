@@ -23,6 +23,7 @@ import {
 import { withItemDefs } from '../core/items';
 import { ItemDef } from '../models/item.model';
 import { ProjectService } from './project.service';
+import { SelectionService } from './selection.service';
 
 // 64x32 es la proporcion 2:1 estandar del pixel art isometrico, y el mismo
 // default que usa LevelLoader.cpp cuando el JSON no declara medidas de tile.
@@ -100,27 +101,22 @@ export class LevelService {
   /** Archivo de origen dentro de levels/. Null si el nivel todavia no se guardo nunca. */
   readonly fileName = signal<string | null>(null);
   /**
-   * Entidades seleccionadas, por id. Se guardan ids y no entidades porque la
-   * entidad se reemplaza entera en cada edicion (estado inmutable).
+   * La entidad activa, resuelta desde el id que guarda SelectionService.
+   * undefined si se borro o no hay ninguna.
    *
-   * El ORDEN importa: el ultimo de la lista es el objeto activo, el mismo
-   * reparto que hace Blender. La seleccion puede tener muchos elementos y
-   * sobre todos ellos actuan las operaciones de grupo (borrar, duplicar,
-   * mover); el activo es el unico que muestra el inspector, porque los campos
-   * de un formulario solo pueden mostrar un valor a la vez.
+   * Este cruce vive aca y no en SelectionService porque hace falta el nivel
+   * para resolverlo, y que el servicio de seleccion dependiera del nivel
+   * cerraria un ciclo (ver el comentario de SelectionService).
    */
-  readonly selectedEntityIds = signal<string[]>([]);
-
-  /** El objeto activo: el ultimo que se agrego a la seleccion. */
-  readonly selectedEntityId = computed<string | null>(() => this.selectedEntityIds().at(-1) ?? null);
-
-  /** La entidad activa, resuelta desde el id. undefined si se borro o no hay ninguna. */
   readonly selectedEntity = computed<LevelEntity | undefined>(() => {
-    const id = this.selectedEntityId();
+    const id = this.selection.selectedEntityId();
     return id ? this.level().entities.find((entity) => entity.id === id) : undefined;
   });
 
-  constructor(private readonly project: ProjectService) {}
+  constructor(
+    private readonly project: ProjectService,
+    private readonly selection: SelectionService,
+  ) {}
 
   // Todos los metodos de abajo reemplazan el nivel entero en vez de mutarlo
   // (spread y map/filter, nunca push ni asignacion directa). Un signal solo
@@ -131,7 +127,7 @@ export class LevelService {
   createNew(name: string, grid: GridConfig = DEFAULT_GRID): void {
     this.level.set({ ...emptyLevel(name), grid: { ...grid } });
     this.fileName.set(null);
-    this.selectedEntityIds.set([]);
+    this.selection.clear();
   }
 
   async load(fileName: string): Promise<void> {
@@ -149,7 +145,7 @@ export class LevelService {
   adopt(level: Level, fileName: string | null): void {
     this.level.set(level);
     this.fileName.set(fileName);
-    this.selectedEntityIds.set([]);
+    this.selection.clear();
   }
 
   /**
@@ -190,9 +186,7 @@ export class LevelService {
       ...level,
       entities: level.entities.filter((entity) => !doomed.has(entity.id)),
     }));
-    // Sin esto quedaria una seleccion apuntando a algo que ya no existe, y el
-    // inspector mostraria un panel vacio sin explicacion.
-    this.selectedEntityIds.update((selected) => selected.filter((id) => !doomed.has(id)));
+    this.selection.forget(doomed);
   }
 
   /** Materializa la grilla legacy y alterna piso o pared en una celda. */
@@ -382,26 +376,6 @@ export class LevelService {
   /** Olvida los retoques de Piso/Pared y deja el mapa como lo generan las salas. */
   clearTileEdits(): void {
     this.level.update((level) => withLayout({ ...level, tileEdits: [] }));
-  }
-
-  /** Deja seleccionada solo esa entidad, o nada si llega null. */
-  selectEntity(id: string | null): void {
-    this.selectedEntityIds.set(id ? [id] : []);
-  }
-
-  selectEntities(ids: readonly string[]): void {
-    this.selectedEntityIds.set([...ids]);
-  }
-
-  /**
-   * Suma o quita una entidad de la seleccion, que es lo que hace Shift+clic.
-   * Al sumarla queda al final, o sea que pasa a ser la activa: el inspector
-   * muestra siempre la ultima que se toco.
-   */
-  toggleEntitySelection(id: string): void {
-    this.selectedEntityIds.update((selected) =>
-      selected.includes(id) ? selected.filter((other) => other !== id) : [...selected, id],
-    );
   }
 
   // Los eventos no tienen id propio en el schema: se los identifica por su
