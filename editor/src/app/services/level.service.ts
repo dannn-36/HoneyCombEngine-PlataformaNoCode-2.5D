@@ -5,6 +5,7 @@ import {
   cellState,
   implicitRoom,
   legacyEdits,
+  legacyTiles,
   nextFreeId,
   sanitizeRoom,
   shiftLevel,
@@ -196,17 +197,7 @@ export class LevelService {
       return;
     }
     this.level.update((level) => {
-      const tiles = level.tiles
-        ? level.tiles.map((tile) => ({ ...tile }))
-        : Array.from({ length: level.grid.height }, (_, tileRow) =>
-            Array.from({ length: level.grid.width }, (_, tileCol): MapTile => ({
-              col: tileCol,
-              row: tileRow,
-              floor: true,
-              wall: tileCol === 0 || tileRow === 0 ||
-                tileCol === level.grid.width - 1 || tileRow === level.grid.height - 1,
-            })),
-          ).flat();
+      const tiles = level.tiles ? level.tiles.map((tile) => ({ ...tile })) : legacyTiles(level.grid);
       const index = tiles.findIndex((tile) => tile.col === col && tile.row === row);
       const current = index >= 0 ? tiles[index] : { col, row, floor: false, wall: false };
       const updated = { ...current, [kind]: !(current[kind] ?? false) };

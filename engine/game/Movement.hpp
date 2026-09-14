@@ -24,12 +24,17 @@ Vector2 HalfExtentsInCells(const LoadedLevel& level, const LevelEntity& entity);
 // celda, asi que su centro esta (N-1)/2 celdas mas adelante en cada eje.
 Vector2 BoxCenter(const LevelEntity& entity);
 
+// Mitad del bloque de celdas de una entidad marcada como pared: span/2 por
+// lado, centrado en BoxCenter. Una pared bloquea el tile entero, sin importar
+// el tamano ni la forma de su collider.
+Vector2 WallHalfExtents(const LevelEntity& entity);
+
 // Lleva una posicion al interior de la grilla: el limite duro del mapa, aparte
 // de las paredes.
 Vector2 ClampToGrid(const LoadedLevel& level, Vector2 position);
 
 // true si "mover" puede estar en "candidate": hay piso debajo, no pisa una
-// pared y no se solapa con ninguna entidad solida. "blocker" es una entidad
+// pared (celda o entidad "wall") y no se solapa con ningun collider solido. "blocker" es una entidad
 // extra que cuenta como solida aunque no lo sea: un enemigo no atraviesa al
 // jugador que persigue. "mover" nunca choca consigo mismo.
 bool CanOccupy(const LoadedLevel& level, const LevelEntity& mover, Vector2 candidate,

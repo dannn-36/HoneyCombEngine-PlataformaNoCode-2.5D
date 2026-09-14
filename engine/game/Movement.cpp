@@ -18,6 +18,11 @@ Vector2 BoxCenter(const LevelEntity& entity) {
     return Vector2{entity.precisePosition.x + spanOffset, entity.precisePosition.y + spanOffset};
 }
 
+Vector2 WallHalfExtents(const LevelEntity& entity) {
+    const float half = static_cast<float>(entity.span) / 2.0f;
+    return Vector2{half, half};
+}
+
 Vector2 ClampToGrid(const LoadedLevel& level, Vector2 position) {
     return Vector2{
         std::clamp(position.x, 0.0f, level.grid.GetGridWidth() - 1.0f),
@@ -58,27 +63,49 @@ bool CanOccupy(const LoadedLevel& level, const LevelEntity& mover, Vector2 candi
         }
     }
 
-    auto overlapsEntity = [&](const LevelEntity& other) {
-        const Vector2 otherHalf = HalfExtentsInCells(level, other);
-        const Vector2 center = BoxCenter(other);
+    auto overlapsBox = [&](Vector2 center, Vector2 otherHalf) {
         return std::fabs(candidate.x - center.x) < half.x + otherHalf.x &&
                std::fabs(candidate.y - center.y) < half.y + otherHalf.y;
     };
 
-    // Entidades solidas. Un collider con solid=false NO bloquea: funciona como
-    // sensor, dispara on_collision y nada mas.
-    // Una entidad oculta (una puerta abierta) no bloquea: por eso existe.
+    // Caja de quien se mueve contra una elipse: se escala el eje Y para que la
+    // elipse sea un circulo y se mide la distancia al punto mas cercano de la caja.
+    auto overlapsEllipse = [&](Vector2 center, Vector2 radii) {
+        if (radii.x <= 0.0f || radii.y <= 0.0f) {
+            return false;
+        }
+        const float scaleY = radii.x / radii.y;
+        const float dx = std::max(std::fabs(candidate.x - center.x) - half.x, 0.0f);
+        const float dy = std::max(std::fabs(candidate.y - center.y) - half.y, 0.0f) * scaleY;
+        return dx * dx + dy * dy < radii.x * radii.x;
+    };
+
+    auto overlapsCollider = [&](const LevelEntity& other) {
+        const Vector2 otherHalf = HalfExtentsInCells(level, other);
+        const Vector2 center = BoxCenter(other);
+        return other.colliderRound ? overlapsEllipse(center, otherHalf) : overlapsBox(center, otherHalf);
+    };
+
+    // Entidades que bloquean. Una entidad oculta (una puerta abierta) no
+    // bloquea: por eso existe.
+    //   Pared    -> todas las celdas de su bloque, sin importar su collider.
+    //   Colision -> solo su collider (solid=true), con su forma y tamano.
+    // Un collider con solid=false NO bloquea: funciona como sensor, dispara
+    // on_collision y nada mas.
     for (const auto& entity : level.entities) {
-        if (&entity == &mover || entity.destroyed || entity.hidden || !entity.colliderSolid) {
+        if (&entity == &mover || entity.destroyed || entity.hidden) {
             continue;
         }
-        if (overlapsEntity(entity)) {
+        if (entity.wall && overlapsBox(BoxCenter(entity), WallHalfExtents(entity))) {
+            return false;
+        }
+        if (entity.colliderSolid && overlapsCollider(entity)) {
             return false;
         }
     }
 
     if (blocker && blocker != &mover && !blocker->destroyed && !blocker->hidden &&
-        overlapsEntity(*blocker)) {
+        overlapsCollider(*blocker)) {
         return false;
     }
     return true;
@@ -117,12 +144,28 @@ bool BlocksProjectile(const LoadedLevel& level, Vector2 point, const LevelEntity
         return true;
     }
     for (const auto& entity : level.entities) {
-        if (&entity == ignore || entity.destroyed || entity.hidden || !entity.colliderSolid) {
+        if (&entity == ignore || entity.destroyed || entity.hidden) {
+            continue;
+        }
+        const Vector2 center = BoxCenter(entity);
+        const float dx = std::fabs(point.x - center.x);
+        const float dy = std::fabs(point.y - center.y);
+        if (entity.wall) {
+            const Vector2 wallHalf = WallHalfExtents(entity);
+            if (dx < wallHalf.x && dy < wallHalf.y) {
+                return true;
+            }
+        }
+        if (!entity.colliderSolid) {
             continue;
         }
         const Vector2 half = HalfExtentsInCells(level, entity);
-        const Vector2 center = BoxCenter(entity);
-        if (std::fabs(point.x - center.x) < half.x && std::fabs(point.y - center.y) < half.y) {
+        if (entity.colliderRound) {
+            if (half.x > 0.0f && half.y > 0.0f &&
+                (dx * dx) / (half.x * half.x) + (dy * dy) / (half.y * half.y) < 1.0f) {
+                return true;
+            }
+        } else if (dx < half.x && dy < half.y) {
             return true;
         }
     }

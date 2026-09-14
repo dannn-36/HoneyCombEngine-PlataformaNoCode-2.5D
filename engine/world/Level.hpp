@@ -60,7 +60,11 @@ struct LevelEntity {
     float attackTimer = 0.0f;  // segundos hasta poder volver a pegar
     float hurtTimer = 0.0f;    // segundos de destello rojo por un golpe recibido
     Vector2 colliderSize;        // {0,0} si la entidad no colisiona
-    bool colliderSolid = false;  // true si el collider bloquea el movimiento
+    bool colliderSolid = false;  // "Colision": el collider bloquea, con su forma y tamano
+    bool colliderRound = false;  // base redonda: bloquea con la elipse inscripta en la caja
+    // "Pared": bloquea TODAS las celdas de su bloque (span x span), sin
+    // importar el tamano ni la forma del collider. Independiente de colliderSolid.
+    bool wall = false;
     bool destroyed = false;      // borrado suave: la accion destroy_entity solo marca esto
 
     // --- Combate, objetos y puzzles (ver world/ItemDefs.hpp) -----------------

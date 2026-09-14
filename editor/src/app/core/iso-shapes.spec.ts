@@ -11,9 +11,10 @@ describe('shapeCollider', () => {
     expect(shapeCollider(shapeDef('pillar')!, tile)).toEqual({ width: 27, height: 13, solid: true });
   });
 
-  it('las figuras redondas bloquean un poco menos que la casilla', () => {
-    expect(shapeCollider(shapeDef('cylinder')!, tile)).toEqual({ width: 52, height: 26, solid: true });
-    expect(shapeCollider(shapeDef('sphere')!, tile)).toEqual({ width: 51, height: 26, solid: true });
+  it('las figuras redondas bloquean con una elipse un poco menor que la casilla', () => {
+    expect(shapeCollider(shapeDef('cylinder')!, tile)).toEqual({ width: 52, height: 26, solid: true, shape: 'ellipse' });
+    expect(shapeCollider(shapeDef('sphere')!, tile)).toEqual({ width: 51, height: 26, solid: true, shape: 'ellipse' });
+    expect(shapeCollider(shapeDef('cone')!, tile).shape).toBe('ellipse');
   });
 
   it('crece con la cantidad de celdas que ocupa la figura', () => {

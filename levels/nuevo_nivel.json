@@ -1,0 +1,576 @@
+{
+  "name": "nuevo_nivel",
+  "grid": {
+    "width": 10,
+    "height": 10,
+    "tileWidth": 64,
+    "tileHeight": 32
+  },
+  "entities": [
+    {
+      "id": "ramp_1",
+      "type": "ramp",
+      "position": {
+        "col": 2,
+        "row": 8
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "wall": true
+    },
+    {
+      "id": "ramp_2",
+      "type": "ramp",
+      "position": {
+        "col": 2,
+        "row": 6
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "wall": true
+    },
+    {
+      "id": "ramp_3",
+      "type": "ramp",
+      "position": {
+        "col": 2,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "wall": true
+    },
+    {
+      "id": "ramp_4",
+      "type": "ramp",
+      "position": {
+        "col": 1,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_5",
+      "type": "ramp",
+      "position": {
+        "col": 1,
+        "row": 4
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_6",
+      "type": "ramp",
+      "position": {
+        "col": 1,
+        "row": 3
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_7",
+      "type": "ramp",
+      "position": {
+        "col": 2,
+        "row": 3
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_8",
+      "type": "ramp",
+      "position": {
+        "col": 3,
+        "row": 3
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_9",
+      "type": "ramp",
+      "position": {
+        "col": 3,
+        "row": 4
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_10",
+      "type": "ramp",
+      "position": {
+        "col": 4,
+        "row": 4
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_11",
+      "type": "ramp",
+      "position": {
+        "col": 4,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "ramp_12",
+      "type": "ramp",
+      "position": {
+        "col": 5,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      }
+    },
+    {
+      "id": "ramp_13",
+      "type": "ramp",
+      "position": {
+        "col": 5,
+        "row": 6
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "wall": true
+    },
+    {
+      "id": "sphere_1",
+      "type": "sphere",
+      "position": {
+        "col": 4,
+        "row": 8
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "sphere_2",
+      "type": "sphere",
+      "position": {
+        "col": 5,
+        "row": 8
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "sphere_3",
+      "type": "sphere",
+      "position": {
+        "col": 6,
+        "row": 8
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 51,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "pillar_1",
+      "type": "pillar",
+      "position": {
+        "col": 8,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 27,
+        "height": 13,
+        "solid": true
+      }
+    },
+    {
+      "id": "pillar_2",
+      "type": "pillar",
+      "position": {
+        "col": 8,
+        "row": 4
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 27,
+        "height": 13,
+        "solid": true
+      }
+    },
+    {
+      "id": "pillar_3",
+      "type": "pillar",
+      "position": {
+        "col": 7,
+        "row": 3
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "pillar_4",
+      "type": "pillar",
+      "position": {
+        "col": 7,
+        "row": 2
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "pillar_5",
+      "type": "pillar",
+      "position": {
+        "col": 7,
+        "row": 1
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "pillar_6",
+      "type": "pillar",
+      "position": {
+        "col": 6,
+        "row": 1
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_1",
+      "type": "cylinder",
+      "position": {
+        "col": 7,
+        "row": 6
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 52,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "cylinder_2",
+      "type": "cylinder",
+      "position": {
+        "col": 7,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_3",
+      "type": "cylinder",
+      "position": {
+        "col": 6,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_4",
+      "type": "cylinder",
+      "position": {
+        "col": 6,
+        "row": 4
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_5",
+      "type": "cylinder",
+      "position": {
+        "col": 5,
+        "row": 4
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "wall": true
+    },
+    {
+      "id": "cylinder_6",
+      "type": "cylinder",
+      "position": {
+        "col": 5,
+        "row": 3
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_7",
+      "type": "cylinder",
+      "position": {
+        "col": 4,
+        "row": 3
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_8",
+      "type": "cylinder",
+      "position": {
+        "col": 4,
+        "row": 2
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_9",
+      "type": "cylinder",
+      "position": {
+        "col": 3,
+        "row": 2
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "cylinder_10",
+      "type": "cylinder",
+      "position": {
+        "col": 3,
+        "row": 1
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    }
+  ],
+  "events": [],
+  "visuals": {
+    "floor": {
+      "texture": "textures/floor.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      }
+    },
+    "wall": {
+      "texture": "textures/wall.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      }
+    }
+  }
+}

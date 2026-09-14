@@ -3088,12 +3088,11 @@ export class App {
       // agrando queda exactamente igual que antes de que existiera el campo.
       span: span === 1 ? undefined : span,
       position,
-      // Se conserva si era pared o sensor; una figura vieja que no tenia
-      // collider recibe el de su forma, solido.
-      collider: {
-        ...shapeCollider(shape, grid, span),
-        solid: entity.collider ? entity.collider.solid : true,
-      },
+      // Solo se agranda el collider que ya tenia (con Colision o sensor): una
+      // figura sin Colision sigue sin collider, y se sigue atravesando.
+      collider: entity.collider
+        ? { ...shapeCollider(shape, grid, span), solid: entity.collider.solid }
+        : undefined,
     });
     this.dirty.set(true);
     this.note(
@@ -3196,52 +3195,106 @@ export class App {
     }
   }
 
-  // --- Entidad o pared ------------------------------------------------------
+  // --- Colision y Pared -----------------------------------------------------
   //
-  // Las dos opciones del menu son las dos caras del MISMO campo del contrato:
-  // collider.solid (ver schema/level.schema.json). No hizo falta inventar nada
-  // nuevo -- el schema ya lo declaraba y el motor ya bloqueaba con el; lo unico
-  // que faltaba era que el editor lo dejara tocar.
+  // Dos propiedades del contrato (ver schema/level.schema.json), excluyentes:
+  // activar una apaga la otra.
   //
-  //   Pared   -> collider.solid = true   el motor frena al jugador contra ella
-  //   Entidad -> collider.solid = false  se la atraviesa; el contacto se sigue
-  //                                      detectando y dispara on_collision
+  //   ninguna  -> se atraviesa
+  //   Colision -> collider.solid = true  bloquea solo el area de su collider,
+  //                                      con la forma y el tamano de la figura
+  //   Pared    -> wall = true            muro invisible en todo su tile (el
+  //                                      bloque entero), sin importar la forma
 
-  /** true si la entidad bloquea el paso. */
-  isWall(entity: LevelEntity): boolean {
+  /** true si la entidad choca con su propia forma (casilla "Colision"). */
+  hasCollision(entity: LevelEntity): boolean {
     return entity.collider?.solid === true;
   }
 
+  /** true si la entidad bloquea el tile entero (casilla "Pared"). */
+  isWall(entity: LevelEntity): boolean {
+    return entity.wall === true;
+  }
+
   /**
-   * Convierte una entidad en pared o en entidad atravesable.
+   * Activa o desactiva la Colision de una entidad.
    *
-   * Al hacerla pared se le crea el collider si no tenia: sin caja no hay con
-   * que chocar. Una figura lo recibe con la huella de su forma (ver
-   * shapeCollider); el resto, al tamano de su sprite.
+   * Al activarla, una figura recibe el collider de su forma (ver
+   * shapeCollider); el resto conserva su caja, o la del tamano de su sprite.
    *
-   * Al volverla entidad se conserva el collider y solo se apaga "solid": asi
-   * los eventos de contacto que ya estuvieran configurados siguen andando.
+   * Al desactivarla, una figura se queda sin collider; el resto conserva la
+   * caja como sensor, para que los eventos de contacto sigan andando.
+   *
+   * Activarla le quita la Pared: son excluyentes.
    */
-  setWall(id: string, wall: boolean): void {
+  setCollision(id: string, enabled: boolean): void {
     const entity = this.entities().find((candidate) => candidate.id === id);
     if (!entity) {
       return;
     }
 
     const shape = shapeOf(entity);
-    const collider =
-      entity.collider ??
-      (shape
+    if (enabled) {
+      const collider = shape
         ? shapeCollider(shape, this.grid(), entitySpan(entity))
-        : { width: entity.sourceRect.width, height: entity.sourceRect.height });
+        : {
+            ...(entity.collider ?? { width: entity.sourceRect.width, height: entity.sourceRect.height }),
+            solid: true,
+          };
+      this.levels.updateEntity(id, { collider, wall: undefined });
+    } else {
+      this.levels.updateEntity(id, { collider: this.colliderWithoutCollision(entity) });
+    }
+    this.dirty.set(true);
+    this.note(
+      '"' + id + '" ' +
+        (enabled
+          ? 'ahora tiene colisión con su forma' + (entity.wall ? ' (se quitó la pared).' : '.')
+          : 'ya no tiene colisión.'),
+    );
+  }
 
+  /**
+   * El collider de una entidad sin Colision: una figura se queda sin collider;
+   * el resto conserva la caja como sensor (solid se omite: es el default).
+   */
+  private colliderWithoutCollision(entity: LevelEntity): LevelEntity['collider'] {
+    return !shapeOf(entity) && entity.collider ? { ...entity.collider, solid: undefined } : undefined;
+  }
+
+  /** Lo mismo que setCollision, sobre toda la seleccion (la casilla del inspector). */
+  setCollisionOnSelection(enabled: boolean): void {
+    const ids = this.selectedIds();
+    for (const id of ids) {
+      this.setCollision(id, enabled);
+    }
+    if (ids.length > 1) {
+      this.note(ids.length + ' entidades: ' + (enabled ? 'ahora tienen colisión.' : 'ya no tienen colisión.'));
+    }
+  }
+
+  /**
+   * Marca o desmarca una entidad como Pared: un muro invisible en todas las
+   * celdas de su bloque. Activarla le quita la Colision: son excluyentes.
+   */
+  setWall(id: string, wall: boolean): void {
+    const entity = this.entities().find((candidate) => candidate.id === id);
+    if (!entity) {
+      return;
+    }
+    const hadCollision = this.hasCollision(entity);
     this.levels.updateEntity(id, {
-      // solid se omite cuando es false: es el default del schema, y asi no
-      // ensucia el JSON de todo lo que no es pared.
-      collider: { ...collider, solid: wall ? true : undefined },
+      // Se omite cuando es false: es el default del schema.
+      wall: wall ? true : undefined,
+      ...(wall && hadCollision ? { collider: this.colliderWithoutCollision(entity) } : {}),
     });
     this.dirty.set(true);
-    this.note('"' + id + '" ahora es ' + (wall ? 'pared: bloquea el paso.' : 'entidad: se atraviesa.'));
+    this.note(
+      '"' + id + '" ' +
+        (wall
+          ? 'ahora es pared: bloquea todo el tile' + (hadCollision ? ' (se quitó la colisión).' : '.')
+          : 'ya no es pared.'),
+    );
   }
 
   /**
@@ -3254,7 +3307,7 @@ export class App {
       this.setWall(id, wall);
     }
     if (ids.length > 1) {
-      this.note(ids.length + ' entidades: ' + (wall ? 'ahora bloquean el paso.' : 'ahora se atraviesan.'));
+      this.note(ids.length + ' entidades: ' + (wall ? 'ahora son pared.' : 'ya no son pared.'));
     }
   }
 
@@ -3627,9 +3680,8 @@ export class App {
       // apoya el borde inferior del sprite en el punto de la celda, y un
       // solido tiene que apoyar ahi el centro del rombo de su base.
       groundOffset: def.groundOffset,
-      // La colision de SU forma, no una generica. Antes las figuras salian
-      // sin collider: se veian, pero el jugador las atravesaba.
-      collider: shapeCollider(def, this.grid()),
+      // Sin collider ni pared: por defecto una figura se atraviesa. Las
+      // casillas Colision y Pared del inspector se lo agregan.
     };
   }
 
@@ -4056,39 +4108,6 @@ export class App {
       return;
     }
     this.patchEntity({ sourceRect: { ...entity.sourceRect, [field]: value } });
-  }
-
-  /**
-   * Activa o desactiva el collider. Al activarlo, una figura recupera la
-   * colision de su forma -- es tambien la manera de arreglar una figura vieja
-   * que quedo sin collider: apagar y prender la casilla -- y el resto arranca
-   * del tamano del sprite. Al desactivarlo se pone en undefined para que la
-   * clave no aparezca en el JSON (el schema la trata como ausente = la entidad
-   * no colisiona).
-   */
-  toggleCollider(enabled: boolean): void {
-    const entity = this.selected();
-    if (!entity) {
-      return;
-    }
-    const shape = shapeOf(entity);
-    if (enabled && shape) {
-      this.patchEntity({ collider: shapeCollider(shape, this.grid(), entitySpan(entity)) });
-      return;
-    }
-    this.patchEntity({
-      collider: enabled
-        ? {
-            width: entity.sourceRect.width,
-            height: entity.sourceRect.height,
-            // Se conserva si la entidad ya era pared: antes esta rama
-            // reconstruia el objeto de cero y apagaba "solid" en silencio, asi
-            // que apagar y volver a encender el collider convertia una pared
-            // en algo atravesable sin que nada lo dijera.
-            solid: entity.collider?.solid,
-          }
-        : undefined,
-    });
   }
 
   patchCollider(field: 'width' | 'height', value: number): void {

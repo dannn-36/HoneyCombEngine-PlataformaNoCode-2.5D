@@ -73,7 +73,9 @@ export function shapeOf(entity: { type: string; texture: string }): ShapeDef | u
  * levanta sobre una base de 0.42 celdas, y bloquearle la casilla entera haria
  * chocar al jugador contra aire.
  *
- * Solido porque una figura es un volumen: se choca contra ella, no se la cruza.
+ * Es lo que pone la casilla "Colision": solido, y con la FORMA de la base. Las
+ * redondas (cilindro, cono, esfera) bloquean con una elipse; el resto, con la
+ * caja. Una figura recien colocada no lleva collider: se atraviesa.
  *
  * "span" es cuantas celdas por lado ocupa la figura agrandada: la huella crece
  * en la misma proporcion, porque el motor agranda el sprite entero.
@@ -87,5 +89,9 @@ export function shapeCollider(
     width: Math.max(1, Math.round(def.footprint * span * tile.tileWidth)),
     height: Math.max(1, Math.round(def.footprint * span * tile.tileHeight)),
     solid: true,
+    ...(ROUND_BASE.has(def.id) ? { shape: 'ellipse' as const } : {}),
   };
 }
+
+/** Figuras cuya base es una elipse (ver fillEllipse en tools/gen-shape-sprites.mjs). */
+const ROUND_BASE = new Set<ShapeId>(['cylinder', 'cone', 'sphere']);

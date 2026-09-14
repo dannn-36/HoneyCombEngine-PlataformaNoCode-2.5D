@@ -199,8 +199,18 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
                     colliderJson.value("height", 0.0f)
                 };
                 entity.colliderSolid = colliderJson.value("solid", false);
+                entity.colliderRound = colliderJson.value("shape", std::string("box")) == "ellipse";
             } else {
                 entity.colliderSize = Vector2{0, 0};
+                entity.colliderSolid = false;
+                entity.colliderRound = false;
+            }
+
+            // Pared: muro invisible en el bloque de celdas entero. Es excluyente
+            // con la Colision; si un JSON trae las dos, gana la pared (el
+            // collider queda como sensor y sigue disparando on_collision).
+            entity.wall = entityJson.value("wall", false);
+            if (entity.wall) {
                 entity.colliderSolid = false;
             }
 

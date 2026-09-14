@@ -181,7 +181,7 @@
   <!-- Menu del clic derecho sobre una entidad. Va centrado y no pegado al
        cursor: ahora tiene controles de verdad (el tamano de una figura), y el
        menu chico junto al puntero se cerraba con cualquier roce del mouse.
-       La casilla Pared es un solo booleano del contrato (collider.solid). -->
+       Colision (collider.solid) y Pared (wall) son independientes. -->
   @if (contextMenuEntity(); as entity) {
     <div class="modal-backdrop" (click)="closeContextMenu()">
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="entity-menu-title"
@@ -220,9 +220,14 @@
           }
 
           <label class="check">
+            <input type="checkbox" [checked]="hasCollision(entity)"
+                   (change)="setCollision(entity.id, checked($event))" />
+            <span>Colisión — {{ hasCollision(entity) ? 'choca solo con su forma' : 'sin colisión' }}</span>
+          </label>
+          <label class="check">
             <input type="checkbox" [checked]="isWall(entity)"
                    (change)="setWall(entity.id, checked($event))" />
-            <span>Pared — {{ isWall(entity) ? 'bloquea el paso' : 'se atraviesa' }}</span>
+            <span>Pared — {{ isWall(entity) ? 'bloquea todo el tile' : 'no es pared' }}</span>
           </label>
         </div>
 
@@ -1509,7 +1514,7 @@
               @if (selectionCount() > 1) {
                 <p class="hint hint--warn">
                   {{ selectionCount() }} entidades seleccionadas. Los campos editan “{{ entity.id }}”;
-                  Duplicar, Eliminar y Pared actuan sobre todas.
+                  Duplicar, Eliminar, Colisión y Pared actuan sobre todas.
                 </p>
               }
 
@@ -1600,18 +1605,18 @@
                 </button>
                 @if (!isCollapsed('collider')) {
                   <div class="panel__body">
-                    <label class="check">
-                      <input type="checkbox" [checked]="!!entity.collider"
-                             (change)="toggleCollider(checked($event))" />
-                      <span>Collider</span>
-                    </label>
                     <!-- Lo mismo que ofrece el menu del click derecho. Esta
                          tambien aca porque es una propiedad del objeto, y el
                          inspector es donde uno la busca. -->
+                    <label class="check">
+                      <input type="checkbox" [checked]="hasCollision(entity)"
+                             (change)="setCollisionOnSelection(checked($event))" />
+                      <span>Colisión (solo con su forma)</span>
+                    </label>
                     <label class="check" style="margin-top: 6px">
                       <input type="checkbox" [checked]="isWall(entity)"
                              (change)="setWallOnSelection(checked($event))" />
-                      <span>Pared (bloquea el paso)</span>
+                      <span>Pared (bloquea todo el tile)</span>
                     </label>
                     @if (entity.collider; as collider) {
                       <div class="field-row" style="margin-top: 6px">

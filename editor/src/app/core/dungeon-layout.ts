@@ -263,6 +263,21 @@ export function cellState(tiles: readonly MapTile[], col: number, row: number): 
 }
 
 /**
+ * Las celdas de un nivel SIN "tiles", tal como las arma LevelLoader.cpp: piso
+ * en toda la grilla y pared en el anillo del borde.
+ */
+export function legacyTiles(grid: { width: number; height: number }): MapTile[] {
+  return Array.from({ length: grid.height }, (_, row) =>
+    Array.from({ length: grid.width }, (_, col): MapTile => ({
+      col,
+      row,
+      floor: true,
+      wall: col === 0 || row === 0 || col === grid.width - 1 || row === grid.height - 1,
+    })),
+  ).flat();
+}
+
+/**
  * La sala equivalente a un nivel de una sola grilla: todo menos el anillo del
  * borde, que es donde el motor pone la pared en esos niveles. Asi, pasar un
  * nivel viejo a mapa no cambia nada de lo que se juega.

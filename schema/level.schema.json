@@ -150,9 +150,20 @@
               "solid": {
                 "type": "boolean",
                 "default": false,
-                "description": "Si es true, bloquea el movimiento; si es false, solo participa en deteccion de contactos."
+                "description": "Colision. Si es true, bloquea el movimiento solo en el area de este collider (su forma y tamano); si es false, solo participa en deteccion de contactos."
+              },
+              "shape": {
+                "type": "string",
+                "enum": ["box", "ellipse"],
+                "default": "box",
+                "description": "Forma con la que bloquea un collider solido: 'box' = la caja entera, 'ellipse' = la elipse inscripta (figuras redondas)."
               }
             }
+          },
+          "wall": {
+            "type": "boolean",
+            "default": false,
+            "description": "Pared. Si es true, la entidad bloquea todas las celdas de su bloque (span x span), como un muro invisible, sin importar el tamano ni la forma de su collider. Excluyente con collider.solid: si estan las dos, gana la pared."
           },
           "hidden": {
             "type": "boolean",

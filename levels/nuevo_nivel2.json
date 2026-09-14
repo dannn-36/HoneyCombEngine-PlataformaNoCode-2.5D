@@ -1,0 +1,208 @@
+{
+  "name": "nuevo_nivel2",
+  "grid": {
+    "width": 10,
+    "height": 10,
+    "tileWidth": 64,
+    "tileHeight": 32
+  },
+  "entities": [
+    {
+      "id": "pillar_1",
+      "type": "pillar",
+      "position": {
+        "col": 4,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 27,
+        "height": 13,
+        "solid": true
+      }
+    },
+    {
+      "id": "player_1",
+      "type": "player",
+      "position": {
+        "col": 2,
+        "row": 6
+      },
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 100,
+        "damage": 10,
+        "speed": 3
+      },
+      "frames": 2,
+      "frameDuration": 0.4
+    },
+    {
+      "id": "cube_1",
+      "type": "cube",
+      "position": {
+        "col": 2,
+        "row": 7
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      }
+    },
+    {
+      "id": "cylinder_1",
+      "type": "cylinder",
+      "position": {
+        "col": 6,
+        "row": 8
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 52,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "sphere_1",
+      "type": "sphere",
+      "position": {
+        "col": 7,
+        "row": 5
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 51,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "cone_1",
+      "type": "cone",
+      "position": {
+        "col": 5,
+        "row": 4
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 66,
+        "y": 98,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 52,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "ramp_1",
+      "type": "ramp",
+      "position": {
+        "col": 2,
+        "row": 3
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 132,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17
+    },
+    {
+      "id": "slab_1",
+      "type": "slab",
+      "position": {
+        "col": 5,
+        "row": 2
+      },
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 198,
+        "y": 0,
+        "width": 64,
+        "height": 96
+      },
+      "groundOffset": 17,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      }
+    }
+  ],
+  "events": [],
+  "visuals": {
+    "floor": {
+      "texture": "textures/floor.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      }
+    },
+    "wall": {
+      "texture": "textures/wall.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      }
+    }
+  },
+  "backgroundColor": {
+    "r": 0,
+    "g": 0,
+    "b": 0
+  }
+}

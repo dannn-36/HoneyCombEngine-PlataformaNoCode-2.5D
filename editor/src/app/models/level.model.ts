@@ -35,11 +35,14 @@ export interface ColliderConfig {
   width: number;
   height: number;
   /**
-   * true = la entidad BLOQUEA el movimiento (una pared). false o ausente = la
-   * atraviesan, pero sigue detectando el contacto y disparando on_collision
-   * (un sensor). Es el mismo campo que ya leia LevelLoader.cpp.
+   * "Colision": true = la entidad BLOQUEA el movimiento, pero solo en el area
+   * de este collider (su forma y tamano). false o ausente = la atraviesan,
+   * pero sigue detectando el contacto y disparando on_collision (un sensor).
+   * Bloquear el tile entero es otra cosa: ver LevelEntity.wall.
    */
   solid?: boolean;
+  /** Forma con la que bloquea: 'ellipse' para las figuras redondas. Ausente = 'box'. */
+  shape?: 'box' | 'ellipse';
 }
 
 /** Caracteristicas de combate y movimiento de una entidad. */
@@ -90,6 +93,12 @@ export interface LevelEntity {
   preset?: string;
   /** Ausente si la entidad no colisiona. */
   collider?: ColliderConfig;
+  /**
+   * "Pared": bloquea TODAS las celdas de su bloque (span x span), sin importar
+   * el tamano o la forma de la figura. Independiente de collider.solid.
+   * Ausente = false.
+   */
+  wall?: boolean;
 
   // --- Combate, objetos y puzzles (ver models/item.model.ts) ---------------
 

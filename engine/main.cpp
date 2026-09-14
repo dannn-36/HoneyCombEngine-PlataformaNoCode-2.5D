@@ -30,7 +30,7 @@
 // Teclas: flechas o WASD = mover | clic izquierdo, Espacio o J = atacar hacia
 //         el mouse | Q = habilidad | Shift = esquivar | clic derecho o K =
 //         defender | 1-9 o rueda = elegir arma | E = cambiar arma / tienda |
-//         F1 = ver grilla | F11 = pantalla completa
+//         F1 = ver grilla | F2 = ver hitboxes | F11 = pantalla completa
 // =============================================================================
 
 #include <algorithm>
@@ -362,6 +362,7 @@ int main(int argc, char *argv[])
     Font defaultFont = GetFontDefault();
     gfx.SetTargetFPS(60);
     bool showGrid = false;
+    bool showHitboxes = false;  // F2, independiente de F1: se pueden ver los dos
 
     // Barras de vida a dibujar encima de la escena, juntadas mientras se
     // encolan las entidades (ahi se sabe donde queda cada sprite en pantalla).
@@ -377,12 +378,12 @@ int main(int argc, char *argv[])
     // BUCLE PRINCIPAL
     //
     // Orden de cada frame:
-    //   1. teclas de depuracion (F1 grilla / F11 pantalla completa)
+    //   1. teclas de depuracion (F1 grilla / F2 hitboxes / F11 pantalla completa)
     //   2. encuadre de camara (se recalcula: la ventana es redimensionable)
     //   3. si no se esta pasando de nivel: movimiento del jugador y combate
     //   4. encolar en el ZSortSystem: piso -> paredes -> entidades
     //   5. Flush del ZSort (ordena por profundidad y recien ahi dibuja)
-    //   6. overlays: grilla (F1), golpe, barras de vida, HUD
+    //   6. overlays: grilla (F1), hitboxes (F2), golpe, barras de vida, HUD
     //   7. resolver colisiones -> correr eventos -> actualizar audio
     //   8. pantalla de paso de nivel, y la carga cuando termina
     // =========================================================================
@@ -393,6 +394,10 @@ int main(int argc, char *argv[])
         if (IsKeyPressed(KEY_F1))
         {
             showGrid = !showGrid;
+        }
+        if (IsKeyPressed(KEY_F2))
+        {
+            showHitboxes = !showHitboxes;
         }
         if (IsKeyPressed(KEY_F11))
         {
@@ -722,7 +727,9 @@ int main(int argc, char *argv[])
         // la escena, y no debe participar del orden por profundidad.
         if (showGrid)
         {
-            const Color gridColor{255, 105, 180, 220};
+            // El mismo azul claro que las lineas de la grilla del editor
+            // (#70bafa en iso-canvas-renderer.ts), para que se lean igual.
+            const Color gridColor{112, 186, 250, 255};
             float halfTileWidth = level.grid.GetTileWidth() / 2.0f;
             float halfTileHeight = level.grid.GetTileHeight() / 2.0f;
             for (int row = 0; row < level.grid.GetGridHeight(); ++row)
@@ -741,6 +748,98 @@ int main(int argc, char *argv[])
                     DrawLineV(right, bottom, gridColor);
                     DrawLineV(bottom, left, gridColor);
                     DrawLineV(left, top, gridColor);
+                }
+            }
+        }
+
+        // --- Overlay de hitboxes (F2) --------------------------------------
+        // Lo que bloquea y lo que detecta contactos, con las mismas cuentas de
+        // Movement y los mismos colores que la vista "Colisiones" del editor:
+        //   rojo     pared: celdas de pared del mapa y entidades "wall" (bloque entero)
+        //   amarillo colision: collider solido, con su forma (caja o elipse)
+        //   verde    sensor: collider no solido, la caja en pixeles de CollisionSystem
+        // Independiente de F1: va despues de la grilla para quedar encima.
+        if (showHitboxes)
+        {
+            const Color wallColor{192, 80, 80, 255};       // #c05050
+            const Color collisionColor{224, 192, 74, 255};  // #e0c04a
+            const Color sensorColor{107, 158, 63, 255};     // #6b9e3f
+            const float thickness = 2.0f;
+
+            // Un contorno cerrado de puntos en CELDAS, proyectado a pantalla.
+            auto drawLoop = [&](const std::vector<Vector2>& cells, Color color)
+            {
+                for (size_t i = 0; i < cells.size(); ++i)
+                {
+                    DrawLineEx(gridToScreen(cells[i]), gridToScreen(cells[(i + 1) % cells.size()]),
+                               thickness, color);
+                }
+            };
+            auto drawBox = [&](Vector2 center, Vector2 half, Color color)
+            {
+                drawLoop({{center.x - half.x, center.y - half.y},
+                          {center.x + half.x, center.y - half.y},
+                          {center.x + half.x, center.y + half.y},
+                          {center.x - half.x, center.y + half.y}},
+                         color);
+            };
+            auto drawEllipse = [&](Vector2 center, Vector2 radii, Color color)
+            {
+                const int steps = 32;
+                std::vector<Vector2> points;
+                points.reserve(steps);
+                for (int i = 0; i < steps; ++i)
+                {
+                    const float angle = (static_cast<float>(i) / steps) * 2.0f * PI;
+                    points.push_back({center.x + std::cos(angle) * radii.x,
+                                      center.y + std::sin(angle) * radii.y});
+                }
+                drawLoop(points, color);
+            };
+
+            // Paredes del mapa: sin textura de pared no bloquean (ver Movement).
+            if (level.wallTexture)
+            {
+                for (const auto& tile : level.wallTiles)
+                {
+                    drawBox({static_cast<float>(tile.col), static_cast<float>(tile.row)},
+                            {0.5f, 0.5f}, wallColor);
+                }
+            }
+
+            for (const auto& entity : level.entities)
+            {
+                if (entity.destroyed || entity.hidden)
+                {
+                    continue;
+                }
+                const Vector2 center = Movement::BoxCenter(entity);
+                if (entity.wall)
+                {
+                    drawBox(center, Movement::WallHalfExtents(entity), wallColor);
+                }
+                if (entity.colliderSize.x <= 0 || entity.colliderSize.y <= 0)
+                {
+                    continue;
+                }
+                if (entity.colliderSolid)
+                {
+                    const Vector2 half = Movement::HalfExtentsInCells(level, entity);
+                    if (entity.colliderRound)
+                    {
+                        drawEllipse(center, half, collisionColor);
+                    }
+                    else
+                    {
+                        drawBox(center, half, collisionColor);
+                    }
+                }
+                else
+                {
+                    const Vector2 anchor = gridToScreen(center);
+                    DrawRectangleLinesEx(
+                        Rectangle{anchor.x, anchor.y, entity.colliderSize.x, entity.colliderSize.y},
+                        thickness, sensorColor);
                 }
             }
         }

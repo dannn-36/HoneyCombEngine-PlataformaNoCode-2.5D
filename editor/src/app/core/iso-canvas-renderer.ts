@@ -26,7 +26,7 @@
 
 import { characterOf } from './characters';
 import { blockCenter, entitySpan } from './entity-blocks';
-import { roomCenter, rectBetween } from './dungeon-layout';
+import { legacyTiles, roomCenter, rectBetween } from './dungeon-layout';
 import { GridCoord, IsoProjection } from './iso-projection';
 import { shapeOf } from './iso-shapes';
 import { GridConfig, Level, LevelEntity } from '../models/level.model';
@@ -342,9 +342,14 @@ export class IsoCanvasRenderer {
     // Paredes: la celda entera rellena. Antes era una franja chica en el medio,
     // que servia para ver una pared suelta pero no para leer el contorno de una
     // sala o de un tunel, que es lo que importa al armar un mapa.
-    if (level.tiles) {
+    //
+    // Sin "tiles" (un nivel recien creado) el motor igual pone pared en todo el
+    // borde de la grilla, siempre que el nivel declare la textura de pared: se
+    // dibujan esas mismas, para que el editor muestre lo que se va a jugar.
+    const wallTiles = level.tiles ?? (level.visuals?.wall ? legacyTiles(grid) : []);
+    if (wallTiles.length > 0) {
       ctx.lineWidth = 1;
-      for (const tile of level.tiles) {
+      for (const tile of wallTiles) {
         if (tile.wall) {
           diamond(tile);
           ctx.fillStyle = 'rgba(176, 106, 70, 0.55)';
@@ -562,42 +567,59 @@ export class IsoCanvasRenderer {
         ctx.textAlign = 'left';
       }
 
-      // Collider: se ve que es una caja logica y no arte. Va en el punto de la
-      // celda y no en la caja del sprite, porque es ahi donde lo encola el
-      // motor (ver el Submit a CollisionSystem en main.cpp).
-      //
-      // Una PARED (solid) va en linea llena y roja; un sensor, punteado y
-      // verde. Son dos comportamientos opuestos -- uno frena al jugador y el
-      // otro no -- y sin distinguirlos hay que abrir el inspector de cada
-      // entidad para saber cual es cual.
+      // Lo que bloquea, sobre el piso y en celdas (como lo mide Movement.cpp):
+      //   Pared    -> el bloque de celdas entero, relleno rojo.
+      //   Colision -> solo la huella del collider (rombo o elipse), amarillo.
+      //   Sensor   -> caja punteada verde: no frena, solo dispara on_collision.
+      // Son comportamientos distintos, y sin distinguirlos hay que abrir el
+      // inspector de cada entidad para saber cual es cual.
+      const { col: centerCol, row: centerRow } = blockCenter(entity);
+      const tracePath = (points: GridCoord[]) => {
+        ctx.beginPath();
+        points.map(project).forEach((point, index) =>
+          index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y),
+        );
+        ctx.closePath();
+      };
+      if (scene.showColliders() && entity.wall) {
+        const half = entitySpan(entity) / 2;
+        tracePath([
+          { col: centerCol - half, row: centerRow - half },
+          { col: centerCol + half, row: centerRow - half },
+          { col: centerCol + half, row: centerRow + half },
+          { col: centerCol - half, row: centerRow + half },
+        ]);
+        ctx.fillStyle = 'rgba(192, 80, 80, 0.28)';
+        ctx.fill();
+        ctx.strokeStyle = '#c05050';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
       if (scene.showColliders() && entity.collider) {
         const solid = entity.collider.solid === true;
-        ctx.strokeStyle = solid ? '#c05050' : '#6b9e3f';
+        ctx.strokeStyle = solid ? '#e0c04a' : '#6b9e3f';
         ctx.lineWidth = solid ? 1.5 : 1;
 
         if (solid) {
-          // Lo que BLOQUEA es una caja en celdas: main.cpp divide el collider
-          // por el tamano del tile y compara contra la casilla. En pantalla esa
-          // caja es un rombo sobre el piso, y es el que se dibuja. Antes era un
-          // rectangulo colgando del punto de la celda, que no coincidia con lo
-          // que frena al jugador: un cubo y un pilar se veian con la misma
-          // colision aunque bloquean superficies muy distintas.
           const halfCols = entity.collider.width / grid.tileWidth / 2;
           const halfRows = entity.collider.height / grid.tileHeight / 2;
-          const { col, row } = blockCenter(entity);
-          const corners = [
-            project({ col: col - halfCols, row: row - halfRows }),
-            project({ col: col + halfCols, row: row - halfRows }),
-            project({ col: col + halfCols, row: row + halfRows }),
-            project({ col: col - halfCols, row: row + halfRows }),
-          ];
-          ctx.beginPath();
-          ctx.moveTo(corners[0].x, corners[0].y);
-          for (const corner of corners.slice(1)) {
-            ctx.lineTo(corner.x, corner.y);
+          if (entity.collider.shape === 'ellipse') {
+            const steps = 32;
+            tracePath(
+              Array.from({ length: steps }, (_, i) => {
+                const angle = (i / steps) * Math.PI * 2;
+                return { col: centerCol + Math.cos(angle) * halfCols, row: centerRow + Math.sin(angle) * halfRows };
+              }),
+            );
+          } else {
+            tracePath([
+              { col: centerCol - halfCols, row: centerRow - halfRows },
+              { col: centerCol + halfCols, row: centerRow - halfRows },
+              { col: centerCol + halfCols, row: centerRow + halfRows },
+              { col: centerCol - halfCols, row: centerRow + halfRows },
+            ]);
           }
-          ctx.closePath();
-          ctx.fillStyle = 'rgba(192, 80, 80, 0.18)';
+          ctx.fillStyle = 'rgba(224, 192, 74, 0.2)';
           ctx.fill();
           ctx.stroke();
         } else {
