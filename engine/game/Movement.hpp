@@ -2,7 +2,7 @@
 
 #include "raylib.h"
 
-#include "loader/LevelLoader.hpp"
+#include "world/Level.hpp"
 
 // Reglas de movimiento compartidas por todo lo que se mueve en el nivel: el
 // jugador con las flechas y los enemigos que lo persiguen.

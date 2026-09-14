@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "loader/ItemDefs.hpp"
+#include "world/ItemDefs.hpp"
 
 // Un casillero con un arma. Guarda la definicion ENTERA y no solo el id: el
 // inventario pasa de un nivel a otro, y el nivel siguiente puede no declarar

@@ -8,7 +8,7 @@
 #include "raylib.h"
 
 #include "game/Inventory.hpp"
-#include "loader/LevelLoader.hpp"
+#include "world/Level.hpp"
 
 // Un objeto tirado en el piso EN EJECUCION: lo que solto un enemigo o el arma
 // que se cambio por otra. No es una LevelEntity porque aparece con el juego

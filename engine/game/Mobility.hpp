@@ -2,7 +2,7 @@
 
 #include "raylib.h"
 
-#include "loader/LevelLoader.hpp"
+#include "world/Level.hpp"
 
 // Movimiento del jugador: caminar, esquivar (dash) y defender.
 //

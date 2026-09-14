@@ -10,8 +10,10 @@
 // (ver "items", "inventory", "mobility", "drops" y "shop" en
 // schema/level.schema.json). Son estructuras planas, sin logica: las reglas
 // que las usan viven en la Capa 4 (game/Combat, game/Inventory, game/Loot,
-// game/Mobility). Estan en loader/ y no en game/ por la misma razon que
-// LevelEntity: el loader las arma, y el loader no puede depender del juego.
+// game/Mobility). Estan en world/ junto a LevelEntity y por la misma razon:
+// son el modelo, no el parseo ni las reglas. loader/ItemLoader las arma
+// leyendo el JSON y game/ las usa, sin que ninguna de las dos capas tenga que
+// depender de la otra (ver la cabecera de world/Level.hpp).
 //
 // Todas las medidas de distancia van en CELDAS de grilla, igual que
 // LevelEntity::precisePosition.

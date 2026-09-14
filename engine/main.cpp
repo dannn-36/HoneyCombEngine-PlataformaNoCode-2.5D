@@ -9,12 +9,17 @@
 //                      con raylib para ventana/dibujo y recursos.
 //   Capa 2 (systems/)  IsoGrid, ZSort, Collision, Event, Animation, Audio,
 //                      Input -> logica reutilizable, sin saber de niveles.
-//   Capa 3 (loader/)   AssetResolver, LevelLoader, EventLoader -> leen el JSON
-//                      y arman con el las estructuras de la Capa 2.
+//   Capa 3 (loader/)   AssetResolver, LevelLoader, EventLoader, ItemLoader ->
+//                      leen el JSON y arman con el el modelo de world/.
 //   Capa 4 (game/)     Movement, Mobility, Combat, Inventory, Loot, Zones ->
 //                      las reglas del juego sobre el nivel ya cargado: por
 //                      donde se camina, quien le pega a quien, que se junta.
 //                      CombatView dibuja lo que esas reglas dejaron.
+//
+//   world/             Level, ItemDefs -> el modelo: QUE hay en un nivel y en
+//                      que estado esta. No es una capa mas arriba ni mas
+//                      abajo: es el lenguaje comun que la Capa 3 llena y la
+//                      Capa 4 usa, y no depende de ninguna de las dos.
 //
 // Nada de lo que hay aca esta atado a un nivel concreto: el tamano de la
 // grilla, las texturas, las entidades y los eventos salen todos del archivo de

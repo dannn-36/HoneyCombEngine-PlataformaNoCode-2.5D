@@ -4,7 +4,7 @@
 
 #include "core/ResourceManager.hpp"
 #include "loader/AssetResolver.hpp"
-#include "loader/ItemDefs.hpp"
+#include "world/ItemDefs.hpp"
 
 struct LevelEntity;
 

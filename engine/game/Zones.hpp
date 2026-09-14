@@ -4,7 +4,7 @@
 
 #include "raylib.h"
 
-#include "loader/LevelLoader.hpp"
+#include "world/Level.hpp"
 
 // Zonas de los puzzles: las salas del mapa y las zonas sueltas del nivel
 // (LoadedLevel::zones). Las usan los eventos "Al limpiar una zona", "Al entrar

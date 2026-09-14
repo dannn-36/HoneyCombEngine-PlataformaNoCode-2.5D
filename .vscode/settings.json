@@ -1,4 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/Users/josda/OneDrive/Documentos/GitHub/HoneyComb-Engine-Plataforma-de-desarrollo-NoCode-2.5D-Isometrico/engine",
+    "cmake.sourceDirectory": "${workspaceFolder}/engine",
     "cmake.ignoreCMakeListsMissing": true
 }

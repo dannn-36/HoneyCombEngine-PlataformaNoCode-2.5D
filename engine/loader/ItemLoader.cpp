@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <string>
 
-#include "loader/LevelLoader.hpp"
+#include "world/Level.hpp"
 
 namespace {
 

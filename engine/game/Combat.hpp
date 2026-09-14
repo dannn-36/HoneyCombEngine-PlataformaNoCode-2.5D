@@ -6,7 +6,7 @@
 #include "raylib.h"
 
 #include "game/Inventory.hpp"
-#include "loader/LevelLoader.hpp"
+#include "world/Level.hpp"
 
 // Combate entre el jugador y los enemigos (type "enemy").
 //
@@ -27,7 +27,7 @@
 //     entidad"); un jugador sin vida marca el nivel como perdido.
 //
 // Vida, dano y velocidad salen de "stats"; armas, habilidades y defensa, de
-// "items" y de los bloques de cada entidad (ver loader/ItemDefs.hpp).
+// "items" y de los bloques de cada entidad (ver world/ItemDefs.hpp).
 namespace Combat {
 
 constexpr float kEnemyAggroRange = 6.0f;      // celdas: mas lejos, el enemigo no persigue
