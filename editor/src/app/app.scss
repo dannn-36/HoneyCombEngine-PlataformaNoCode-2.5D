@@ -1,0 +1,1932 @@
+/* Estilos del editor (componente App). La base global -- fondo y tipografia de
+   la pagina -- esta en src/styles.scss; todo lo demas es esto.
+
+   Tema calcado del oscuro de Blender. Las tres decisiones que lo definen, y de
+   las que sale casi todo lo demas:
+
+     1. GRIS NEUTRO, sin tinte. Blender no mete ni una gota de azul en sus
+        grises; un #1e222a (azulado) es lo que hace que una interfaz oscura se
+        vea "de plantilla web" en vez de "de herramienta 3D".
+
+     2. AREAS CUADRADAS, WIDGETS REDONDEADOS. Los editores se pegan entre si
+        separados por un surco oscuro de 2px y no tienen esquinas redondeadas;
+        los controles de adentro si, con 4px. Ese contraste es la firma visual
+        de Blender.
+
+     3. UN SOLO AZUL DE ACENTO (#4772b3) para "esto esta activo/seleccionado", y
+        el naranja solo para el objeto activo en el viewport. Blender no reparte
+        color por decoracion: cada uno significa una cosa.
+
+   Dos convenciones que se repiten en todo el archivo:
+
+     - Nomenclatura BEM con anidado de Sass: .bloque, &__elemento, &--variante.
+       Un ".panel__head" es la cabecera de un ".panel", y un ".btn--primary" es
+       la variante destacada de un ".btn".
+
+     - "is-active" marca el estado encendido de un control (herramienta elegida,
+       pestana abierta, entidad seleccionada). La clase la pone la plantilla con
+       [class.is-active], nunca el CSS. */
+:host {
+  /* Fondos, del mas oscuro al mas claro. Son los valores del tema Dark de
+     Blender: la ventana y el surco entre areas son lo mas oscuro, el cuerpo de
+     cada editor queda un escalon arriba, y los paneles otro mas. La profundidad
+     se lee por el escalon de gris, sin una sola sombra. */
+  --bg-window: #1d1d1d;     /* topbar, barra de estado y surco entre areas */
+  --bg-header: #2b2b2b;     /* cabecera de cada editor */
+  --bg-editor: #303030;     /* cuerpo de un editor (outliner, propiedades) */
+  --bg-panel: #383838;      /* panel desplegable dentro de propiedades */
+  --bg-panel-head: #424242; /* cabecera de ese panel */
+  --bg-viewport: #393939;   /* lienzo isometrico (lo repinta el canvas) */
+
+  /* Widgets. En Blender un boton es un gris claro sobre fondo oscuro -- al
+     reves de lo habitual en la web -- y los campos de texto son los unicos que
+     se hunden hasta el negro. */
+  --widget: #545454;
+  --widget-hover: #656565;
+  --widget-sunken: #1d1d1d;
+
+  --border: #101010;      /* surco entre areas (casi negro) */
+  --border-soft: #3d3d3d; /* separacion suave dentro de un editor */
+
+  /* Tres niveles de texto: el normal, el atenuado para etiquetas y datos
+     secundarios, y el brillante para lo que tiene el foco. */
+  --text: #e5e5e5;
+  --text-dim: #989898;
+  --text-bright: #ffffff;
+
+  --accent: #4772b3;      /* azul de seleccion de Blender: pestana y fila activa */
+  --accent-hi: #5c8ad0;
+  --active: #ff8b1f;      /* naranja del objeto activo: solo eso */
+  --danger: #a33c3c;
+  --ok: #6b9e3f;
+
+  --radius: 4px;          /* redondez de widget de Blender (roundness 0.4) */
+
+  display: block;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--text);
+  /* Inter es la tipografia que Blender usa desde la 4.0. */
+  font: 12px/1.4 Inter, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg-window);
+}
+
+/* border-box en todo: los anchos fijos de los docks incluyen su borde y su
+   padding, asi que las cuentas del layout cierran sin restar a mano. */
+* {
+  box-sizing: border-box;
+}
+
+/* Esqueleto de la ventana, de arriba abajo:
+
+     26px  topbar (menus + pestanas de workspace)
+     1fr   cuerpo -- se queda con todo el alto sobrante
+     auto  editor inferior (eventos / salida), solo en esas workspaces
+     22px  barra de estado
+
+   El "gap" de 2px con el fondo de la ventana detras es el surco que Blender
+   deja entre areas: no es un borde de cada panel, es el fondo que se ve. */
+.shell {
+  display: grid;
+  grid-template-rows: 26px 1fr auto 22px;
+  gap: 2px;
+  height: 100%;
+  background: var(--bg-window);
+}
+
+/* ---------- Topbar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  background: var(--bg-window);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px 0 2px;
+
+  &__mark {
+    color: var(--active);
+    font-size: 13px;
+  }
+  &__name {
+    color: var(--text);
+    font-weight: 500;
+  }
+}
+
+/* Aviso de cambios sin guardar, a la derecha del topbar. Ambar y chico: tiene
+   que verse de reojo, pero no competir con el verde de Ejecutar. */
+.topbar__dirty {
+  padding: 0 8px;
+  color: #d9a441;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Botones sueltos del topbar (Ejecutar y los interruptores de paneles). Los
+   menus desplegables tienen su propio componente, menu-bar. Planos hasta que
+   se los pasa por encima, como los de Blender. */
+.menu {
+  height: 20px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--widget);
+  }
+
+  /* El unico menu que es un interruptor (mostrar la barra lateral): se hunde
+     cuando esta encendido, para que se lea como tal y no como un boton mas. */
+  &.is-active {
+    background: var(--widget);
+  }
+
+  /* Ejecutar: el unico boton del topbar con color propio. Es la accion que
+     saca el nivel del editor y lo pone a correr, y conviene encontrarla sin
+     leer. Verde y no el azul de acento, que en este tema significa
+     "seleccionado" y no "ejecutar". */
+  &--run {
+    margin-left: 6px;
+    background: #3f6b32;
+    color: #e8f5e2;
+    font-weight: 500;
+
+    &:hover {
+      background: #4d8340;
+    }
+  }
+}
+
+/* Pestanas de workspace. Van pegadas al borde inferior del topbar y la activa
+   se funde con el fondo del cuerpo: es asi como Blender indica cual esta
+   abierta, sin subrayados ni bordes de color. */
+.wstabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 100%;
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-soft);
+}
+
+.wstab {
+  height: 20px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+  &.is-active {
+    background: var(--bg-header);
+    color: var(--text-bright);
+  }
+}
+
+.topbar__spacer,
+.head__spacer,
+.statusbar__spacer,
+.event__spacer {
+  flex: 1;
+}
+
+/* ---------- Cuerpo: tres areas ---------- */
+/* Outliner + viewport + propiedades. Los laterales son fijos y el viewport se
+   queda con el resto.
+
+   El "min-height: 0" que aparece aca y en casi todos los contenedores de abajo
+   NO es decorativo: por defecto un hijo de grid o flex no achica por debajo de
+   su contenido, asi que sin esto un panel con muchas entidades estira la
+   ventana en vez de mostrar su propia barra de scroll. */
+/* Las columnas las escribe la plantilla con bodyColumns(), porque el ancho de
+   la barra lateral se arrastra y puede esconderse entera. Lo de aca es solo el
+   valor de arranque, para que el primer render no aparezca sin columnas. */
+.body {
+  display: grid;
+  grid-template-columns: 230px 1fr 290px;
+  gap: 2px;
+  min-height: 0;
+}
+
+/* Un "area" es un editor de Blender: cabecera propia arriba y cuerpo debajo.
+   Todas las zonas de la ventana usan esta misma caja. */
+.area {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--bg-editor);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 26px;
+    padding: 0 6px;
+    background: var(--bg-header);
+  }
+
+  /* Icono de tipo de editor: el boton cuadrado que en Blender abre el
+     desplegable para cambiar que editor ocupa el area. Aca es solo la
+     etiqueta, pero es lo primero que se lee de cada cabecera. */
+  &__kind {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 18px;
+    border-radius: 3px;
+    background: var(--widget);
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  &__title {
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+}
+
+/* Boton de plegar de las secciones de la barra izquierda. Reemplaza al icono
+   de tipo, que antes era solo una etiqueta: como en VS Code, un clic deja la
+   seccion en su cabecera sola y le devuelve el alto a las demas. La flechita
+   se gira para decir en que estado esta sin tener que probar. */
+.area__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--widget);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--widget-hover);
+  }
+
+  /* Plegada se hunde en la cabecera: se lee como "aca hay algo guardado". */
+  &.is-collapsed {
+    background: transparent;
+    color: var(--text-dim);
+
+    &:hover {
+      background: var(--widget);
+    }
+  }
+}
+
+.area__chevron {
+  display: inline-block;
+  font-size: 8px;
+  transition: transform 0.1s ease-out;
+
+  .is-collapsed > & {
+    transform: rotate(-90deg);
+  }
+}
+
+/* Un boton de cabecera apagado mientras trabaja (Importar durante una
+   importacion): se ve y se lee, pero no se puede lanzar otra vez. */
+.tool:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* La columna izquierda apila cuatro editores. Solo el primero (escena o
+   explorador) es elastico; las tres paletas ocupan lo que necesitan y se
+   quedan abajo.
+
+   "relative" es para el borde arrastrable, que se posiciona contra esta caja
+   en vez de ocupar una columna propia del grid del cuerpo. El z-index lo
+   acompana: el borde sobresale unos pixeles hacia el viewport, y sin un
+   contexto de apilado por encima quedaria tapado por el contenedor del canvas
+   (que tambien esta posicionado y viene despues en el DOM). */
+.stack {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  /* Valor de arranque: las filas reales las escribe sidebarRows(), porque
+     dependen de que secciones esten plegadas. */
+  grid-template-rows: 1fr auto auto auto;
+  /* Con todo plegado no queda ninguna fila elastica, y sin esto el navegador
+     estiraria las cabeceras para repartir el alto sobrante. */
+  align-content: start;
+  gap: 2px;
+  min-height: 0;
+}
+
+/* El panel de propiedades necesita las mismas dos cosas que la barra
+   izquierda: ser el ancla de su borde arrastrable, y quedar por encima del
+   contenedor del canvas para que ese borde no aparezca tapado. */
+.inspector {
+  position: relative;
+  z-index: 2;
+}
+
+/* Borde arrastrable de un panel lateral, como el de VS Code: una tira invisible
+   un poco mas ancha que el surco, para poder agarrarla sin apuntar al pixel. Se
+   pinta sola al pasar por encima o mientras se arrastra. Cada variante se pega
+   al canto que da al viewport. */
+.grip {
+  position: absolute;
+  top: 0;
+  z-index: 5;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  /* Sin esto, el navegador cancela el arrastre y empieza a seleccionar texto. */
+  touch-action: none;
+
+  &--right {
+    right: -3px;
+  }
+  &--left {
+    left: -3px;
+  }
+
+  &:hover,
+  &.is-active {
+    background: var(--accent);
+  }
+}
+
+/* ---------- Outliner (arbol de escena) ---------- */
+.tree {
+  padding: 2px 0;
+}
+
+.tree__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 20px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #3a3a3a;
+  }
+
+  /* Fila seleccionada: el azul de Blender ocupa la fila entera. Con una
+     seleccion de varias, todas se pintan igual. */
+  &.is-active {
+    background: var(--accent);
+    color: var(--text-bright);
+  }
+
+  /* El objeto ACTIVO dentro de la seleccion: el unico que muestra el
+     inspector. Lo marca una barra naranja a la izquierda, el mismo color con
+     el que el viewport lo contornea. */
+  &.is-current {
+    box-shadow: inset 3px 0 0 var(--active);
+  }
+
+  &--root {
+    font-weight: 500;
+  }
+
+  /* Sangria de los hijos + la guia vertical que Blender dibuja bajo el padre. */
+  &--child {
+    padding-left: 22px;
+  }
+}
+
+.tree__icon {
+  color: #7aa2d8;
+  font-size: 10px;
+
+  &--player {
+    color: var(--active);
+  }
+  &--obstacle {
+    color: #d06a6a;
+  }
+  &--item {
+    color: #8ac25a;
+  }
+}
+
+.tree__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree__meta {
+  margin-left: auto;
+  color: var(--text-dim);
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+  font-size: 10px;
+
+  /* Sobre la fila azul el gris atenuado no se lee. */
+  .tree__item.is-active & {
+    color: #d6e2f5;
+  }
+}
+
+/* ---------- Organizador de archivos del proyecto ---------- */
+.filetree {
+  padding-bottom: 2px;
+}
+
+/* Los dos botones de entrada del panel, pegados arriba y separados del arbol
+   por la misma linea suave que divide el resto del editor. */
+.filetools {
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-soft);
+
+  > .btn {
+    flex: 1;
+    /* Los nombres no se cortan a la mitad en un dock de 230px. */
+    white-space: nowrap;
+  }
+}
+
+/* Fila del arbol de archivos: el mismo aspecto que una fila del outliner. Lo
+   unico propio es que la sangria la calcula la plantilla segun la profundidad,
+   porque aca los niveles no son dos fijos como alla. */
+.filerow {
+  /* Valor de arranque; lo pisa el [style.padding-left.px] de la plantilla. */
+  padding-left: 8px;
+
+  /* Una carpeta es estructura, no contenido: se lee un escalon por debajo de
+     los archivos que uno realmente va a abrir. */
+  &--dir .tree__label {
+    color: var(--text-dim);
+  }
+
+  &--dir .tree__icon {
+    color: var(--text-dim);
+  }
+}
+
+/* ---------- Paleta de recursos (asset browser) ---------- */
+.assets {
+  /* auto-fill con minimo de 64px: entran tantas miniaturas por fila como
+     permita el ancho del area, sin fijar el numero de columnas a mano. El alto
+     se topea para que la paleta no se coma el arbol de escena. */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  align-content: start;
+  gap: 4px;
+  padding: 6px;
+  max-height: 176px;
+
+  /* Con la escena plegada, Recursos hereda el alto libre de la barra: el tope
+     ya no hace falta, y es justo el caso de una carpeta con 150 imagenes. */
+  &--fill {
+    max-height: none;
+  }
+}
+
+.asset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text-dim);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: #444;
+  }
+  &.is-active {
+    border-color: var(--accent-hi);
+    background: #3f4a5e;
+    color: var(--text-bright);
+  }
+
+  &__thumb {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 2px;
+    overflow: hidden;
+    /* Tablero de ajedrez: el fondo canonico de transparencia en pixel art. */
+    background-image:
+      linear-gradient(45deg, #4a4a4a 25%, transparent 25%),
+      linear-gradient(-45deg, #4a4a4a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #4a4a4a 75%),
+      linear-gradient(-45deg, transparent 75%, #4a4a4a 75%);
+    background-color: #2e2e2e;
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    image-rendering: pixelated;
+  }
+
+  /* La imagen real de la textura, sobre el tablero de transparencia. Va
+     contenida y no estirada: un sprite ancho no tiene por que deformarse solo
+     para llenar un cuadrado de 32px. */
+  &__img {
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+    /* El fantasma que arrastra el navegador sale del boton, no de la imagen. */
+    pointer-events: none;
+  }
+
+  &__name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+  }
+}
+
+/* ---------- Paleta de figuras (primitivas de bloqueo) ---------- */
+/* Cuatro por fila fijas, no auto-fill como los recursos: son ocho y siempre
+   las mismas, asi que conviene una retícula estable que se aprenda de memoria
+   antes que una que se reacomode con el ancho del panel. */
+.shapes {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  padding: 6px;
+}
+
+.shape {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 1px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text-dim);
+  font: inherit;
+  /* "grab" anuncia que el gesto principal es arrastrar, no clickear. */
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+  &:hover {
+    background: #444;
+    color: var(--text);
+  }
+  &.is-active {
+    border-color: var(--accent-hi);
+    background: #3f4a5e;
+    color: var(--text-bright);
+  }
+
+  /* El tamano, el recorte y la escala los pone thumbStyle() en app.ts: son un
+     recorte del spritesheet real, no un icono aparte. Aca solo queda lo que no
+     depende de la figura. */
+  &__icon {
+    background-repeat: no-repeat;
+    /* Es pixel art: escalado sin interpolar o se ve pastoso. */
+    image-rendering: pixelated;
+    /* El fantasma que el navegador arrastra sale de este elemento; sin esto
+       arrastraria tambien el fondo del boton. */
+    pointer-events: none;
+  }
+
+  &__name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+  }
+}
+
+/* Icono de un arquetipo de personaje. A diferencia del de las figuras no es un
+   recorte del spritesheet: un personaje puede tener cualquier arte, asi que lo
+   que lo identifica en la paleta es su color -- el mismo con el que el viewport
+   dibuja sus entidades, para que paleta y escena se lean juntas. */
+.character__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 3px;
+  color: #101010;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Entidades agarradas con Ctrl: mano cerrada mientras se arrastran. Con dos
+   clases para ganarle al cursor de la herramienta activa, que se declara mas
+   abajo con la misma especificidad. */
+.canvas.canvas--moving {
+  cursor: grabbing;
+}
+
+/* ---------- Dialogos anchos ---------- */
+/* El de grilla y el de tunel tienen varios campos por fila (los cuatro lados,
+   columna/fila/ancho/alto): en 400px se apilaban y el dialogo quedaba mas alto
+   que la ventana. Mas ancho, entran en pocas filas. */
+/* Con DOS clases a proposito: .modal declara su ancho de 400px mas abajo en
+   este archivo, y con una sola clase empataba en especificidad y ganaba por
+   venir despues. Por eso estos dialogos nunca llegaron a ensancharse. */
+.modal.modal--wide {
+  width: min(640px, calc(100vw - 40px));
+}
+
+.modal.modal--xl {
+  width: min(960px, calc(100vw - 40px));
+}
+
+.modal--wide,
+.modal--xl {
+  .field-row > .field {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ---------- Configurar personajes ---------- */
+.chareditor {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+
+  /* Cada columna se desplaza por su cuenta: la lista puede crecer mucho sin
+     llevarse el formulario hacia abajo. */
+  &__list,
+  &__form {
+    max-height: 64vh;
+    overflow: auto;
+  }
+
+  &__list {
+    padding: 6px 0;
+    border-right: 1px solid var(--border-soft);
+    background: var(--bg-header);
+  }
+
+  &__group {
+    padding-bottom: 6px;
+  }
+
+  &__grouphead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 2px 12px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-style: italic;
+  }
+
+  &__form {
+    padding: 10px 12px;
+  }
+
+  &__section {
+    margin: 14px 0 4px;
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__asset {
+    display: grid;
+    grid-template-columns: 112px 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  /* Tablero de transparencia detras del sprite, como en Recursos. */
+  &__preview {
+    display: grid;
+    place-items: center;
+    height: 112px;
+    border-radius: var(--radius);
+    background-image:
+      linear-gradient(45deg, #4a4a4a 25%, transparent 25%),
+      linear-gradient(-45deg, #4a4a4a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #4a4a4a 75%),
+      linear-gradient(-45deg, transparent 75%, #4a4a4a 75%);
+    background-color: #2e2e2e;
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  }
+
+  &__sprite {
+    display: block;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+  }
+
+  &__nopreview {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  /* Los dos numeros, la casilla y el boton en una sola fila, alineados abajo
+     con los campos. */
+  &__collider {
+    align-items: flex-end;
+  }
+}
+
+/* Selector de asset: las texturas del proyecto como miniaturas. */
+.texpicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  align-content: start;
+  gap: 3px;
+  max-height: 112px;
+  overflow: auto;
+
+  /* El aviso de "sin texturas" ocupa todo el ancho: como una celda mas de la
+     grilla de 40px se partia en una palabra por renglon. */
+  .hint {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  &__item {
+    display: grid;
+    place-items: center;
+    height: 40px;
+    padding: 2px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: var(--bg-panel);
+    cursor: pointer;
+
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+    }
+
+    &:hover {
+      background: #444;
+    }
+    &.is-active {
+      border-color: var(--accent-hi);
+      background: #3f4a5e;
+    }
+  }
+}
+
+/* ---------- Paleta: personajes configurados de un tipo ---------- */
+.presetlist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 6px 6px;
+
+  &__item {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: var(--bg-panel);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    /* "grab": el gesto principal es arrastrarlo a la grilla. */
+    cursor: grab;
+
+    &:hover {
+      background: #444;
+    }
+    &.is-active {
+      border-color: var(--accent-hi);
+      background: #3f4a5e;
+    }
+  }
+
+  &__thumb {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    overflow: hidden;
+    border-radius: 3px;
+  }
+
+  &__sprite {
+    display: block;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+
+  &__name {
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__stats {
+    color: var(--text-dim);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  &__new {
+    margin-top: 2px;
+  }
+}
+
+/* Grupo de botones que puede bajar de linea (los cuatro lados de una grilla
+   en un dialogo angosto). Separados y todos redondeados: pegados en varias
+   filas, las esquinas de .seg dejarian formas raras. */
+.seg.seg--wrap {
+  flex-wrap: wrap;
+  gap: 3px;
+
+  > * {
+    border-radius: var(--radius);
+  }
+}
+
+/* ---------- Panel Mapa: grillas y tuneles ---------- */
+.maprow__actions {
+  display: flex;
+  gap: 3px;
+}
+/* Cada grilla es un bloque: nombre con su boton de quitar, y debajo sus cuatro
+   numeros en una fila. La linea suave de abajo separa una grilla de la
+   siguiente sin llegar a ser un panel dentro del panel. */
+.maprow {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  &__name {
+    overflow: hidden;
+    font-family: ui-monospace, "Cascadia Mono", monospace;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Un tunel entra en una sola linea: "de -> a", su ancho y quitar. */
+  &--inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .maprow__name {
+      flex: 1;
+    }
+  }
+
+  &__num {
+    width: 54px;
+  }
+}
+
+.maplist__title {
+  margin: 10px 0 2px;
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- Visor de archivos ---------- */
+/* Solo lectura: el editor muestra el archivo, no lo edita. Es la diferencia
+   entre poder revisar el proyecto sin salir de la ventana y tener que abrir
+   otro programa para mirar un .cpp o un .md. */
+.fileview {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  /* Se respetan los saltos del archivo pero las lineas largas bajan solas: una
+     barra horizontal en un panel de 200px de alto es incomodisima. */
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  &--image {
+    display: grid;
+    place-items: center;
+    padding: 12px;
+
+    img {
+      max-width: 100%;
+      max-height: 240px;
+      /* Casi todo lo que se mira aca es pixel art. */
+      image-rendering: pixelated;
+    }
+  }
+}
+
+/* ---------- Viewport ---------- */
+.viewport {
+  background: var(--bg-viewport);
+}
+
+/* Grupo de botones pegados entre si: solo el primero y el ultimo llevan
+   esquinas redondeadas, como las filas de toggles del header de Blender. */
+.seg {
+  display: flex;
+
+  > * {
+    border-radius: 0;
+
+    &:first-child {
+      border-radius: var(--radius) 0 0 var(--radius);
+    }
+    &:last-child {
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    &:only-child {
+      border-radius: var(--radius);
+    }
+  }
+}
+
+.head__sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--border-soft);
+}
+
+.head__label {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+/* Boton de header: el widget base de Blender. Gris claro, plano, redondeado, y
+   azul cuando esta encendido. */
+.tool {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 18px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--widget);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--widget-hover);
+  }
+  &.is-active {
+    background: var(--accent);
+    color: var(--text-bright);
+  }
+  &--zoom {
+    font-family: ui-monospace, "Cascadia Mono", monospace;
+    font-size: 10px;
+  }
+}
+
+/* Contenedor del canvas. Es "relative" para que los overlays se posicionen
+   contra el, y "overflow: hidden" para que el canvas no desborde al ampliar.
+
+   Es tambien el elemento que mide el ResizeObserver de app.ts: el canvas no
+   tiene tamano propio, lo toma de aca. Por eso se observa este div y no el
+   canvas (dibujar cambia el tamano del canvas y se entraria en un bucle). */
+.canvas-host {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Sin suavizado: el pixel art se ve a bordes duros aun al ampliar. */
+  image-rendering: pixelated;
+  /* Flecha normal para seleccionar y cruz solo al colocar, como Blender:
+     el cursor dice que va a hacer el click. */
+  cursor: default;
+
+  &--place {
+    cursor: crosshair;
+  }
+
+  /* Va ultimo a proposito: durante un arrastre de camara el cursor de mano
+     cerrada gana sobre el de la herramienta activa, porque en ese momento el
+     gesto es desplazar, no colocar. */
+  &--panning {
+    cursor: grabbing;
+  }
+}
+
+/* Texto de la esquina superior izquierda del viewport: en Blender es la
+   coleccion y el objeto activo. Aca, el nivel y la entidad seleccionada.
+
+   "pointer-events: none" es imprescindible en los dos overlays: sin eso se
+   comen los clicks y no se podria colocar una entidad debajo de ellos. */
+.vp-info {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  color: rgba(230, 230, 230, 0.55);
+  font-size: 11px;
+  pointer-events: none;
+
+  &__active {
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+/* Encima/Debajo bajo el nombre del nivel. .vp-info no recibe el puntero (para
+   no tapar el canvas), asi que los botones lo reactivan solo para ellos. */
+.vp-gridpos {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  pointer-events: auto;
+  width: max-content;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    background: rgba(20, 20, 20, 0.6);
+    color: rgba(230, 230, 230, 0.7);
+    cursor: pointer;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.3;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    /* El tachado lleva un borde del color del boton para que se lea como
+       cortando las capas y no como otra linea mas. */
+    .slash {
+      stroke-width: 1.6;
+      paint-order: stroke;
+      filter: drop-shadow(0 0 1px rgba(20, 20, 20, 0.9));
+    }
+
+    /* Apilados en vertical: se redondea arriba el primero y abajo el ultimo. */
+    &:first-child {
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    &:last-child {
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+    &:hover {
+      background: rgba(60, 60, 60, 0.8);
+    }
+    &.is-active {
+      background: var(--accent);
+      color: var(--text-bright);
+    }
+  }
+}
+
+/* Chips de la esquina inferior izquierda (celda bajo el cursor, herramienta). */
+.vp-chips {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+
+  span {
+    padding: 1px 7px;
+    border-radius: var(--radius);
+    background: rgba(20, 20, 20, 0.6);
+    color: rgba(230, 230, 230, 0.7);
+    font-family: ui-monospace, "Cascadia Mono", monospace;
+    font-size: 10px;
+  }
+}
+
+/* ---------- Editor de propiedades ---------- */
+/* Columna de iconos a la izquierda + contenido a la derecha, igual que el
+   editor de propiedades de Blender. */
+.props {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  min-height: 0;
+}
+
+.ptabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 0 3px;
+  background: var(--bg-header);
+}
+
+.ptab {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+  /* La pestana activa se funde con el fondo del contenido, sin subrayado. */
+  &.is-active {
+    background: var(--bg-editor);
+    color: var(--text-bright);
+  }
+}
+
+.props__body {
+  min-height: 0;
+  overflow: auto;
+  padding: 4px;
+}
+
+/* Panel plegable. Cabecera con triangulo y cuerpo debajo, los dos con el mismo
+   redondeo: es la unidad con la que Blender organiza todo el inspector. */
+.panel {
+  margin-bottom: 4px;
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  overflow: hidden;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    height: 24px;
+    padding: 0 8px;
+    border: 0;
+    background: var(--bg-panel-head);
+    color: var(--text);
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: #4b4b4b;
+    }
+  }
+
+  /* El triangulo gira en vez de cambiar de caracter: un solo glifo, y la
+     transicion deja claro que es el mismo panel abriendose. */
+  &__arrow {
+    display: inline-block;
+    color: var(--text-dim);
+    font-size: 9px;
+    transition: transform 0.12s ease;
+    transform: rotate(90deg);
+
+    &--collapsed {
+      transform: rotate(0deg);
+    }
+  }
+
+  &__count {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  &__body {
+    padding: 6px 8px 8px;
+  }
+
+  &--flat {
+    background: transparent;
+
+    > .panel__body {
+      padding: 6px 0;
+    }
+  }
+}
+
+/* ---------- Campos ----------
+   El campo de Blender: una pastilla redondeada con la etiqueta adentro a la
+   izquierda y el valor a la derecha, sin borde ni fondo separados. Es el
+   control mas caracteristico de su interfaz, y el que mas cambia la lectura
+   de todo el inspector.
+
+   Las flechas ◀ ▶ aparecen al pasar por encima, igual que las suyas. */
+.field {
+  display: flex;
+  align-items: center;
+  height: 20px;
+  margin-bottom: 3px;
+  padding: 0 8px;
+  border-radius: var(--radius);
+  background: var(--widget);
+  overflow: hidden;
+
+  &:hover {
+    background: var(--widget-hover);
+  }
+  &:focus-within {
+    background: var(--widget-sunken);
+    box-shadow: inset 0 0 0 1px var(--accent-hi);
+  }
+
+  > span {
+    flex: 0 0 auto;
+    max-width: 46%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  /* Las flechas se reservan su hueco siempre (visibility, no display) para que
+     el valor no se corra un pixel al pasar el mouse. */
+  &::before,
+  &::after {
+    color: var(--text-dim);
+    font-size: 8px;
+    visibility: hidden;
+  }
+  &::before {
+    content: "◀";
+    margin-right: 2px;
+  }
+  &::after {
+    content: "▶";
+    margin-left: 2px;
+  }
+  &:hover::before,
+  &:hover::after {
+    visibility: visible;
+  }
+  /* Con el campo en edicion las flechas estorban: se van del todo. */
+  &:focus-within::before,
+  &:focus-within::after {
+    visibility: hidden;
+  }
+
+  /* Variante suelta para barras y filas de eventos: ahi el control va sin
+     pastilla, porque ya vive dentro de una fila con su propio fondo. */
+  &--inline {
+    height: auto;
+    margin-bottom: 0;
+    padding: 0;
+    background: transparent;
+    overflow: visible;
+
+    &:hover,
+    &:focus-within {
+      background: transparent;
+      box-shadow: none;
+    }
+    &::before,
+    &::after {
+      content: none;
+    }
+
+    > span {
+      margin-right: 6px;
+      color: var(--text-dim);
+      font-size: 10px;
+    }
+  }
+}
+
+/* Dos campos por fila (X/Y, ancho/alto). */
+.field-row {
+  display: flex;
+  gap: 3px;
+
+  .field {
+    flex: 1;
+    /* Sin esto los dos campos no bajan del ancho natural del input y el
+       segundo se sale del area. */
+    min-width: 0;
+  }
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-bright);
+  font: inherit;
+  font-size: 11px;
+
+  &:focus {
+    outline: none;
+  }
+
+  /* El valor numerico alineado a la derecha y la etiqueta a la izquierda: es lo
+     que hace legible una columna de campos de un vistazo. El texto libre
+     (nombres, rutas) se queda a la izquierda, que se lee mejor. */
+  &[type="number"] {
+    text-align: right;
+    padding-right: 0;
+    /* Las flechitas nativas de Chromium rompen la pastilla. */
+    -moz-appearance: textfield;
+    appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      appearance: none;
+      margin: 0;
+    }
+  }
+
+  /* Un <select> dentro de una pastilla se funde con ella: es un control mas
+     del campo, no una caja aparte. Su desplegable si necesita fondo propio,
+     porque Chromium no se lo hereda. */
+  &:is(select) {
+    padding-left: 6px;
+    cursor: pointer;
+
+    option {
+      background: var(--bg-header);
+      color: var(--text);
+    }
+  }
+}
+
+/* Un select solo (sin pastilla alrededor) en las barras. */
+.select-lone {
+  height: 18px;
+  min-width: 130px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--widget);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--widget-hover);
+  }
+  option {
+    background: var(--bg-header);
+  }
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+
+  input {
+    accent-color: var(--accent);
+    margin: 0;
+  }
+}
+
+/* ---------- Selector de color (panel Fondo y colores) ---------- */
+.picker {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+
+  /* Las dos capas (blanco a la izquierda, negro abajo) van encima del color
+     puro del tono, que se pinta desde el template. */
+  &__square {
+    position: relative;
+    flex: 1;
+    height: 170px;
+    border-radius: var(--radius);
+    background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent);
+    box-shadow: inset 0 0 0 1px var(--border);
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  &__cursor {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  &__hue {
+    position: relative;
+    flex: 0 0 14px;
+    border-radius: var(--radius);
+    background: linear-gradient(to bottom, #f00 0%, #ff0 16.67%, #0f0 33.33%, #0ff 50%, #00f 66.67%, #f0f 83.33%, #f00 100%);
+    box-shadow: inset 0 0 0 1px var(--border);
+    cursor: ns-resize;
+    touch-action: none;
+  }
+
+  &__hue-cursor {
+    position: absolute;
+    left: -3px;
+    right: -3px;
+    height: 5px;
+    border: 1px solid #fff;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  &__row {
+    display: flex;
+    gap: 3px;
+
+    > .field {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__swatch {
+    flex: 0 0 40px;
+    height: 20px;
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+}
+
+.hint {
+  margin: 5px 0 0;
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1.4;
+
+  &--warn {
+    color: #c9a24a;
+  }
+}
+
+/* Un control que no es un solo valor -- una fila de botones, o un texto con
+   botones debajo --: etiqueta arriba y contenido abajo. Adentro de la pastilla
+   de 20px de .field quedaba aplastado y cortado, que es lo que pasaba con "De
+   que lado" y "Trazado". */
+.fieldblock {
+  margin-bottom: 6px;
+
+  &__label {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  .hint {
+    margin: 0 0 4px;
+  }
+}
+
+/* ---------- Dialogo de nivel nuevo ---------- */
+/* Fondo oscurecido del dialogo. "inset: 0" lo estira sobre toda la ventana y
+   "place-items: center" centra el dialogo sin cuentas. Ademas de oscurecer,
+   bloquea el resto de la interfaz: un click aca cierra el dialogo (ver el
+   (click) del backdrop en app.html). */
+.modal-backdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* Los popups de Blender si tienen esquinas redondeadas y una sombra marcada:
+   son lo unico que flota sobre la interfaz. */
+.modal {
+  width: min(400px, 100%);
+  /* Nunca mas alto que la ventana: un dialogo con muchos campos se desplaza
+     por dentro en vez de dejar los botones de abajo fuera de la pantalla. */
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: 6px;
+  background: var(--bg-editor);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  /* Sin "overflow: hidden" aca: pisaba el overflow-y de arriba y un dialogo
+     alto quedaba recortado en vez de desplazarse. El auto ya recorta las
+     esquinas redondeadas igual. */
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 26px;
+    padding: 0 6px 0 10px;
+    background: var(--bg-header);
+
+    h2 {
+      margin: 0;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
+
+  &__body {
+    padding: 10px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+    padding: 4px 10px 10px;
+
+    /* Los botones de confirmacion de Blender ocupan el ancho completo y a
+       partes iguales. */
+    .btn {
+      flex: 1;
+      height: 24px;
+    }
+  }
+}
+
+.icon-button {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--widget);
+    color: var(--text);
+  }
+}
+
+/* ---------- Editor de eventos / consola ---------- */
+.bottom {
+  height: 200px;
+}
+
+.event {
+  margin-bottom: 4px;
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  overflow: hidden;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+
+    &--child {
+      padding-left: 24px;
+      border-top: 1px solid #2e2e2e;
+    }
+  }
+}
+
+/* Etiquetas "Cuando" / "Entonces" de cada fila de evento. Los dos colores no
+   son decorativos: separan de un vistazo la causa del efecto, que es la
+   lectura basica de un evento NoCode. */
+.badge {
+  padding: 1px 7px;
+  border-radius: var(--radius);
+  font-size: 10px;
+  font-weight: 500;
+
+  &--trigger {
+    background: #5c4520;
+    color: #f0c07a;
+  }
+  &--action {
+    background: #2c4468;
+    color: #9dc0ee;
+  }
+}
+
+/* Consola de la workspace Salida: el log que llena note() en app.ts.
+   Monoespaciada porque casi siempre muestra rutas y nombres de archivo. */
+.console {
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+  font-size: 11px;
+
+  &__line {
+    padding: 1px 0;
+    color: var(--text-dim);
+
+    /* El prompt va por CSS y no en el texto del mensaje: asi el log guardado en
+       app.ts queda limpio, sin caracteres de presentacion. */
+    &::before {
+      content: "› ";
+      color: var(--accent-hi);
+    }
+  }
+}
+
+.pad {
+  padding: 6px;
+}
+
+/* ---------- Barra de estado ----------
+   La de Blender: pistas de teclado y raton a la izquierda, estadisticas de la
+   escena a la derecha, y ni un borde. */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 10px;
+  background: var(--bg-window);
+  color: var(--text-dim);
+  font-size: 11px;
+
+  &__msg {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__stat {
+    white-space: nowrap;
+
+    &--warn {
+      color: #d8a13c;
+    }
+  }
+}
+
+/* Pista de raton/teclado: la tecla en una capsula y su accion al lado. */
+.keyhint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+
+  b {
+    padding: 0 4px;
+    border-radius: 3px;
+    background: #333;
+    color: var(--text);
+    font-weight: 500;
+    font-size: 10px;
+  }
+}
+
+/* ---------- Botones ----------
+   .btn es el boton de dialogos y barras generales; .tool, mas arriba, es el de
+   las cabeceras de area. Comparten fondo y redondez: en Blender son el mismo
+   widget con distinto alto. */
+.btn {
+  height: 20px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--widget);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--widget-hover);
+  }
+
+  &--primary {
+    background: var(--accent);
+    color: var(--text-bright);
+
+    &:hover {
+      background: var(--accent-hi);
+    }
+  }
+
+  &--danger:hover {
+    background: var(--danger);
+    color: var(--text-bright);
+  }
+
+  &--small {
+    height: 18px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: 10px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.5;
+  /* En la paleta de recursos el contenedor es un grid de columnas angostas:
+     sin esto el mensaje cae dentro de una columna de 64px y se parte letra
+     a letra. */
+  grid-column: 1 / -1;
+}
+
+/* ---------- Scrollbars ----------
+   Finas y sin pista visible, como las de Blender. Esto es propietario de
+   WebKit/Chromium, lo que aca alcanza: el editor corre siempre sobre Electron. */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 6px;
+  background: #545454;
+  background-clip: content-box;
+
+  &:hover {
+    background: #6b6b6b;
+    background-clip: content-box;
+  }
+}
+
+/* ---------- Objetos y armas ---------- */
+/* Las seis formas de ataque como botones: las de cuerpo a cuerpo en gris, las
+   de distancia en gris azulado, para que la categoria se lea sin etiqueta. */
+.patterns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  margin-bottom: 4px;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: var(--widget);
+    color: var(--text);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--widget-hover);
+    }
+    &.is-active {
+      border-color: var(--accent-hi);
+      background: var(--accent);
+      color: var(--text-bright);
+    }
+  }
+
+  &__item--ranged:not(.is-active) {
+    background: #4a5261;
+  }
+
+  &__glyph {
+    width: 14px;
+    text-align: center;
+  }
+}
+
+/* Formulario a la izquierda, vista previa a la derecha. */
+.attackform {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 10px;
+  align-items: start;
+
+  &__preview {
+    width: 260px;
+    height: 160px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+  }
+}
+
+/* Los campos de un ataque van en grilla y no en una fila flex: son hasta
+   siete, y en una sola fila se comprimian hasta cortar etiquetas y valores. */
+.field-row--wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px;
+
+  > .field {
+    min-width: 0;
+  }
+}
+
+/* Titulo chico dentro de un panel del inspector o de un dialogo. */
+.subhead {
+  margin: 10px 0 4px;
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Lista de casillas (las puertas de un puzzle), en columnas y con scroll. */
+.checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 2px 10px;
+  max-height: 160px;
+  margin-bottom: 8px;
+  overflow: auto;
+
+  small {
+    margin-left: 4px;
+    color: var(--text-dim);
+  }
+}
+
+.maprow__select {
+  flex: 1;
+  min-width: 0;
+}
+
+.maprow__unit {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+/* "Si": la condicion va entre la causa (Cuando) y el efecto (Entonces). */
+.badge--condition {
+  background: #3d4a2a;
+  color: #b9d98a;
+}

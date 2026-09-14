@@ -1,0 +1,2459 @@
+<!--
+  Plantilla del editor. La ventana se arma como la de Blender: un topbar con
+  menus y pestanas de workspace, y debajo AREAS -- editores independientes,
+  cada uno con su propia cabecera de 26px -- separadas por un surco de 2px.
+
+    +-----------------------------------------------------+
+    |  topbar: menus  |  Layout · Eventos · Salida         |
+    +-----------+-----------------------------+-----------+
+    | outliner  | ⊞ cabecera del viewport     | ⚙ props   |
+    | (escena)  +-----------------------------+ +---------+
+    +-----------+                             | |t| campos|
+    | recursos  |     canvas isometrico       | |a|       |
+    |           |                             | |b|       |
+    +-----------+-----------------------------+-----------+
+    |  editor inferior (eventos / salida), segun workspace |
+    +-----------------------------------------------------+
+    |  barra de estado: pistas de teclas | estadisticas    |
+    +-----------------------------------------------------+
+
+  Todo lee de signals del componente (app.ts) y escribe llamando a sus metodos;
+  no hay estado propio de la plantilla. Se usa la sintaxis de control de flujo
+  moderna de Angular (@if / @for / @empty), no las directivas *ngIf / *ngFor.
+-->
+<div class="shell">
+  <!-- ===================== TOPBAR ===================== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark">⬢</span>
+      <span class="brand__name">HoneyComb</span>
+    </div>
+
+    <!-- Barra de menus con desplegables (Archivo, Editar, Ver, Mapa...). Se
+         describe entera en el computed "menus" de app.ts. -->
+    <app-menu-bar [menus]="menus()" />
+
+    <!-- Guarda y lanza el motor con el nivel abierto. Destacado porque es la
+         accion que cierra el ciclo de trabajo: editar, probar, corregir. -->
+    <button class="menu menu--run" (click)="run()" title="Guardar y ejecutar en el motor (F5)">
+      ▶ Ejecutar
+    </button>
+
+    <!-- Pestanas de workspace: no cambian de pantalla, cambian que editores
+         estan abiertos (ver el tipo Workspace en app.ts). -->
+    <nav class="wstabs">
+      <button class="wstab" [class.is-active]="workspace() === 'layout'" (click)="workspace.set('layout')">
+        Layout
+      </button>
+      <button class="wstab" [class.is-active]="workspace() === 'eventos'" (click)="workspace.set('eventos')">
+        Eventos
+      </button>
+      <button class="wstab" [class.is-active]="workspace() === 'salida'" (click)="workspace.set('salida')">
+        Salida
+      </button>
+      <button class="wstab" [class.is-active]="workspace() === 'archivo'" (click)="workspace.set('archivo')"
+              title="Ver el archivo abierto desde el explorador">
+        Archivo
+      </button>
+    </nav>
+
+    <div class="topbar__spacer"></div>
+
+    <!-- Aviso de cambios sin guardar. Antes iba como "Guardar *" en un boton
+         que ahora vive dentro del menu Archivo, donde no se ve de un vistazo. -->
+    @if (dirty()) {
+      <span class="topbar__dirty" title="Hay cambios sin guardar (Ctrl+S)">● Sin guardar</span>
+    }
+
+    <!-- Interruptores de los paneles laterales, a la derecha como los de
+         diseño de VS Code. Tambien estan en el menu Ver. -->
+    <button class="menu" [class.is-active]="sidebarVisible()" (click)="toggleSidebar()"
+            title="Mostrar u ocultar el panel izquierdo (Ctrl+B)">☰</button>
+    <button class="menu" [class.is-active]="inspectorVisible()" (click)="toggleInspector()"
+            title="Mostrar u ocultar el panel de propiedades">⚙</button>
+
+    <!-- [selected] en cada opcion, y no solo [value] en el select: Angular
+         asigna el valor ANTES de crear las opciones del @for, y el navegador
+         se queda con la primera. Pasa en todos los desplegables con opciones
+         generadas, por eso se repite en cada uno. -->
+    <select class="select-lone" [value]="levels.fileName() ?? ''" (change)="loadLevel(str($event))">
+      <option value="" disabled [selected]="!levels.fileName()">— nivel —</option>
+      @for (file of levelFiles(); track file) {
+        <option [value]="file" [selected]="levels.fileName() === file">{{ file }}</option>
+      }
+    </select>
+  </header>
+
+  <!-- Dialogo de nivel nuevo. Click en el fondo cierra; el stopPropagation del
+       <section> evita que un click dentro del dialogo llegue al fondo y lo cierre. -->
+  @if (showNewLevelDialog()) {
+    <div class="modal-backdrop" (click)="cancelNewLevel()">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="new-level-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="new-level-title">Crear nivel</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="cancelNewLevel()">×</button>
+        </div>
+
+        <div class="modal__body">
+          <label class="field">
+            <span>Nombre</span>
+            <input class="input" [value]="newLevelName()" (input)="newLevelName.set(str($event))" autofocus />
+          </label>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Ancho</span>
+              <input class="input" type="number" min="1" step="1" [value]="newLevelWidth()"
+                     (input)="newLevelWidth.set(int($event))" />
+            </label>
+            <label class="field">
+              <span>Alto</span>
+              <input class="input" type="number" min="1" step="1" [value]="newLevelHeight()"
+                     (input)="newLevelHeight.set(int($event))" />
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Tile W</span>
+              <input class="input" type="number" min="1" step="1" [value]="newLevelTileWidth()"
+                     (input)="newLevelTileWidth.set(int($event))" />
+            </label>
+            <label class="field">
+              <span>Tile H</span>
+              <input class="input" type="number" min="1" step="1" [value]="newLevelTileHeight()"
+                     (input)="newLevelTileHeight.set(int($event))" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Plantilla</span>
+            <select class="input" [value]="newLevelTemplate()" (change)="setNewLevelTemplate(str($event))">
+              <option value="empty">Grilla vacia</option>
+              <option value="player">Jugador</option>
+              <option value="test-scene">Escena de prueba</option>
+            </select>
+          </label>
+
+          @if (textures().length === 0) {
+            <p class="hint">Las plantillas usan textures/player.png. Abre un proyecto antes de guardar el nivel.</p>
+          } @else {
+            <p class="hint">Usa {{ textures()[0] }} como textura inicial. Puedes cambiarla desde Recursos.</p>
+          }
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn" type="button" (click)="cancelNewLevel()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="confirmNewLevel()">Crear nivel</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Celda ocupada. Antes se apilaba sin avisar y las dos entidades quedaban
+       una encima de la otra tapandose: se veia una sola, y la de abajo aparecia
+       solo en el outliner. "Reemplazar" va primero porque es lo que uno suele
+       querer al volver a colocar algo en la misma casilla. -->
+  @if (pendingPlacement()) {
+    <div class="modal-backdrop" (click)="cancelPending()">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="occupied-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="occupied-title">Esa celda ya esta ocupada</h2>
+          <button class="icon-button" type="button" title="Cancelar" (click)="cancelPending()">×</button>
+        </div>
+
+        <div class="modal__body">
+          <p class="hint">{{ pendingSummary() }}</p>
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn" type="button" (click)="cancelPending()">Cancelar</button>
+          <button class="btn" type="button" (click)="stackPending()"
+                  title="Deja las dos en la misma celda, una encima de la otra">Superponer</button>
+          <button class="btn btn--primary" type="button" (click)="replacePending()">Reemplazar</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Menu del clic derecho sobre una entidad. Va centrado y no pegado al
+       cursor: ahora tiene controles de verdad (el tamano de una figura), y el
+       menu chico junto al puntero se cerraba con cualquier roce del mouse.
+       La casilla Pared es un solo booleano del contrato (collider.solid). -->
+  @if (contextMenuEntity(); as entity) {
+    <div class="modal-backdrop" (click)="closeContextMenu()">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="entity-menu-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="entity-menu-title">{{ entity.id }}</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="closeContextMenu()">×</button>
+        </div>
+
+        <div class="modal__body">
+          @if (isShape(entity)) {
+            <div class="field">
+              <span>Tamaño en celdas</span>
+              <div class="seg">
+                @for (size of spanChoices; track size) {
+                  <button class="tool" type="button" [class.is-active]="spanOf(entity) === size"
+                          (click)="setSpan(entity.id, size)">
+                    {{ size }}×{{ size }}
+                  </button>
+                }
+              </div>
+            </div>
+            <label class="field">
+              <span>Otro tamaño</span>
+              <input class="input" type="number" min="1" step="1" [max]="maxSpan()"
+                     [value]="spanOf(entity)" (change)="setSpan(entity.id, int($event))" />
+            </label>
+            <p class="hint">
+              Ocupa de {{ entity.position.col }},{{ entity.position.row }} a
+              {{ entity.position.col + spanOf(entity) - 1 }},{{ entity.position.row + spanOf(entity) - 1 }}.
+              Su colision crece con ella.
+            </p>
+            @if (overlapIds(entity).length > 0) {
+              <p class="hint hint--warn">Se superpone con: {{ overlapIds(entity).join(', ') }}.</p>
+            }
+          }
+
+          <label class="check">
+            <input type="checkbox" [checked]="isWall(entity)"
+                   (change)="setWall(entity.id, checked($event))" />
+            <span>Pared — {{ isWall(entity) ? 'bloquea el paso' : 'se atraviesa' }}</span>
+          </label>
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn btn--primary" type="button" (click)="closeContextMenu()">Listo</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Grilla del mapa: agregar una nueva, o cambiar una que ya existe (clic
+       derecho sobre ella, o ✎ en el panel Mapa). Una nueva se puede pegar a
+       otra eligiendo de que lado va, o dejar donde se la dibujo con la
+       herramienta Grilla. La vista previa verde del viewport muestra el lugar
+       mientras se cambian los numeros. -->
+  @if (roomDraft(); as draft) {
+    <div class="modal-backdrop" (click)="cancelRoomDialog()">
+      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="room-dialog-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="room-dialog-title">{{ draft.editId ? 'Grilla “' + draft.editId + '”' : 'Agregar grilla al mapa' }}</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="cancelRoomDialog()">×</button>
+        </div>
+
+        <div class="modal__body">
+          @if (!draft.editId && rooms().length === 0) {
+            <p class="hint">
+              El nivel todavía es una sola grilla. Al agregar esta, el área actual pasa a llamarse
+              “sala_1” y se puede unir con la nueva.
+            </p>
+          }
+
+          <div class="field-row">
+            @if (!draft.editId) {
+              <label class="field">
+                <span>Nombre</span>
+                <input class="input" [value]="draft.id" (input)="patchRoomDraft({ id: str($event) })" />
+              </label>
+            }
+            <label class="field">
+              <span>Ubicar junto a</span>
+              <select class="input" [value]="draft.anchor" (change)="setRoomAnchor(str($event))">
+                <option value="" [selected]="draft.anchor === ''">— posición libre —</option>
+                @for (room of anchorRooms(); track room.id) {
+                  <option [value]="room.id" [selected]="draft.anchor === room.id">{{ room.id }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          @if (draft.anchor) {
+            <div class="fieldblock">
+              <span class="fieldblock__label">De qué lado</span>
+              <div class="seg seg--wrap">
+                @for (side of roomSides; track side.value) {
+                  <button class="tool" type="button" [class.is-active]="draft.side === side.value"
+                          [title]="side.hint" (click)="setRoomSide(side.value)">{{ side.label }}</button>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Escribir columna o fila suelta la grilla de la de al lado; el
+               tamano, en cambio, la mantiene pegada. Ver patchRoomPosition. -->
+          <div class="field-row">
+            <label class="field">
+              <span>Columna</span>
+              <input class="input" type="number" step="1" [value]="draft.col"
+                     (input)="patchRoomPosition({ col: int($event) })" />
+            </label>
+            <label class="field">
+              <span>Fila</span>
+              <input class="input" type="number" step="1" [value]="draft.row"
+                     (input)="patchRoomPosition({ row: int($event) })" />
+            </label>
+            <label class="field">
+              <span>Ancho</span>
+              <input class="input" type="number" min="1" step="1" [value]="draft.width"
+                     (input)="patchRoomSize({ width: int($event) })" />
+            </label>
+            <label class="field">
+              <span>Alto</span>
+              <input class="input" type="number" min="1" step="1" [value]="draft.height"
+                     (input)="patchRoomSize({ height: int($event) })" />
+            </label>
+          </div>
+
+          @if (!draft.editId) {
+            <div class="field-row">
+              <label class="field">
+                <span>Conectar con</span>
+                <select class="input" [value]="draft.connectTo" (change)="patchRoomDraft({ connectTo: str($event) })">
+                  <option value="" [selected]="draft.connectTo === ''">— sin túnel —</option>
+                  @for (room of connectableRooms(); track room.id) {
+                    <option [value]="room.id" [selected]="draft.connectTo === room.id">{{ room.id }}</option>
+                  }
+                </select>
+              </label>
+              @if (draft.connectTo) {
+                <label class="field">
+                  <span>Ancho del túnel (celdas)</span>
+                  <input class="input" type="number" min="1" step="1" [value]="draft.tunnelWidth"
+                         (input)="patchRoomDraft({ tunnelWidth: int($event) })" />
+                </label>
+              }
+            </div>
+          }
+
+          <p class="hint">
+            El recuadro verde del viewport muestra dónde va a quedar. Si cae a la izquierda o arriba del
+            mapa, el mapa entero se corre para hacerle lugar.
+          </p>
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn" type="button" (click)="cancelRoomDialog()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="confirmRoomDialog()">
+            {{ draft.editId ? 'Guardar' : 'Agregar grilla' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Menu del tunel: nuevo, recien trazado a mano, o uno existente (clic
+       derecho sobre el, o ✎ en el panel Mapa). Los lados deciden por donde
+       sale y entra; el trazado, por donde pasa. -->
+  @if (tunnelDraft(); as draft) {
+    <div class="modal-backdrop" (click)="cancelTunnelDialog()">
+      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="tunnel-dialog-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="tunnel-dialog-title">
+            {{ draft.editId ? 'Túnel “' + draft.editId + '”' : 'Conectar grillas con un túnel' }}
+          </h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="cancelTunnelDialog()">×</button>
+        </div>
+
+        <div class="modal__body">
+          <div class="field-row">
+            <label class="field">
+              <span>Desde</span>
+              <select class="input" [value]="draft.from" (change)="patchTunnelDraft({ from: str($event) })">
+                @for (room of rooms(); track room.id) {
+                  <option [value]="room.id" [selected]="draft.from === room.id">{{ room.id }}</option>
+                }
+              </select>
+            </label>
+            <label class="field">
+              <span>Hasta</span>
+              <select class="input" [value]="draft.to" (change)="patchTunnelDraft({ to: str($event) })">
+                @for (room of rooms(); track room.id) {
+                  <option [value]="room.id" [selected]="draft.to === room.id">{{ room.id }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Sale por</span>
+              <select class="input" [value]="draft.fromSide" (change)="patchTunnelDraft({ fromSide: sideValue($event) })">
+                <option value="" [selected]="draft.fromSide === ''">Automático (centro)</option>
+                @for (side of roomSides; track side.value) {
+                  <option [value]="side.value" [selected]="draft.fromSide === side.value">{{ side.label }}</option>
+                }
+              </select>
+            </label>
+            <label class="field">
+              <span>Entra por</span>
+              <select class="input" [value]="draft.toSide" (change)="patchTunnelDraft({ toSide: sideValue($event) })">
+                <option value="" [selected]="draft.toSide === ''">Automático (centro)</option>
+                @for (side of roomSides; track side.value) {
+                  <option [value]="side.value" [selected]="draft.toSide === side.value">{{ side.label }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Ancho (celdas caminables)</span>
+            <input class="input" type="number" min="1" step="1" [value]="draft.width"
+                   (input)="patchTunnelDraft({ width: int($event) })" />
+          </label>
+
+          <div class="fieldblock">
+            <span class="fieldblock__label">Trazado</span>
+            @if (draft.path.length > 0) {
+              <p class="hint">A mano, pasando por {{ draft.path.length }} puntos marcados.</p>
+            } @else {
+              <p class="hint">Automático: tramos rectos entre sus dos extremos.</p>
+            }
+            <div class="field-row">
+              <button class="btn" style="flex: 1" type="button" (click)="retraceTunnel()">Trazar a mano…</button>
+              <button class="btn" style="flex: 1" type="button" [disabled]="draft.path.length === 0"
+                      (click)="patchTunnelDraft({ path: [] })">Volver a automático</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn" type="button" (click)="cancelTunnelDialog()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="confirmTunnelDialog()">
+            {{ draft.editId ? 'Guardar' : 'Conectar' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Configurar personajes. A la izquierda, los guardados en el proyecto por
+       tipo; a la derecha, el que se esta editando. Lo que se guarda aca
+       aparece en el panel Personajes para arrastrarlo a cualquier nivel. -->
+  @if (characterEditor(); as editor) {
+    <div class="modal-backdrop" (click)="closeCharacterEditor()">
+      <section class="modal modal--xl" role="dialog" aria-modal="true" aria-labelledby="chars-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="chars-title">Configurar personajes</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="closeCharacterEditor()">×</button>
+        </div>
+
+        <div class="chareditor">
+          <nav class="chareditor__list">
+            @for (kind of characterKinds; track kind.id) {
+              <div class="chareditor__group">
+                <div class="chareditor__grouphead">
+                  <span>{{ kind.glyph }} {{ kind.label }}</span>
+                  <button class="btn btn--small" type="button" [title]="'Nuevo ' + kind.label.toLowerCase()"
+                          (click)="newCharacterDraft(kind.id)">+</button>
+                </div>
+                @for (preset of savedPresetsOfKind(kind.id); track preset.id) {
+                  <button class="tree__item" type="button" [class.is-active]="editor.savedId === preset.id"
+                          (click)="editCharacterPreset(preset.id)">
+                    <span class="tree__label">{{ preset.name }}</span>
+                  </button>
+                } @empty {
+                  <p class="chareditor__empty">Ninguno guardado</p>
+                }
+              </div>
+            }
+          </nav>
+
+          <div class="chareditor__form">
+            @if (!editor.savedId) {
+              <p class="hint hint--warn">Sin guardar todavía.</p>
+            }
+
+            <div class="field-row">
+              <label class="field">
+                <span>Nombre</span>
+                <input class="input" [value]="editor.draft.name" (input)="patchCharacterDraft({ name: str($event) })" />
+              </label>
+              <label class="field">
+                <span>Tipo</span>
+                <select class="input" [value]="editor.draft.kind" (change)="setCharacterKind(str($event))">
+                  @for (kind of characterKinds; track kind.id) {
+                    <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.label }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+            <p class="hint">{{ kindHint(editor.draft.kind) }}</p>
+
+            <div class="chareditor__section">Asset</div>
+            <div class="chareditor__asset">
+              <div class="chareditor__preview" title="Primer cuadro del recorte">
+                @if (draftPreviewStyle(); as style) {
+                  <span class="chareditor__sprite" [style]="style"></span>
+                } @else {
+                  <span class="chareditor__nopreview">Sin vista previa</span>
+                }
+              </div>
+              <div class="texpicker">
+                @for (texture of textures(); track texture) {
+                  <button class="texpicker__item" type="button" [title]="texture"
+                          [class.is-active]="editor.draft.texture === 'textures/' + texture"
+                          (click)="setDraftTexture(texture)">
+                    @if (textureAssets()[texture]; as asset) {
+                      <img [src]="asset.dataUrl" [alt]="texture" />
+                    }
+                  </button>
+                } @empty {
+                  <p class="hint">Sin texturas en assets/textures/. Importalas desde Recursos.</p>
+                }
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span>Recorte X</span>
+                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.x"
+                       (change)="patchDraftRect('x', int($event))" />
+              </label>
+              <label class="field">
+                <span>Y</span>
+                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.y"
+                       (change)="patchDraftRect('y', int($event))" />
+              </label>
+              <label class="field">
+                <span>Ancho</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.width"
+                       (change)="patchDraftRect('width', int($event))" />
+              </label>
+              <label class="field">
+                <span>Alto</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.height"
+                       (change)="patchDraftRect('height', int($event))" />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span>Cuadros</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.frames"
+                       (change)="setDraftFrames(int($event))" />
+              </label>
+              <label class="field">
+                <span>Seg. por cuadro</span>
+                <input class="input" type="number" min="0.05" step="0.05" [value]="editor.draft.frameDuration"
+                       (change)="setDraftFrameDuration(num($event))" />
+              </label>
+              <label class="field">
+                <span>Tamaño (escala)</span>
+                <input class="input" type="number" min="0.25" step="0.25" [value]="editor.draft.scale"
+                       (change)="setDraftScale(num($event))" />
+              </label>
+            </div>
+            <p class="hint">
+              Los cuadros van uno al lado del otro en la textura, del ancho del recorte. Con escala 2 se dibuja
+              al doble.
+            </p>
+
+            <div class="chareditor__section">Colisión</div>
+            <div class="field-row chareditor__collider">
+              <label class="field">
+                <span>Ancho</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.width"
+                       (change)="patchDraftCollider('width', int($event))" />
+              </label>
+              <label class="field">
+                <span>Alto</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.height"
+                       (change)="patchDraftCollider('height', int($event))" />
+              </label>
+              <label class="check">
+                <input type="checkbox" [checked]="editor.draft.collider.solid === true"
+                       (change)="setDraftSolid(checked($event))" />
+                <span>Sólido</span>
+              </label>
+              <button class="btn btn--small" type="button" (click)="fitDraftCollider()"
+                      title="Del tamaño con que se dibuja: el recorte por la escala">Ajustar al sprite</button>
+            </div>
+
+            <div class="chareditor__section">Características</div>
+            <div class="field-row">
+              <label class="field">
+                <span>Vida</span>
+                <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.health"
+                       (change)="patchDraftStats('health', num($event))" />
+              </label>
+              <label class="field">
+                <span>Daño</span>
+                <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.damage"
+                       (change)="patchDraftStats('damage', num($event))" />
+              </label>
+              <label class="field">
+                <span title="Celdas de grilla por segundo">Velocidad</span>
+                <input class="input" type="number" min="0" step="0.5" [value]="editor.draft.stats.speed"
+                       (change)="patchDraftStats('speed', num($event))" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          @if (editor.savedId) {
+            <button class="btn btn--danger" type="button" (click)="deleteCharacterPreset()">Eliminar</button>
+            <button class="btn" type="button" (click)="duplicateCharacterPreset()">Duplicar</button>
+          }
+          <button class="btn" type="button" (click)="closeCharacterEditor()">Cerrar</button>
+          <button class="btn btn--primary" type="button" (click)="saveCharacterDraft()">Guardar</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Objetos y armas: la biblioteca del proyecto (items.json). Mismo armado que
+       Configurar personajes; la logica esta en combat/item-editor.controller.ts.
+       Cada ataque muestra su forma en vivo, con la misma geometria que el motor. -->
+  @if (itemEditor.state(); as editor) {
+    <div class="modal-backdrop" (click)="itemEditor.close()">
+      <section class="modal modal--xl" role="dialog" aria-modal="true" aria-labelledby="items-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="items-title">Objetos y armas</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="itemEditor.close()">×</button>
+        </div>
+
+        <div class="chareditor">
+          <nav class="chareditor__list">
+            @for (group of itemEditor.groups(); track group.id) {
+              <div class="chareditor__group">
+                <div class="chareditor__grouphead">
+                  <span>{{ group.label }}</span>
+                  <button class="btn btn--small" type="button" [title]="'Nuevo: ' + group.label.toLowerCase()"
+                          (click)="itemEditor.create(group.kind, group.category)">+</button>
+                </div>
+                @for (item of group.items; track item.id) {
+                  <button class="tree__item" type="button" [class.is-active]="editor.savedId === item.id"
+                          (click)="itemEditor.edit(item.id)">
+                    <span class="tree__label">{{ itemGlyph(item) }} {{ item.name }}</span>
+                  </button>
+                } @empty {
+                  <p class="chareditor__empty">Ninguno guardado</p>
+                }
+              </div>
+            }
+          </nav>
+
+          <div class="chareditor__form">
+            @if (!editor.savedId) {
+              <p class="hint hint--warn">Sin guardar todavía.</p>
+            }
+
+            <div class="field-row">
+              <label class="field">
+                <span>Nombre</span>
+                <input class="input" [value]="editor.draft.name" (input)="itemEditor.setName(str($event))" />
+              </label>
+              <label class="field">
+                <span>Tipo</span>
+                <select class="input" (change)="itemEditor.setKind(str($event))">
+                  @for (kind of itemKinds; track kind.id) {
+                    <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.glyph }} {{ kind.label }}</option>
+                  }
+                </select>
+              </label>
+              @if (editor.draft.weapon; as weapon) {
+                <label class="field">
+                  <span>Categoría</span>
+                  <select class="input" (change)="itemEditor.setCategory(str($event))">
+                    <option value="melee" [selected]="weapon.category === 'melee'">Cuerpo a cuerpo</option>
+                    <option value="ranged" [selected]="weapon.category === 'ranged'">A distancia</option>
+                  </select>
+                </label>
+              }
+            </div>
+            <p class="hint">{{ itemKindHint(editor.draft.kind) }}</p>
+
+            <div class="chareditor__section">Sprite</div>
+            <div class="chareditor__asset">
+              <div class="chareditor__preview" title="Así se ve en el piso y en el inventario">
+                @if (itemSpriteStyle(editor.draft, 96); as style) {
+                  <span class="chareditor__sprite" [style]="style"></span>
+                } @else {
+                  <span class="chareditor__nopreview">Sin vista previa</span>
+                }
+              </div>
+              <div class="texpicker">
+                @for (texture of textures(); track texture) {
+                  <button class="texpicker__item" type="button" [title]="texture"
+                          [class.is-active]="editor.draft.texture === 'textures/' + texture"
+                          (click)="setItemTexture(texture)">
+                    @if (textureAssets()[texture]; as asset) {
+                      <img [src]="asset.dataUrl" [alt]="texture" />
+                    }
+                  </button>
+                } @empty {
+                  <p class="hint">Sin texturas en assets/textures/. Importalas desde Recursos.</p>
+                }
+              </div>
+            </div>
+            <div class="field-row">
+              <label class="field">
+                <span>Recorte X</span>
+                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.x"
+                       (change)="itemEditor.patchRect('x', int($event))" />
+              </label>
+              <label class="field">
+                <span>Y</span>
+                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.y"
+                       (change)="itemEditor.patchRect('y', int($event))" />
+              </label>
+              <label class="field">
+                <span>Ancho</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.width"
+                       (change)="itemEditor.patchRect('width', int($event))" />
+              </label>
+              <label class="field">
+                <span>Alto</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.height"
+                       (change)="itemEditor.patchRect('height', int($event))" />
+              </label>
+              <label class="field">
+                <span>Escala</span>
+                <input class="input" type="number" min="0.05" step="0.05" [value]="editor.draft.scale ?? 1"
+                       (change)="itemEditor.setScale(num($event))" />
+              </label>
+            </div>
+
+            @if (editor.draft.kind === 'healing') {
+              <div class="chareditor__section">Curación</div>
+              <div class="field-row">
+                <label class="field">
+                  <span>Vida que devuelve</span>
+                  <input class="input" type="number" min="0" step="5" [value]="editor.draft.heal ?? 0"
+                         (change)="itemEditor.setHeal(num($event))" />
+                </label>
+              </div>
+            }
+
+            @if (editor.draft.kind === 'coin') {
+              <div class="chareditor__section">Moneda</div>
+              <div class="field-row">
+                <label class="field">
+                  <span>Monedas que suma</span>
+                  <input class="input" type="number" min="1" step="1" [value]="editor.draft.value ?? 1"
+                         (change)="itemEditor.setCoinValue(int($event))" />
+                </label>
+              </div>
+              <p class="hint">Las monedas se gastan en la tienda de un NPC (inspector del NPC > Tienda).</p>
+            }
+
+            @if (editor.draft.weapon; as weapon) {
+              @for (block of itemEditor.attackSlots(); track block.slot) {
+                <div class="chareditor__section">{{ block.label }}</div>
+                <div class="attackform">
+                  <div>
+                    <div class="patterns">
+                      @for (pattern of itemEditor.patterns; track pattern.id) {
+                        <button type="button" class="patterns__item" [class.is-active]="block.attack.pattern === pattern.id"
+                                [class.patterns__item--ranged]="pattern.category === 'ranged'" [title]="pattern.hint"
+                                (click)="itemEditor.setPattern(block.slot, pattern.id)">
+                          <span class="patterns__glyph">{{ pattern.glyph }}</span>
+                          <span>{{ pattern.label }}</span>
+                        </button>
+                      }
+                    </div>
+                    <p class="hint">{{ itemEditor.patternHint(block.attack) }}</p>
+                    <div class="field-row field-row--wrap">
+                      <label class="field">
+                        <span>Daño</span>
+                        <input class="input" type="number" min="0" step="1" [value]="block.attack.damage"
+                               (change)="itemEditor.setDamage(block.slot, num($event))" />
+                      </label>
+                      <label class="field">
+                        <span title="Segundos entre dos ataques">Pausa (s)</span>
+                        <input class="input" type="number" min="0" step="0.05" [value]="block.attack.cooldown"
+                               (change)="itemEditor.setCooldown(block.slot, num($event))" />
+                      </label>
+                      @for (field of itemEditor.numericFields(block.attack); track field.field) {
+                        <label class="field">
+                          <span [title]="field.hint">{{ field.label }}</span>
+                          <input class="input" type="number" [min]="field.min" [attr.max]="field.max ?? null"
+                                 [step]="field.step" [value]="field.value"
+                                 (change)="itemEditor.setField(block.slot, field.field, num($event))" />
+                        </label>
+                      }
+                    </div>
+                    @if (itemEditor.usesPierce(block.attack)) {
+                      <label class="check">
+                        <input type="checkbox" [checked]="block.attack.pierce === true"
+                               (change)="itemEditor.setPierce(block.slot, checked($event))" />
+                        <span>Atraviesa enemigos</span>
+                      </label>
+                    }
+                  </div>
+                  <canvas class="attackform__preview" width="260" height="160"
+                          [appAttackPreview]="block.attack" title="Vista previa: apuntando con el mouse hacia la derecha"></canvas>
+                </div>
+
+                @if (block.slot === 'weapon') {
+                  <div class="chareditor__section">Habilidad por golpes</div>
+                  <label class="check">
+                    <input type="checkbox" [checked]="!!weapon.ability" (change)="itemEditor.setAbilityEnabled(checked($event))" />
+                    <span>El arma carga una habilidad acertando golpes</span>
+                  </label>
+                  @if (weapon.ability; as ability) {
+                    <div class="field-row">
+                      <label class="field">
+                        <span>Nombre</span>
+                        <input class="input" [value]="ability.name ?? ''"
+                               (input)="itemEditor.patchAbility({ name: str($event) })" />
+                      </label>
+                      <label class="field">
+                        <span title="Ataques que tienen que acertar para cargarla">Golpes para cargar</span>
+                        <input class="input" type="number" min="1" step="1" [value]="ability.hitsRequired"
+                               (change)="itemEditor.setHitsRequired(int($event))" />
+                      </label>
+                      <label class="field">
+                        <span>Se lanza</span>
+                        <select class="input" (change)="itemEditor.setActivation(str($event))">
+                          <option value="auto" [selected]="ability.activation !== 'manual'">Sola, en el ataque siguiente</option>
+                          <option value="manual" [selected]="ability.activation === 'manual'">Con la tecla Q</option>
+                        </select>
+                      </label>
+                      <label class="field">
+                        <span title="Segundos sin acertar que vacían el contador. 0 = nunca">Se pierde tras (s)</span>
+                        <input class="input" type="number" min="0" step="0.5" [value]="ability.resetAfter ?? 0"
+                               (change)="itemEditor.setResetAfter(num($event))" />
+                      </label>
+                    </div>
+                    <p class="hint">
+                      Cada ataque que acierta suma 1 al contador del arma (se ve bajo su casillero en el juego). Lleno, la
+                      habilidad queda lista; lanzarla vacía el contador. El evento “Al usar una habilidad” permite
+                      reaccionar a ella.
+                    </p>
+                  }
+                }
+              }
+            }
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          @if (editor.savedId) {
+            <button class="btn btn--danger" type="button" (click)="itemEditor.remove()">Eliminar</button>
+            <button class="btn" type="button" (click)="itemEditor.duplicate()">Duplicar</button>
+            @if (itemEditor.definedInLevel()) {
+              <button class="btn" type="button" (click)="itemEditor.updateInLevel()"
+                      title="El nivel abierto tiene su propia copia de este objeto: ponerla al día con lo guardado">
+                Actualizar en este nivel
+              </button>
+            }
+          }
+          <button class="btn" type="button" (click)="itemEditor.close()">Cerrar</button>
+          <button class="btn btn--primary" type="button" (click)="itemEditor.save()">Guardar</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Pasar a otro nivel: arma el evento con su trigger y la accion
+       load_level, que en el juego muestra la pantalla con el mensaje y carga
+       el nivel elegido. Queda en el panel Eventos para ajustarlo. -->
+  @if (transitionDraft(); as draft) {
+    <div class="modal-backdrop" (click)="cancelTransitionDialog()">
+      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="transition-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="transition-title">Pasar a otro nivel</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="cancelTransitionDialog()">×</button>
+        </div>
+
+        <div class="modal__body">
+          <div class="field-row">
+            <label class="field">
+              <span>Cuándo</span>
+              <select class="input" [value]="draft.when" (change)="setTransitionWhen(str($event))">
+                <option value="entity_destroyed" [selected]="draft.when === 'entity_destroyed'">
+                  Al eliminar una entidad
+                </option>
+                <option value="all_enemies" [selected]="draft.when === 'all_enemies'">
+                  Al vencer a todos los enemigos
+                </option>
+                <option value="touch" [selected]="draft.when === 'touch'">Cuando el jugador toca una entidad</option>
+              </select>
+            </label>
+            @if (draft.when !== 'all_enemies') {
+              <label class="field">
+                <span>Entidad</span>
+                <select class="input" [value]="draft.entity" (change)="patchTransitionDraft({ entity: str($event) })">
+                  <option value="" disabled [selected]="draft.entity === ''">— entidad —</option>
+                  @for (id of entityIds(); track id) {
+                    <option [value]="id" [selected]="draft.entity === id">{{ id }}</option>
+                  }
+                </select>
+              </label>
+            }
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Ir al nivel</span>
+              @if (levelFiles().length > 0) {
+                <select class="input" [value]="draft.level" (change)="patchTransitionDraft({ level: str($event) })">
+                  <option value="" disabled [selected]="draft.level === ''">— nivel —</option>
+                  @for (file of levelFiles(); track file) {
+                    <option [value]="file" [selected]="draft.level === file">{{ file }}</option>
+                  }
+                </select>
+              } @else {
+                <input class="input" [value]="draft.level" placeholder="test_level_1.json"
+                       (input)="patchTransitionDraft({ level: str($event) })" />
+              }
+            </label>
+            <label class="field">
+              <span>Mensaje</span>
+              <input class="input" [value]="draft.message" (input)="patchTransitionDraft({ message: str($event) })" />
+            </label>
+          </div>
+
+          <p class="hint">
+            Al cumplirse, el juego se congela, muestra el mensaje un par de segundos y carga el nivel elegido.
+            El nivel siguiente tiene que estar en la misma carpeta levels/.
+          </p>
+          @if (draft.when !== 'all_enemies' && entityIds().length === 0) {
+            <p class="hint hint--warn">El nivel todavía no tiene entidades: colocá un enemigo primero.</p>
+          }
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn" type="button" (click)="cancelTransitionDialog()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="confirmTransitionDialog()">Crear evento</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- Puzzle de sala: que hay que resolver, en que sala, y que entidades
+       bloquean el paso hasta entonces. Arma los eventos con core/puzzles.ts y
+       los deja en el panel Eventos para ajustarlos. -->
+  @if (puzzle.draft(); as draft) {
+    <div class="modal-backdrop" (click)="puzzle.cancel()">
+      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="puzzle-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="puzzle-title">Puzzle de sala</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="puzzle.cancel()">×</button>
+        </div>
+
+        <div class="modal__body">
+          <div class="field-row">
+            <label class="field">
+              <span>Para abrir el paso</span>
+              <select class="input" (change)="puzzle.setKind(str($event))">
+                @for (kind of puzzle.kinds; track kind.id) {
+                  <option [value]="kind.id" [selected]="draft.kind === kind.id">{{ kind.label }}</option>
+                }
+              </select>
+            </label>
+            <label class="field">
+              <span>Sala o zona</span>
+              <select class="input" (change)="puzzle.patch({ zone: str($event) })">
+                <option value="" [selected]="draft.zone === ''">— ninguna —</option>
+                @for (id of puzzle.zoneIds(); track id) {
+                  <option [value]="id" [selected]="draft.zone === id">{{ id }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          <p class="hint">{{ puzzle.kindHint() }}</p>
+
+          @if (draft.kind === 'boss') {
+            <label class="field">
+              <span>Jefe</span>
+              <select class="input" (change)="puzzle.patch({ boss: str($event) })">
+                <option value="" disabled [selected]="draft.boss === ''">— enemigo —</option>
+                @for (enemy of puzzle.enemies(); track enemy.id) {
+                  <option [value]="enemy.id" [selected]="draft.boss === enemy.id">{{ enemy.id }}{{ enemy.boss ? ' ♛' : '' }}</option>
+                }
+              </select>
+            </label>
+          }
+
+          @if (draft.kind === 'collect') {
+            <div class="field-row">
+              <label class="field">
+                <span>Objeto</span>
+                <select class="input" (change)="puzzle.patch({ item: str($event) })">
+                  <option value="" [selected]="draft.item === ''">— cualquiera —</option>
+                  @for (item of combat.options(); track item.id) {
+                    <option [value]="item.id" [selected]="draft.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span title="0 = todos los que están colocados en el nivel">Cantidad (0 = todos)</span>
+                <input class="input" type="number" min="0" step="1" [value]="draft.count"
+                       (change)="puzzle.patch({ count: int($event) })" />
+              </label>
+            </div>
+          }
+
+          <div class="subhead">Bloquean el paso hasta resolverlo</div>
+          <div class="checklist">
+            @for (entity of puzzle.gateCandidates(); track entity.id) {
+              <label class="check">
+                <input type="checkbox" [checked]="draft.gates.includes(entity.id)"
+                       (change)="puzzle.toggleGate(entity.id, checked($event))" />
+                <span>{{ entity.id }} <small>{{ entity.type }} · {{ entity.position.col }},{{ entity.position.row }}</small></span>
+              </label>
+            } @empty {
+              <p class="hint hint--warn">
+                No hay entidades que puedan hacer de puerta. Colocá figuras (un cubo, un pilar) donde se corta el paso.
+              </p>
+            }
+          </div>
+
+          <label class="check">
+            <input type="checkbox" [checked]="draft.lockOnEnter" (change)="puzzle.patch({ lockOnEnter: checked($event) })" />
+            <span>Cerrar las puertas cuando el jugador entra a la zona</span>
+          </label>
+          <p class="hint">
+            @if (draft.lockOnEnter) {
+              Las puertas arrancan ocultas, aparecen al entrar y se van al resolverlo. Volver a entrar no las cierra otra vez.
+            } @else {
+              Las puertas bloquean desde el principio y se van al resolverlo.
+            }
+          </p>
+
+          <label class="field">
+            <span>Mensaje al resolverlo</span>
+            <input class="input" [value]="draft.message" (input)="puzzle.patch({ message: str($event) })" />
+          </label>
+
+          @if (puzzle.zoneIds().length === 0) {
+            <p class="hint">El nivel no tiene salas ni zonas: agregá una con Combate > Agregar zona de puzzle.</p>
+          }
+          @if (puzzle.error(); as error) {
+            <p class="hint hint--warn">{{ error }}</p>
+          }
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn" type="button" (click)="puzzle.cancel()">Cancelar</button>
+          <button class="btn btn--primary" type="button" [disabled]="!!puzzle.error()" (click)="puzzle.confirm()">
+            Crear puzzle
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ===================== CUERPO: TRES AREAS =====================
+       El ancho de la barra lateral sale de un signal y se inyecta en las
+       columnas del grid, asi que arrastrar su borde o esconderla con Ctrl+B no
+       necesita tocar el DOM a mano: cambia el signal y el layout se recalcula.
+       Con la barra oculta esa columna directamente no existe. -->
+  <div class="body" [style.grid-template-columns]="bodyColumns()">
+    <!-- --------- AREA IZQUIERDA: outliner + paletas --------- -->
+    @if (sidebarVisible()) {
+    <div class="stack" [style.grid-template-rows]="sidebarRows()">
+      <!-- Borde arrastrable, como el de VS Code. Va dentro de la barra y
+           posicionado sobre su canto derecho para no ocupar una columna
+           propia del grid. -->
+      <div class="grip grip--right" [class.is-active]="isResizing('sidebar')"
+           title="Arrastra para cambiar el ancho"
+           (pointerdown)="onResizeStart('sidebar', $event)"
+           (pointermove)="onResizeMove($event)"
+           (pointerup)="onResizeEnd($event)"
+           (pointercancel)="onResizeEnd($event)"></div>
+      <!-- Un area, dos editores. Las pestanas de la cabecera no abren otra
+           pantalla: cambian QUE editor ocupa este espacio, igual que el
+           selector de tipo de editor de Blender. "Escena" es el outliner de
+           entidades del nivel abierto; "Proyecto", el organizador de archivos
+           de la carpeta del proyecto (levels/, assets/, schema/). -->
+      <section class="area">
+        <div class="area__head">
+          <!-- Plegar la seccion, como en VS Code. Elegir una de las dos
+               pestanas de al lado la vuelve a desplegar. -->
+          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-main')"
+                  [attr.aria-expanded]="!isCollapsed('side-main')"
+                  (click)="togglePanel('side-main')" title="Plegar o desplegar esta seccion">
+            <span class="area__chevron">▾</span>
+          </button>
+          <div class="seg">
+            <button class="tool" [class.is-active]="leftEditor() === 'escena'"
+                    (click)="setLeftEditor('escena')" title="Escena: entidades del nivel abierto">☰</button>
+            <button class="tool" [class.is-active]="leftEditor() === 'proyecto'"
+                    (click)="setLeftEditor('proyecto')" title="Proyecto: archivos en disco">🗀</button>
+          </div>
+          <span class="area__title">{{ leftEditor() === 'escena' ? 'Escena' : 'Proyecto' }}</span>
+          <div class="head__spacer"></div>
+          @if (leftEditor() === 'escena') {
+            <span class="area__title">{{ entities().length }}</span>
+          } @else {
+            <button class="tool" (click)="refreshTree()" title="Releer la carpeta del proyecto">⟳</button>
+          }
+        </div>
+
+        @if (!isCollapsed('side-main') && leftEditor() === 'escena') {
+          <div class="area__body tree">
+            <!-- Raiz del arbol: deseleccionar todo. Las entidades cuelgan de ella
+                 con sangria, como los objetos bajo una coleccion en Blender. -->
+            <button class="tree__item tree__item--root" [class.is-active]="!selected()"
+                    (click)="selectEntity(null)">
+              <span class="tree__icon">▾</span>{{ levels.level().name }}
+            </button>
+
+            <!-- Ctrl+clic suma o quita una fila, Shift+clic selecciona el rango
+                 desde la activa: las mismas reglas que cualquier lista de
+                 escritorio. "is-active" pinta toda la seleccion; "is-current",
+                 solo la que esta mostrando el inspector. -->
+            @for (entity of entities(); track entity.id) {
+              <button class="tree__item tree__item--child"
+                      [class.is-active]="isEntitySelected(entity.id)"
+                      [class.is-current]="selected()?.id === entity.id"
+                      (click)="onOutlinerClick(entity.id, $event)">
+                <span class="tree__icon tree__icon--{{ entity.type }}">▣</span>
+                <span class="tree__label">{{ entity.id }}</span>
+                <span class="tree__meta">{{ entity.position.col }},{{ entity.position.row }}</span>
+              </button>
+            } @empty {
+              <p class="empty">Sin entidades. Elige una textura y usa la herramienta Colocar.</p>
+            }
+          </div>
+        } @else if (!isCollapsed('side-main')) {
+          <div class="area__body filetree">
+            <!-- Los dos puntos de entrada del panel: elegir una escena ya
+                 existente con el dialogo del sistema (sirva o no la carpeta
+                 abierta), y cambiar cual es la carpeta del proyecto. -->
+            <div class="filetools">
+              <button class="btn btn--small" (click)="openLevelFile()"
+                      title="Elegir un archivo .json de nivel (Ctrl+O)">Abrir escena…</button>
+              <button class="btn btn--small" (click)="openProject()"
+                      title="Elegir la carpeta raiz del proyecto">Carpeta…</button>
+            </div>
+
+            <!-- Una sola lista plana: la sangria la da la profundidad que
+                 calculo projectRows(). Cada fila es un boton porque todas
+                 hacen algo -- abrir la carpeta, cargar el nivel, elegir la
+                 textura, o mostrar el archivo en el visor de abajo. -->
+            @for (row of projectRows(); track row.node.path) {
+              <button class="tree__item filerow"
+                      [class.is-active]="isOpenLevel(row.node) || isOpenFile(row.node)"
+                      [class.filerow--dir]="row.node.kind === 'dir'"
+                      [style.padding-left.px]="8 + row.depth * 12"
+                      [title]="row.node.path"
+                      (click)="openTreeEntry(row.node)">
+                <span class="tree__icon">{{ treeGlyph(row.node) }}</span>
+                <span class="tree__label">{{ row.node.name }}</span>
+              </button>
+            } @empty {
+              <p class="empty">
+                Sin proyecto abierto. Usa “Carpeta…” y elige la raiz: la carpeta que contiene
+                levels/, assets/ y schema/.
+              </p>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Texturas del proyecto. "Importar…" copia una carpeta de imagenes a
+           assets/textures/, y desde ahi cada una se puede arrastrar sobre una
+           entidad del viewport para cambiarle el arte, o sobre una celda vacia
+           para crear una entidad nueva con ella. -->
+      <section class="area">
+        <div class="area__head">
+          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-assets')"
+                  [attr.aria-expanded]="!isCollapsed('side-assets')"
+                  (click)="togglePanel('side-assets')" title="Plegar o desplegar Recursos">
+            <span class="area__chevron">▾</span>▦
+          </button>
+          <span class="area__title">Recursos</span>
+          <div class="head__spacer"></div>
+          <span class="area__title">{{ textures().length }}</span>
+          <button class="tool" [disabled]="importing()" (click)="importTextures()"
+                  title="Copiar a assets/textures/ las imagenes de una carpeta, ajustadas al tamano de un tile">
+            {{ importing() ? 'Importando…' : 'Importar…' }}
+          </button>
+        </div>
+
+        @if (!isCollapsed('side-assets')) {
+        <div class="area__body assets" [class.assets--fill]="isCollapsed('side-main')">
+          @for (texture of textures(); track texture) {
+            <button class="asset" [class.is-active]="activeTexture() === texture"
+                    draggable="true"
+                    (dragstart)="onTextureDragStart($event, texture)"
+                    (click)="selectTexture(texture)"
+                    [title]="texture + ' — arrastra sobre una entidad para cambiarle la textura'">
+              <span class="asset__thumb">
+                @if (textureAssets()[texture]; as asset) {
+                  <img class="asset__img" [src]="asset.dataUrl" [alt]="texture" />
+                }
+              </span>
+              <span class="asset__name">{{ texture }}</span>
+            </button>
+          } @empty {
+            <p class="empty">
+              assets/textures/ vacio o proyecto sin abrir. Usa “Importar…” para traer una carpeta
+              de imagenes.
+            </p>
+          }
+        </div>
+        }
+      </section>
+
+      <!-- Primitivas de bloqueo. Se pueden arrastrar al viewport o clickear
+           para dejarlas como "lo que se va a colocar" con la herramienta de
+           colocar. Las miniaturas las genera app.ts con la misma funcion que
+           dibuja en el canvas (ver core/iso-shapes.ts). -->
+      <section class="area">
+        <div class="area__head">
+          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-shapes')"
+                  [attr.aria-expanded]="!isCollapsed('side-shapes')"
+                  (click)="togglePanel('side-shapes')" title="Plegar o desplegar Figuras">
+            <span class="area__chevron">▾</span>◆
+          </button>
+          <span class="area__title">Figuras</span>
+          <div class="head__spacer"></div>
+          <span class="area__title">arrastra a la grilla</span>
+        </div>
+
+        @if (!isCollapsed('side-shapes')) {
+        <div class="area__body shapes">
+          @for (shape of shapes; track shape.id) {
+            <button
+              class="shape"
+              [class.is-active]="activeShape() === shape.id"
+              draggable="true"
+              [title]="shape.label + ' — arrastra al viewport, o haz clic para colocar'"
+              (dragstart)="onShapeDragStart($event, shape.id)"
+              (click)="selectShape(shape.id)"
+            >
+              <!-- La miniatura es un recorte del MISMO sheet que va al juego,
+                   escalado a la mitad: no hay un icono aparte que pueda quedar
+                   desincronizado del sprite real. Las cuentas estan en
+                   thumbStyle() porque son cuatro valores acoplados entre si. -->
+              <span class="shape__icon" [style]="thumbStyle(shape)"></span>
+              <span class="shape__name">{{ shape.label }}</span>
+            </button>
+          }
+        </div>
+        }
+      </section>
+
+      <!-- Arquetipos de personaje. Funcionan igual que las figuras -- clic para
+           elegir, o arrastrar a la grilla -- pero lo que colocan es una entidad
+           con su type, su collider y su clip de animacion ya puestos como los
+           espera el motor (ver core/characters.ts). -->
+      <section class="area">
+        <div class="area__head">
+          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-characters')"
+                  [attr.aria-expanded]="!isCollapsed('side-characters')"
+                  (click)="togglePanel('side-characters')" title="Plegar o desplegar Personajes">
+            <span class="area__chevron">▾</span>☻
+          </button>
+          <span class="area__title">Personajes</span>
+          <div class="head__spacer"></div>
+          <button class="tool" type="button" (click)="openCharacterEditor()"
+                  title="Configurar personajes: asset, tamaño y características">Configurar…</button>
+        </div>
+
+        <!-- Cada tipo es un boton que DESPLIEGA sus personajes: el base y los
+             configurados en "Configurar…". Arrastrar el boton del tipo coloca
+             el base; arrastrar uno de la lista coloca ese. -->
+        @if (!isCollapsed('side-characters')) {
+        <div class="area__body">
+          <div class="shapes">
+            @for (character of characters; track character.id) {
+              <button
+                class="shape"
+                [class.is-active]="expandedKind() === character.id"
+                draggable="true"
+                [title]="character.label + ': clic para ver los configurados, o arrastrá el básico a la grilla'"
+                (dragstart)="onCharacterDragStart($event, basePresetId(character.id))"
+                (click)="toggleKind(character.id)"
+              >
+                <span class="shape__icon character__icon" [style.background]="character.color">
+                  {{ character.glyph }}
+                </span>
+                <span class="shape__name">{{ character.label }} {{ expandedKind() === character.id ? '▴' : '▾' }}</span>
+              </button>
+            }
+          </div>
+
+          @if (expandedKind(); as kind) {
+            <div class="presetlist">
+              @for (preset of presetsOfKind(kind); track preset.id) {
+                <button class="presetlist__item" type="button" draggable="true"
+                        [class.is-active]="activeCharacter() === preset.id"
+                        [title]="preset.name + ' — arrastrá a la grilla, o clic para colocarlo'"
+                        (dragstart)="onCharacterDragStart($event, preset.id)"
+                        (click)="selectCharacter(preset.id)">
+                  <span class="presetlist__thumb" [style.background]="kindColor(kind)">
+                    @if (presetSpriteStyle(preset); as style) {
+                      <span class="presetlist__sprite" [style]="style"></span>
+                    }
+                  </span>
+                  <span class="presetlist__name">{{ preset.name }}</span>
+                  <span class="presetlist__stats">♥{{ preset.stats.health }} ⚔{{ preset.stats.damage }}</span>
+                </button>
+              }
+              <button class="btn btn--small presetlist__new" type="button" (click)="openCharacterEditor(kind)">
+                + Nuevo {{ kindLabel(kind).toLowerCase() }}…
+              </button>
+            </div>
+          }
+        </div>
+        }
+      </section>
+      <!-- Objetos de la biblioteca del proyecto (items.json): armas, curaciones y
+           monedas. Arrastrar uno a la grilla lo deja para juntarlo, y copia su
+           definicion al nivel (ver core/items.ts). -->
+      <section class="area">
+        <div class="area__head">
+          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-items')"
+                  [attr.aria-expanded]="!isCollapsed('side-items')"
+                  (click)="togglePanel('side-items')" title="Plegar o desplegar Objetos">
+            <span class="area__chevron">▾</span>⚔
+          </button>
+          <span class="area__title">Objetos</span>
+          <div class="head__spacer"></div>
+          <button class="tool" type="button" (click)="itemEditor.open()"
+                  title="Crear y editar armas, curaciones y monedas">Configurar…</button>
+        </div>
+
+        @if (!isCollapsed('side-items')) {
+        <div class="area__body">
+          <div class="presetlist">
+            @for (item of itemLibrary.items(); track item.id) {
+              <button class="presetlist__item" type="button" draggable="true"
+                      [class.is-active]="activeItem() === item.id"
+                      [title]="item.name + ' — arrastrá a la grilla, o clic para colocarlo'"
+                      (dragstart)="onItemDragStart($event, item.id)"
+                      (click)="selectItem(item.id)">
+                <span class="presetlist__thumb" [style.background]="itemColor(item)">
+                  @if (itemSpriteStyle(item); as style) {
+                    <span class="presetlist__sprite" [style]="style"></span>
+                  } @else {
+                    {{ itemGlyph(item) }}
+                  }
+                </span>
+                <span class="presetlist__name">{{ item.name }}</span>
+                <span class="presetlist__stats">{{ itemStat(item) }}</span>
+              </button>
+            } @empty {
+              <p class="empty">Sin objetos. “Configurar…” crea armas, curaciones y monedas.</p>
+            }
+          </div>
+        </div>
+        }
+      </section>
+    </div>
+    }
+
+    <!-- --------- AREA CENTRAL: viewport isometrico --------- -->
+    <section class="area viewport">
+      <div class="area__head">
+        <span class="area__kind" title="Viewport isometrico">⊞</span>
+
+        <div class="seg">
+          <button class="tool" [class.is-active]="tool() === 'select'" (click)="setTool('select')"
+                  title="Seleccionar: clic sobre una entidad">▶</button>
+          <button class="tool" [class.is-active]="tool() === 'place'" (click)="setTool('place')"
+                  title="Colocar entidad: textura o figura elegida">✚</button>
+          <button class="tool" [class.is-active]="tool() === 'floor'" (click)="setTool('floor')"
+                  title="Alternar piso: una celda sin suelo no se puede pisar">▱</button>
+          <button class="tool" [class.is-active]="tool() === 'wall'" (click)="setTool('wall')"
+                  title="Alternar pared: bloquea el paso en esa celda">▥</button>
+          <button class="tool" [class.is-active]="tool() === 'room'" (click)="setTool('room')"
+                  title="Grilla: arrastrá sobre el vacío para dibujar una nueva, o dentro de una para moverla">▢</button>
+          <button class="tool" [class.is-active]="tool() === 'tunnel'" (click)="setTool('tunnel')"
+                  title="Túnel: trazalo a mano, de una grilla a otra">⤳</button>
+        </div>
+
+        <span class="head__sep"></span>
+
+        <!-- Toggles de overlay: en Blender viven juntos y encendidos se ponen
+             azules, que es exactamente lo que hace .tool.is-active. -->
+        <div class="seg">
+          <button class="tool" [class.is-active]="showGrid()" (click)="toggleGrid()"
+                  title="Mostrar grilla">Grilla</button>
+          <button class="tool" [class.is-active]="showColliders()" (click)="toggleColliders()"
+                  title="Mostrar colisiones">Colisiones</button>
+        </div>
+
+        <span class="head__sep"></span>
+
+        <span class="head__label">Zoom</span>
+        <div class="seg">
+          @for (step of zoomSteps; track step) {
+            <button class="tool tool--zoom" [class.is-active]="zoom() === step" (click)="setZoom(step)">
+              {{ step }}x
+            </button>
+          }
+        </div>
+        <button class="tool" (click)="frameAll()" title="Encuadrar todo (Inicio)">Encuadrar</button>
+
+        <div class="head__spacer"></div>
+        <span class="head__label">{{ zoomLabel() }}</span>
+      </div>
+
+      <!-- El canvas no tiene width/height en el HTML: se los fija draw() con
+           lo que mide el contenedor (ver el ResizeObserver en app.ts). Los
+           eventos de puntero cubren seleccionar, colocar y desplazar; la rueda
+           hace zoom anclado al cursor. -->
+      <div class="canvas-host">
+        <canvas
+          #viewport
+          class="canvas"
+          [class.canvas--place]="tool() !== 'select'"
+          [class.canvas--panning]="panning()"
+          [class.canvas--moving]="moving()"
+          (pointerdown)="onPointerDown($event)"
+          (pointermove)="onPointerMove($event)"
+          (pointerup)="onPointerUp($event)"
+          (pointerleave)="onPointerLeave()"
+          (wheel)="onWheel($event)"
+          (contextmenu)="onContextMenu($event)"
+          (dragover)="onCanvasDragOver($event)"
+          (dragleave)="onCanvasDragLeave()"
+          (drop)="onCanvasDrop($event)"
+        ></canvas>
+
+        <!-- Nivel y objeto activo arriba a la izquierda, como el texto de
+             coleccion/objeto del viewport de Blender. -->
+        <div class="vp-info">
+          {{ levels.level().name }}
+          @if (selected(); as entity) {
+            <span class="vp-info__active"> | {{ entity.id }}</span>
+          }
+          <!-- Lineas de la grilla por encima de las entidades (como la de F1
+               en el runtime) o por debajo, que es como se ve el piso. -->
+          <div class="vp-gridpos" role="group" aria-label="Líneas de la grilla">
+            <!-- Tres capas = lineas encima de todo; las mismas capas tachadas =
+                 lineas debajo, sin tapar las entidades. -->
+            <button type="button" [class.is-active]="gridOnTop()" (click)="setGridOnTop(true)"
+                    title="Líneas de la grilla encima de las entidades" aria-label="Líneas encima">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 2 14 5 8 8 2 5Z" />
+                <path d="M2 8 8 11 14 8" />
+                <path d="M2 11 8 14 14 11" />
+              </svg>
+            </button>
+            <button type="button" [class.is-active]="!gridOnTop()" (click)="setGridOnTop(false)"
+                    title="Líneas de la grilla debajo de las entidades" aria-label="Líneas debajo">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 2 14 5 8 8 2 5Z" />
+                <path d="M2 8 8 11 14 8" />
+                <path d="M2 11 8 14 14 11" />
+                <path class="slash" d="M2.5 14.5 13.5 1.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+
+        <div class="vp-chips">
+          @if (hovered(); as cell) {
+            <span>{{ cell.col }}, {{ cell.row }}</span>
+          }
+          @if (tool() === 'place') {
+            <span>colocar · {{ activeCharacterLabel() ?? activeItemLabel() ?? activeShape() ?? activeTexture() ?? 'nada elegido' }}</span>
+          }
+          @if (selectionCount() > 1) {
+            <span>{{ selectionCount() }} seleccionadas</span>
+          }
+          @if (tunnelTrace(); as trace) {
+            <span>túnel desde {{ trace.from }} · {{ trace.points.length }} puntos · Retroceso deshace · Escape cancela</span>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- --------- AREA DERECHA: editor de propiedades ---------
+         Columna de pestanas a la izquierda (objeto / escena) y paneles
+         plegables a la derecha, como el Properties editor de Blender. Cada
+         control escribe con un patch* del componente, nunca directo sobre el
+         objeto del nivel. -->
+    @if (inspectorVisible()) {
+    <section class="area inspector">
+      <!-- Mismo borde arrastrable que el panel izquierdo, en su canto interno. -->
+      <div class="grip grip--left" [class.is-active]="isResizing('inspector')"
+           title="Arrastra para cambiar el ancho"
+           (pointerdown)="onResizeStart('inspector', $event)"
+           (pointermove)="onResizeMove($event)"
+           (pointerup)="onResizeEnd($event)"
+           (pointercancel)="onResizeEnd($event)"></div>
+
+      <div class="area__head">
+        <span class="area__kind" title="Propiedades">⚙</span>
+        <span class="area__title">Propiedades</span>
+      </div>
+
+      <div class="area__body props">
+        <nav class="ptabs">
+          <button class="ptab" [class.is-active]="inspectorTab() === 'objeto'"
+                  (click)="inspectorTab.set('objeto')" title="Objeto">▣</button>
+          <button class="ptab" [class.is-active]="inspectorTab() === 'escena'"
+                  (click)="inspectorTab.set('escena')" title="Escena">⊞</button>
+        </nav>
+
+        <div class="props__body">
+          @if (inspectorTab() === 'objeto') {
+            @if (selected(); as entity) {
+              <!-- Con varias seleccionadas los campos siguen mostrando UNA (no
+                   se pueden mostrar dos valores en el mismo campo), asi que
+                   hay que decir cual y cuantas hay detras: lo que se escriba
+                   arriba cambia solo la activa, mientras que los botones del
+                   final y la casilla de pared van a todas. -->
+              @if (selectionCount() > 1) {
+                <p class="hint hint--warn">
+                  {{ selectionCount() }} entidades seleccionadas. Los campos editan “{{ entity.id }}”;
+                  Duplicar, Eliminar y Pared actuan sobre todas.
+                </p>
+              }
+
+              <section class="panel">
+                <button class="panel__head" (click)="togglePanel('obj')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('obj')">▶</span>
+                  Objeto
+                </button>
+                @if (!isCollapsed('obj')) {
+                  <div class="panel__body">
+                    <label class="field">
+                      <span>ID</span>
+                      <input class="input" [value]="entity.id" (change)="patchEntity({ id: str($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>Tipo</span>
+                      <input class="input" [value]="entity.type" (change)="patchEntity({ type: str($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>Textura</span>
+                      <input class="input" [value]="entity.texture"
+                             (change)="patchEntity({ texture: str($event) })" />
+                    </label>
+                  </div>
+                }
+              </section>
+
+              <section class="panel">
+                <button class="panel__head" (click)="togglePanel('transform')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('transform')">▶</span>
+                  Transformacion
+                </button>
+                @if (!isCollapsed('transform')) {
+                  <div class="panel__body">
+                    <label class="field">
+                      <span>Columna</span>
+                      <input class="input" type="number" step="1" [value]="entity.position.col"
+                             (input)="patchPosition('col', int($event))" />
+                    </label>
+                    <label class="field">
+                      <span>Fila</span>
+                      <input class="input" type="number" step="1" [value]="entity.position.row"
+                             (input)="patchPosition('row', int($event))" />
+                    </label>
+                  </div>
+                }
+              </section>
+
+              <section class="panel">
+                <button class="panel__head" (click)="togglePanel('sprite')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('sprite')">▶</span>
+                  Sprite
+                </button>
+                @if (!isCollapsed('sprite')) {
+                  <div class="panel__body">
+                    <div class="field-row">
+                      <label class="field">
+                        <span>X</span>
+                        <input class="input" type="number" step="1" [value]="entity.sourceRect.x"
+                               (input)="patchSourceRect('x', int($event))" />
+                      </label>
+                      <label class="field">
+                        <span>Y</span>
+                        <input class="input" type="number" step="1" [value]="entity.sourceRect.y"
+                               (input)="patchSourceRect('y', int($event))" />
+                      </label>
+                    </div>
+                    <div class="field-row">
+                      <label class="field">
+                        <span>W</span>
+                        <input class="input" type="number" step="1" [value]="entity.sourceRect.width"
+                               (input)="patchSourceRect('width', int($event))" />
+                      </label>
+                      <label class="field">
+                        <span>H</span>
+                        <input class="input" type="number" step="1" [value]="entity.sourceRect.height"
+                               (input)="patchSourceRect('height', int($event))" />
+                      </label>
+                    </div>
+                  </div>
+                }
+              </section>
+
+              <section class="panel">
+                <button class="panel__head" (click)="togglePanel('collider')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('collider')">▶</span>
+                  Fisica
+                </button>
+                @if (!isCollapsed('collider')) {
+                  <div class="panel__body">
+                    <label class="check">
+                      <input type="checkbox" [checked]="!!entity.collider"
+                             (change)="toggleCollider(checked($event))" />
+                      <span>Collider</span>
+                    </label>
+                    <!-- Lo mismo que ofrece el menu del click derecho. Esta
+                         tambien aca porque es una propiedad del objeto, y el
+                         inspector es donde uno la busca. -->
+                    <label class="check" style="margin-top: 6px">
+                      <input type="checkbox" [checked]="isWall(entity)"
+                             (change)="setWallOnSelection(checked($event))" />
+                      <span>Pared (bloquea el paso)</span>
+                    </label>
+                    @if (entity.collider; as collider) {
+                      <div class="field-row" style="margin-top: 6px">
+                        <label class="field">
+                          <span>W</span>
+                          <input class="input" type="number" step="1" [value]="collider.width"
+                                 (input)="patchCollider('width', int($event))" />
+                        </label>
+                        <label class="field">
+                          <span>H</span>
+                          <input class="input" type="number" step="1" [value]="collider.height"
+                                 (input)="patchCollider('height', int($event))" />
+                        </label>
+                      </div>
+                    }
+                  </div>
+                }
+              </section>
+
+              <section class="panel">
+                <button class="panel__head" (click)="togglePanel('anim')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('anim')">▶</span>
+                  Animación y tamaño
+                </button>
+                @if (!isCollapsed('anim')) {
+                  <div class="panel__body">
+                    <div class="field-row">
+                      <label class="field">
+                        <span>Cuadros</span>
+                        <input class="input" type="number" min="1" step="1" [value]="effectiveFrames(entity)"
+                               (change)="patchEntityFrames(int($event))" />
+                      </label>
+                      <label class="field">
+                        <span>Seg/cuadro</span>
+                        <input class="input" type="number" min="0.05" step="0.05"
+                               [value]="effectiveFrameDuration(entity)"
+                               (change)="patchEntityFrameDuration(num($event))" />
+                      </label>
+                      <label class="field">
+                        <span>Escala</span>
+                        <input class="input" type="number" min="0.25" step="0.25" [value]="entity.scale ?? 1"
+                               (change)="patchEntityScale(num($event))" />
+                      </label>
+                    </div>
+                    <p class="hint">
+                      Los cuadros van uno al lado del otro en la textura, del ancho del recorte. Con 1 el sprite
+                      queda quieto.
+                    </p>
+                  </div>
+                }
+              </section>
+
+              @if (isCharacter(entity)) {
+                <section class="panel">
+                  <button class="panel__head" (click)="togglePanel('stats')">
+                    <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('stats')">▶</span>
+                    Características
+                  </button>
+                  @if (!isCollapsed('stats')) {
+                    <div class="panel__body">
+                      <div class="field-row">
+                        <label class="field">
+                          <span>Vida</span>
+                          <input class="input" type="number" min="0" step="1" [value]="statsOf(entity).health"
+                                 (change)="patchEntityStats('health', num($event))" />
+                        </label>
+                        <label class="field">
+                          <span>Daño</span>
+                          <input class="input" type="number" min="0" step="1" [value]="statsOf(entity).damage"
+                                 (change)="patchEntityStats('damage', num($event))" />
+                        </label>
+                        <label class="field">
+                          <span>Velocidad</span>
+                          <input class="input" type="number" min="0" step="0.5" [value]="statsOf(entity).speed"
+                                 (change)="patchEntityStats('speed', num($event))" />
+                        </label>
+                      </div>
+                      @if (entity.preset) {
+                        <p class="hint">
+                          Basado en el personaje “{{ entity.preset }}”. Lo que cambies acá afecta solo a esta entidad.
+                        </p>
+                      }
+                    </div>
+                  }
+                </section>
+              }
+
+              <!-- Combate, objetos y puzzles. Lo que muestra depende del type:
+                   inventario y movilidad del jugador, arma y botin de un
+                   enemigo, tienda de un NPC, que objeto es un objeto. La logica
+                   esta en combat/combat-inspector.controller.ts. -->
+              @let role = combat.roleOf(entity);
+              <section class="panel">
+                <button class="panel__head" (click)="togglePanel('combat')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('combat')">▶</span>
+                  {{ role === 'npc' ? 'Tienda' : role === 'item' ? 'Objeto para juntar' : role === 'other' ? 'Puzzle' : 'Combate' }}
+                </button>
+                @if (!isCollapsed('combat')) {
+                  <div class="panel__body">
+                    @switch (role) {
+                      @case ('player') {
+                        @let inventory = combat.inventoryOf(entity);
+                        <div class="subhead">Inventario</div>
+                        <div class="field-row">
+                          <label class="field">
+                            <span title="Armas que entran; en el juego se eligen con 1 a 9">Casilleros</span>
+                            <input class="input" type="number" min="1" max="9" step="1" [value]="inventory.slots"
+                                   (change)="combat.patchInventory(entity, { slots: int($event) })" />
+                          </label>
+                          <label class="field">
+                            <span>Monedas</span>
+                            <input class="input" type="number" min="0" step="1" [value]="inventory.coins"
+                                   (change)="combat.patchInventory(entity, { coins: int($event) })" />
+                          </label>
+                        </div>
+                        <label class="check">
+                          <input type="checkbox" [checked]="inventory.locked"
+                                 (change)="combat.patchInventory(entity, { locked: checked($event) })" />
+                          <span>Límite bloqueado (los eventos no lo cambian)</span>
+                        </label>
+                        <label class="field" style="margin-top: 6px">
+                          <span>Con el inventario lleno</span>
+                          <select class="input" (change)="combat.patchInventory(entity, { onFull: onFullOf(str($event)) })">
+                            @for (option of combat.onFullOptions; track option.value) {
+                              <option [value]="option.value" [selected]="inventory.onFull === option.value">{{ option.label }}</option>
+                            }
+                          </select>
+                        </label>
+                        <p class="hint">{{ combat.onFullHint(inventory.onFull) }}</p>
+
+                        <div class="subhead">Armas con las que arranca</div>
+                        @for (id of inventory.items; track id; let index = $index) {
+                          <div class="maprow maprow--inline">
+                            <span class="maprow__name">{{ index + 1 }} · {{ combat.itemLabel(id) }}</span>
+                            <button class="btn btn--small btn--danger" type="button" title="Quitar"
+                                    (click)="combat.removeStartItem(entity, index)">×</button>
+                          </div>
+                        }
+                        @if (inventory.items.length > inventory.slots) {
+                          <p class="hint hint--warn">Hay más armas que casilleros: el motor descarta las que no entran.</p>
+                        }
+                        <select class="input" (change)="combat.addStartItem(entity, str($event)); resetSelect($event)">
+                          <option value="" selected>+ Agregar arma…</option>
+                          @for (weapon of combat.weaponOptions(); track weapon.id) {
+                            <option [value]="weapon.id">{{ weapon.name }}</option>
+                          }
+                        </select>
+                        @if (combat.weaponOptions().length === 0) {
+                          <p class="hint">Todavía no hay armas: creálas en Combate > Objetos y armas.</p>
+                        }
+
+                        <div class="subhead">Movilidad</div>
+                        <label class="check">
+                          <input type="checkbox" [checked]="!!combat.dashOf(entity)"
+                                 (change)="combat.setDashEnabled(entity, checked($event))" />
+                          <span>Esquive (Shift)</span>
+                        </label>
+                        @if (combat.dashOf(entity); as dash) {
+                          <div class="field-row">
+                            <label class="field">
+                              <span title="Celdas que recorre">Distancia</span>
+                              <input class="input" type="number" min="0.5" step="0.5" [value]="dash.distance"
+                                     (change)="combat.patchDash(entity, 'distance', num($event))" />
+                            </label>
+                            <label class="field">
+                              <span title="Segundos que dura">Duración</span>
+                              <input class="input" type="number" min="0.05" step="0.02" [value]="dash.duration"
+                                     (change)="combat.patchDash(entity, 'duration', num($event))" />
+                            </label>
+                          </div>
+                          <div class="field-row">
+                            <label class="field">
+                              <span title="Segundos hasta poder repetirlo">Pausa</span>
+                              <input class="input" type="number" min="0" step="0.1" [value]="dash.cooldown"
+                                     (change)="combat.patchDash(entity, 'cooldown', num($event))" />
+                            </label>
+                            <label class="field">
+                              <span title="Segundos de invulnerabilidad desde que empieza el esquive">I-frames</span>
+                              <input class="input" type="number" min="0" step="0.05" [value]="dash.iframes"
+                                     (change)="combat.patchDash(entity, 'iframes', num($event))" />
+                            </label>
+                          </div>
+                        }
+                        <label class="check">
+                          <input type="checkbox" [checked]="!!combat.defenseOf(entity)"
+                                 (change)="combat.setDefenseEnabled(entity, checked($event))" />
+                          <span>Defensa (clic derecho o K)</span>
+                        </label>
+                        @if (combat.defenseOf(entity); as defense) {
+                          <div class="field-row">
+                            <label class="field">
+                              <span title="Parte del daño que evita al defender, en %">Bloqueo %</span>
+                              <input class="input" type="number" min="0" max="100" step="5"
+                                     [value]="combat.percent(defense.reduction)"
+                                     (change)="combat.patchDefensePercent(entity, 'reduction', num($event))" />
+                            </label>
+                            <label class="field">
+                              <span title="Velocidad mientras defiende, en % de la normal">Veloc. %</span>
+                              <input class="input" type="number" min="0" max="100" step="5"
+                                     [value]="combat.percent(defense.speedMultiplier)"
+                                     (change)="combat.patchDefensePercent(entity, 'speedMultiplier', num($event))" />
+                            </label>
+                          </div>
+                          <p class="hint">Defendiendo no se puede atacar.</p>
+                        }
+                      }
+
+                      @case ('enemy') {
+                        <label class="check">
+                          <input type="checkbox" [checked]="entity.boss === true"
+                                 (change)="combat.setBoss(entity, checked($event))" />
+                          <span>Jefe (barra de vida grande)</span>
+                        </label>
+                        <label class="field" style="margin-top: 6px">
+                          <span>Arma</span>
+                          <select class="input" (change)="combat.setWeapon(entity, str($event))">
+                            <option value="" [selected]="!entity.weapon">— sin arma: pega por contacto —</option>
+                            @for (weapon of combat.weaponOptions(); track weapon.id) {
+                              <option [value]="weapon.id" [selected]="entity.weapon === weapon.id">{{ weapon.name }}</option>
+                            }
+                          </select>
+                        </label>
+                        @if (entity.weapon) {
+                          <p class="hint">{{ weaponSummary(entity.weapon) }}</p>
+                        }
+
+                        <div class="subhead">Puede soltar al caer</div>
+                        @for (drop of entity.drops ?? []; track $index; let index = $index) {
+                          <div class="maprow maprow--inline">
+                            <select class="input maprow__select" (change)="combat.setDropItem(entity, index, str($event))">
+                              @for (item of combat.options(); track item.id) {
+                                <option [value]="item.id" [selected]="drop.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                              }
+                            </select>
+                            <input class="input maprow__num" type="number" min="0" max="100" step="5"
+                                   [value]="combat.percent(drop.chance)" title="Probabilidad (%)"
+                                   (change)="combat.setDropPercent(entity, index, num($event))" />
+                            <span class="maprow__unit">%</span>
+                            <button class="btn btn--small btn--danger" type="button" title="Quitar"
+                                    (click)="combat.removeDrop(entity, index)">×</button>
+                          </div>
+                        }
+                        <button class="btn btn--small" type="button" [disabled]="combat.options().length === 0"
+                                (click)="combat.addDrop(entity)">+ Botín</button>
+                        <p class="hint">Cada entrada se sortea aparte. Lo que suelta queda en el piso para juntarlo.</p>
+                      }
+
+                      @case ('npc') {
+                        <p class="hint">En el juego, acercarse y apretar E abre la tienda; se compra con 1 a 9.</p>
+                        @for (entry of combat.shopOf(entity); track $index; let index = $index) {
+                          <div class="maprow maprow--inline">
+                            <select class="input maprow__select"
+                                    (change)="combat.setShopItem(entity, index, { item: str($event) })">
+                              @for (item of combat.options(); track item.id) {
+                                <option [value]="item.id" [selected]="entry.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                              }
+                            </select>
+                            <input class="input maprow__num" type="number" min="0" step="1" [value]="entry.price"
+                                   title="Precio en monedas" (change)="combat.setShopItem(entity, index, { price: int($event) })" />
+                            <span class="maprow__unit">●</span>
+                            <button class="btn btn--small btn--danger" type="button" title="Quitar"
+                                    (click)="combat.removeShopItem(entity, index)">×</button>
+                          </div>
+                        }
+                        <button class="btn btn--small" type="button" [disabled]="combat.options().length === 0"
+                                (click)="combat.addShopItem(entity)">+ Objeto en venta</button>
+                      }
+
+                      @case ('item') {
+                        <label class="field">
+                          <span>Objeto</span>
+                          <select class="input" (change)="combat.setPickupItem(entity, str($event))">
+                            <option value="" disabled [selected]="!entity.item">— elegir —</option>
+                            @for (item of combat.options(); track item.id) {
+                              <option [value]="item.id" [selected]="entity.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                            }
+                          </select>
+                        </label>
+                        <p class="hint">El jugador lo junta al tocarlo. Elegirlo también le pone el sprite del objeto.</p>
+                      }
+
+                      @default {
+                        <p class="hint">Una entidad oculta al empezar sirve de puerta: la muestran y ocultan los eventos (Combate > Puzzle de sala).</p>
+                      }
+                    }
+
+                    <label class="check" style="margin-top: 6px">
+                      <input type="checkbox" [checked]="entity.hidden === true"
+                             (change)="combat.setHidden(entity, checked($event))" />
+                      <span>Oculta al empezar</span>
+                    </label>
+                    @if (combat.missing().length > 0) {
+                      <p class="hint hint--warn">
+                        El nivel usa objetos que no define: {{ combat.missing().join(', ') }}. Volvé a elegirlos, o
+                        creálos en Objetos y armas.
+                      </p>
+                    }
+                  </div>
+                }
+              </section>
+
+              <section class="panel panel--flat">
+                <div class="panel__body">
+                  <div class="field-row">
+                    <button class="btn" style="flex: 1" (click)="duplicateSelected()">Duplicar</button>
+                    <button class="btn btn--danger" style="flex: 1" (click)="deleteSelected()">Eliminar</button>
+                  </div>
+                </div>
+              </section>
+            } @else {
+              <p class="empty">Sin objeto activo. Selecciona una entidad en la escena o en el viewport.</p>
+            }
+
+            <!-- Fuera del @if de la seleccion: sirve para colocar, asi que
+                 tiene que estar aunque no haya nada elegido. -->
+            <section class="panel">
+              <button class="panel__head" (click)="togglePanel('shapes')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('shapes')">▶</span>
+                Figuras
+              </button>
+              @if (!isCollapsed('shapes')) {
+                <div class="panel__body">
+                  <label class="check">
+                    <input type="checkbox" [checked]="paintShapes()" (change)="paintShapes.set(checked($event))" />
+                    <span>Pintar figuras arrastrando</span>
+                  </label>
+                  <p class="hint">Shift + arrastrar pinta siempre.</p>
+                </div>
+              }
+            </section>
+          } @else {
+            <section class="panel">
+              <button class="panel__head" (click)="togglePanel('level')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('level')">▶</span>
+                Nivel
+              </button>
+              @if (!isCollapsed('level')) {
+                <div class="panel__body">
+                  <label class="field">
+                    <span>Nombre</span>
+                    <input class="input" [value]="levels.level().name" (change)="renameLevel(str($event))" />
+                  </label>
+                </div>
+              }
+            </section>
+
+            <section class="panel">
+              <button class="panel__head" (click)="togglePanel('background')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('background')">▶</span>
+                Fondo y colores
+              </button>
+              @if (!isCollapsed('background')) {
+                <div class="panel__body">
+                  <!-- Selector a lo Photoshop, sin ventana aparte: el cuadro
+                       elige saturacion (X) y brillo (Y), la barra el tono. -->
+                  <div class="picker">
+                    <div class="picker__square" [style.background-color]="backgroundHueCss()"
+                         (pointerdown)="onBackgroundSquare($event)" (pointermove)="onBackgroundSquare($event)">
+                      <span class="picker__cursor"
+                            [style.left.%]="backgroundHsv().s * 100"
+                            [style.top.%]="(1 - backgroundHsv().v) * 100"
+                            [style.background-color]="backgroundHex()"></span>
+                    </div>
+                    <div class="picker__hue"
+                         (pointerdown)="onBackgroundHue($event)" (pointermove)="onBackgroundHue($event)">
+                      <span class="picker__hue-cursor" [style.top.%]="backgroundHsv().h / 360 * 100"></span>
+                    </div>
+                  </div>
+                  <div class="picker__row">
+                    <span class="picker__swatch" [style.background-color]="backgroundHex()"></span>
+                    <label class="field">
+                      <span>Hex</span>
+                      <input class="input" maxlength="7" spellcheck="false" [value]="backgroundHex()"
+                             (change)="setBackgroundHex(str($event))" />
+                    </label>
+                  </div>
+                  <div class="field-row">
+                    <label class="field">
+                      <span>R</span>
+                      <input class="input" type="number" step="1" min="0" max="255" [value]="backgroundColor().r"
+                             (change)="patchBackground({ r: int($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>G</span>
+                      <input class="input" type="number" step="1" min="0" max="255" [value]="backgroundColor().g"
+                             (change)="patchBackground({ g: int($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>B</span>
+                      <input class="input" type="number" step="1" min="0" max="255" [value]="backgroundColor().b"
+                             (change)="patchBackground({ b: int($event) })" />
+                    </label>
+                  </div>
+                  <p class="hint">Color RGB del fondo de la escena al ejecutar el runtime.</p>
+                </div>
+              }
+            </section>
+
+            <section class="panel">
+              <button class="panel__head" (click)="togglePanel('grid')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('grid')">▶</span>
+                Grilla
+              </button>
+              @if (!isCollapsed('grid')) {
+                <div class="panel__body">
+                  <div class="field-row">
+                    <label class="field">
+                      <span>Ancho</span>
+                      <input class="input" type="number" step="1" min="1" [value]="grid().width"
+                             (input)="patchGrid({ width: int($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>Alto</span>
+                      <input class="input" type="number" step="1" min="1" [value]="grid().height"
+                             (input)="patchGrid({ height: int($event) })" />
+                    </label>
+                  </div>
+                  <div class="field-row">
+                    <label class="field">
+                      <span>Tile W</span>
+                      <input class="input" type="number" step="1" min="1" [value]="grid().tileWidth"
+                             (input)="patchGrid({ tileWidth: int($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>Tile H</span>
+                      <input class="input" type="number" step="1" min="1" [value]="grid().tileHeight"
+                             (input)="patchGrid({ tileHeight: int($event) })" />
+                    </label>
+                  </div>
+                  <p class="hint">Proporcion 2:1 (64×32) es el estandar de pixel art isometrico.</p>
+                </div>
+              }
+            </section>
+
+            <!-- Grillas y tuneles del mapa. Los numeros usan (change) y no
+                 (input): cada cambio recalcula el mapa entero, y hacerlo con
+                 cada tecla dibujaria salas de tamaños intermedios sin sentido
+                 mientras se escribe un "12". -->
+            <section class="panel">
+              <button class="panel__head" (click)="togglePanel('map')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('map')">▶</span>
+                Mapa
+              </button>
+              @if (!isCollapsed('map')) {
+                <div class="panel__body">
+                  @if (rooms().length === 0) {
+                    <p class="hint">
+                      El nivel es una sola grilla. Agregá otra para armar salas unidas por túneles.
+                    </p>
+                  }
+
+                  @for (room of rooms(); track room.id) {
+                    <div class="maprow">
+                      <div class="maprow__head">
+                        <span class="maprow__name">▦ {{ room.id }}</span>
+                        <span class="maprow__actions">
+                          <button class="btn btn--small" type="button" title="Configurar la grilla"
+                                  (click)="editRoom(room.id)">✎</button>
+                          <button class="btn btn--small btn--danger" type="button"
+                                  title="Quitar la grilla y sus túneles" (click)="removeRoom(room.id)">×</button>
+                        </span>
+                      </div>
+                      <div class="field-row">
+                        <label class="field">
+                          <span>Col</span>
+                          <input class="input" type="number" step="1" [value]="room.col"
+                                 (change)="updateRoom(room.id, { col: int($event) })" />
+                        </label>
+                        <label class="field">
+                          <span>Fila</span>
+                          <input class="input" type="number" step="1" [value]="room.row"
+                                 (change)="updateRoom(room.id, { row: int($event) })" />
+                        </label>
+                        <label class="field">
+                          <span>Ancho</span>
+                          <input class="input" type="number" min="1" step="1" [value]="room.width"
+                                 (change)="updateRoom(room.id, { width: int($event) })" />
+                        </label>
+                        <label class="field">
+                          <span>Alto</span>
+                          <input class="input" type="number" min="1" step="1" [value]="room.height"
+                                 (change)="updateRoom(room.id, { height: int($event) })" />
+                        </label>
+                      </div>
+                    </div>
+                  }
+
+                  @if (tunnels().length > 0) {
+                    <div class="maplist__title">Túneles</div>
+                    @for (tunnel of tunnels(); track tunnel.id) {
+                      <div class="maprow maprow--inline">
+                        <span class="maprow__name"
+                              [title]="tunnel.path?.length ? 'Trazado a mano' : 'Trazado automático'">
+                          {{ tunnel.from }} → {{ tunnel.to }}{{ tunnel.path?.length ? ' · a mano' : '' }}
+                        </span>
+                        <input class="input maprow__num" type="number" min="1" step="1" [value]="tunnel.width"
+                               title="Ancho en celdas caminables" (change)="updateTunnel(tunnel.id, int($event))" />
+                        <button class="btn btn--small" type="button" title="Configurar: lados, trazado y ancho"
+                                (click)="editTunnel(tunnel.id)">✎</button>
+                        <button class="btn btn--small btn--danger" type="button" title="Quitar el túnel"
+                                (click)="removeTunnel(tunnel.id)">×</button>
+                      </div>
+                    }
+                  }
+
+                  <div class="field-row" style="margin-top: 8px">
+                    <button class="btn" style="flex: 1" type="button" (click)="openRoomDialog()">+ Grilla</button>
+                    <button class="btn" style="flex: 1" type="button" [disabled]="rooms().length < 2"
+                            (click)="openTunnelDialog()">+ Túnel</button>
+                  </div>
+
+                  @if (tileEditCount() > 0) {
+                    <p class="hint" style="margin-top: 8px">
+                      {{ tileEditCount() }} celdas retocadas a mano con Piso/Pared se aplican encima de las
+                      grillas.
+                    </p>
+                    <button class="btn btn--small" type="button" (click)="clearTileEdits()">
+                      Descartar retoques
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+
+            <!-- Zonas de puzzle: rectangulos con nombre para "Al limpiar una
+                 zona" y "Al entrar a una zona". Las salas del mapa ya cuentan
+                 como zonas; esto es para lo que no es una sala entera. -->
+            <section class="panel">
+              <button class="panel__head" (click)="togglePanel('zones')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('zones')">▶</span>
+                Zonas de puzzle
+              </button>
+              @if (!isCollapsed('zones')) {
+                <div class="panel__body">
+                  <p class="hint">Las salas del mapa ya sirven como zonas. Agregá una para una parte de una sala o un pasillo.</p>
+                  @for (zone of zones(); track zone.id) {
+                    <div class="maprow">
+                      <div class="maprow__head">
+                        <span class="maprow__name">◇ {{ zone.id }}</span>
+                        <span class="maprow__actions">
+                          <button class="btn btn--small btn--danger" type="button" title="Quitar la zona"
+                                  (click)="removeZone(zone.id)">×</button>
+                        </span>
+                      </div>
+                      <div class="field-row">
+                        <label class="field">
+                          <span>Col</span>
+                          <input class="input" type="number" min="0" step="1" [value]="zone.col"
+                                 (change)="updateZone(zone.id, { col: int($event) })" />
+                        </label>
+                        <label class="field">
+                          <span>Fila</span>
+                          <input class="input" type="number" min="0" step="1" [value]="zone.row"
+                                 (change)="updateZone(zone.id, { row: int($event) })" />
+                        </label>
+                        <label class="field">
+                          <span>Ancho</span>
+                          <input class="input" type="number" min="1" step="1" [value]="zone.width"
+                                 (change)="updateZone(zone.id, { width: int($event) })" />
+                        </label>
+                        <label class="field">
+                          <span>Alto</span>
+                          <input class="input" type="number" min="1" step="1" [value]="zone.height"
+                                 (change)="updateZone(zone.id, { height: int($event) })" />
+                        </label>
+                      </div>
+                    </div>
+                  }
+                  <div class="field-row" style="margin-top: 8px">
+                    <button class="btn" style="flex: 1" type="button" (click)="addZone()">+ Zona</button>
+                    <button class="btn" style="flex: 1" type="button" (click)="puzzle.open()">Puzzle de sala…</button>
+                  </div>
+                </div>
+              }
+            </section>
+
+            <section class="panel">
+              <button class="panel__head" (click)="togglePanel('project')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('project')">▶</span>
+                Proyecto
+              </button>
+              @if (!isCollapsed('project')) {
+                <div class="panel__body">
+                  <p class="hint">{{ project.projectRoot() ?? 'Sin proyecto abierto.' }}</p>
+                  @if (!hasFileSystem) {
+                    <p class="hint hint--warn">
+                      Modo navegador: sin acceso a disco. Abre el editor con "npm run electron".
+                    </p>
+                  }
+                </div>
+              }
+            </section>
+          }
+        </div>
+      </div>
+    </section>
+    }
+  </div>
+
+  <!-- ===================== AREA INFERIOR =====================
+       Solo existe en las workspaces "eventos" y "salida"; en "layout" el
+       viewport se queda con todo el alto, que es lo que hace que cambiar de
+       workspace se sienta como en Blender.
+
+       Los eventos son el corazon NoCode. Nada de esto esta escrito a mano: los
+       <select> se llenan con lo que declara schema/event_catalog.json y los
+       campos de parametros salen de paramRows(), que lee los params del bloque
+       elegido. Un bloque nuevo en el catalogo aparece aca sin tocar el HTML.
+
+       Los params de tipo entity_ref se muestran como desplegable de entidades
+       del nivel (y no como texto libre) para que no se pueda escribir un id
+       que no existe. -->
+  @if (workspace() !== 'layout') {
+    <section class="area bottom">
+      <div class="area__head">
+        @if (workspace() === 'eventos') {
+          <span class="area__kind" title="Editor de eventos">⚡</span>
+          <span class="area__title">Eventos</span>
+          <span class="head__sep"></span>
+          <button class="tool" (click)="addEvent()">+ Evento</button>
+          <button class="tool" (click)="puzzle.open()"
+                  title="Armar los eventos de una sala que bloquea el paso hasta resolverla">Puzzle de sala…</button>
+          <div class="head__spacer"></div>
+          <span class="head__label">{{ events().length }} eventos</span>
+        } @else if (workspace() === 'archivo') {
+          <span class="area__kind" title="Visor de archivos">◈</span>
+          <span class="area__title">{{ openFile()?.path ?? 'Archivo' }}</span>
+          <div class="head__spacer"></div>
+          @if (openFile(); as file) {
+            <span class="head__label">{{ fileSize(file.data.size) }}</span>
+            <button class="tool" (click)="closeOpenFile()" title="Cerrar el archivo">×</button>
+          }
+        } @else {
+          <span class="area__kind" title="Consola">›_</span>
+          <span class="area__title">Salida</span>
+          <div class="head__spacer"></div>
+          <span class="head__label">{{ log().length }} lineas</span>
+        }
+      </div>
+
+      <div class="area__body pad">
+        @if (workspace() === 'eventos') {
+          <!-- Los controles de los parametros de un paso (trigger, condicion o
+               accion) se escriben una sola vez aca y se reusan en las tres
+               filas: el control sale del tipo que declara el catalogo.
+               entity_ref, level_ref, zone_ref e item_ref se eligen de una lista
+               para no escribir a mano algo que no existe. -->
+          <ng-template #stepParams let-step let-stepKind="stepKind" let-eventIndex="eventIndex"
+                       let-stepIndex="stepIndex">
+            @for (row of paramRows(catalogKindOf(stepKind), step.type); track row.key) {
+              <label class="field field--inline" [title]="row.def.description ?? ''">
+                <span>{{ row.key }}</span>
+                @switch (row.def.type) {
+                  @case ('entity_ref') {
+                    <select class="select-lone"
+                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" disabled [selected]="paramValue(step, row.key) === ''">— entidad —</option>
+                      @for (id of entityIds(); track id) {
+                        <option [value]="id" [selected]="paramValue(step, row.key) === id">{{ id }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('level_ref') {
+                    <select class="select-lone"
+                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" disabled [selected]="paramValue(step, row.key) === ''">— nivel —</option>
+                      @for (file of levelFiles(); track file) {
+                        <option [value]="file" [selected]="paramValue(step, row.key) === file">{{ file }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('zone_ref') {
+                    <select class="select-lone"
+                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" disabled [selected]="paramValue(step, row.key) === ''">— sala o zona —</option>
+                      @for (id of zoneIds(); track id) {
+                        <option [value]="id" [selected]="paramValue(step, row.key) === id">{{ id }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('item_ref') {
+                    <select class="select-lone"
+                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" [selected]="paramValue(step, row.key) === ''">— cualquiera —</option>
+                      @for (item of combat.options(); track item.id) {
+                        <option [value]="item.id" [selected]="paramValue(step, row.key) === item.id">
+                          {{ itemGlyph(item) }} {{ item.name }}
+                        </option>
+                      }
+                    </select>
+                  }
+                  @case ('boolean') {
+                    <input type="checkbox" [checked]="step.params[row.key] === true"
+                           (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, checked($event))" />
+                  }
+                  @default {
+                    <input class="select-lone" [type]="row.def.type === 'number' ? 'number' : 'text'"
+                           [value]="paramValue(step, row.key)"
+                           (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))" />
+                  }
+                }
+              </label>
+            }
+          </ng-template>
+
+          @for (event of events(); track $index; let eventIndex = $index) {
+            <article class="event">
+              <div class="event__row">
+                <span class="badge badge--trigger">Cuando</span>
+                <select class="select-lone" [value]="event.trigger.type"
+                        (change)="changeTrigger(eventIndex, str($event))">
+                  @for (entry of triggers(); track entry.type) {
+                    <option [value]="entry.type" [selected]="event.trigger.type === entry.type">{{ entry.label }}</option>
+                  }
+                </select>
+                <ng-container
+                  *ngTemplateOutlet="stepParams; context: { $implicit: event.trigger, stepKind: 'trigger', eventIndex: eventIndex, stepIndex: 0 }" />
+
+                <div class="event__spacer"></div>
+                <button class="btn btn--small btn--danger" (click)="removeEvent(eventIndex)">Quitar</button>
+              </div>
+
+              @for (condition of event.conditions ?? []; track $index; let conditionIndex = $index) {
+                <div class="event__row event__row--child">
+                  <span class="badge badge--condition">Si</span>
+                  <select class="select-lone" [value]="condition.type"
+                          (change)="changeCondition(eventIndex, conditionIndex, str($event))">
+                    @for (entry of conditions(); track entry.type) {
+                      <option [value]="entry.type" [selected]="condition.type === entry.type">{{ entry.label }}</option>
+                    }
+                  </select>
+                  <ng-container
+                    *ngTemplateOutlet="stepParams; context: { $implicit: condition, stepKind: 'condition', eventIndex: eventIndex, stepIndex: conditionIndex }" />
+
+                  <div class="event__spacer"></div>
+                  <button class="btn btn--small" (click)="removeCondition(eventIndex, conditionIndex)">×</button>
+                </div>
+              }
+
+              @for (action of event.actions; track $index; let actionIndex = $index) {
+                <div class="event__row event__row--child">
+                  <span class="badge badge--action">Entonces</span>
+                  <select class="select-lone" [value]="action.type"
+                          (change)="changeAction(eventIndex, actionIndex, str($event))">
+                    @for (entry of actions(); track entry.type) {
+                      <option [value]="entry.type" [selected]="action.type === entry.type">{{ entry.label }}</option>
+                    }
+                  </select>
+                  <ng-container
+                    *ngTemplateOutlet="stepParams; context: { $implicit: action, stepKind: 'action', eventIndex: eventIndex, stepIndex: actionIndex }" />
+
+                  <div class="event__spacer"></div>
+                  <button class="btn btn--small" (click)="removeAction(eventIndex, actionIndex)">×</button>
+                </div>
+              }
+
+              <div class="event__row event__row--child">
+                <button class="btn btn--small" (click)="addCondition(eventIndex)">+ Condición</button>
+                <button class="btn btn--small" (click)="addAction(eventIndex)">+ Accion</button>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty">
+              Sin eventos. El catalogo declara {{ triggers().length }} triggers,
+              {{ conditions().length }} condiciones y {{ actions().length }} acciones.
+            </p>
+          }
+        } @else if (workspace() === 'archivo') {
+          <!-- Visor de solo lectura. El proceso principal decide por extension
+               si el archivo llega como texto, como imagen o si no se puede
+               mostrar; aca solo se elige con que caja dibujarlo. -->
+          @if (openFile(); as file) {
+            @switch (file.data.kind) {
+              @case ('text') {
+                @if (file.data.truncated) {
+                  <p class="hint hint--warn">
+                    Archivo grande: se muestran solo los primeros 400 KB.
+                  </p>
+                }
+                <pre class="fileview">{{ file.data.text }}</pre>
+              }
+              @case ('image') {
+                <div class="fileview fileview--image">
+                  <img [src]="file.data.dataUrl" [alt]="file.path" />
+                </div>
+              }
+              @default {
+                <p class="empty">
+                  @if (isTooLargeToPreview(file)) {
+                    {{ file.path }} pesa {{ fileSize(file.data.size) }}: es una imagen, pero demasiado
+                    pesada para previsualizarla aca.
+                  } @else {
+                    {{ file.path }} pesa {{ fileSize(file.data.size) }} y no es texto ni imagen:
+                    el editor no puede mostrarlo.
+                  }
+                </p>
+              }
+            }
+          } @else {
+            <p class="empty">
+              Ningun archivo abierto. Elegi uno en el explorador (pestana “Proyecto” de la barra
+              lateral) para verlo aca.
+            </p>
+          }
+        } @else {
+          <div class="console">
+            @for (line of log(); track $index) {
+              <div class="console__line">{{ line }}</div>
+            } @empty {
+              <p class="empty">Sin mensajes todavia.</p>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ===================== BARRA DE ESTADO =====================
+       Como la de Blender: pistas de raton y teclado a la izquierda, ultimo
+       mensaje en el medio, estadisticas de la escena a la derecha. El contador
+       de entidades se pone en ambar al pasar ENTITY_WARN_THRESHOLD (app.ts):
+       avisa antes de que la escena empiece a comprometer los FPS del runtime. -->
+  <footer class="statusbar">
+    <span class="keyhint"><b>Rueda</b> Zoom</span>
+    <span class="keyhint"><b>Derecho / Medio</b> Desplazar</span>
+    <span class="keyhint"><b>Shift+clic</b> Sumar</span>
+    <span class="keyhint"><b>Ctrl+arrastrar</b> Mover</span>
+    <span class="keyhint"><b>Clic derecho</b> Configurar</span>
+    <span class="keyhint"><b>Shift+D</b> Duplicar</span>
+    <span class="keyhint"><b>X</b> Eliminar</span>
+    <span class="keyhint"><b>Ctrl+B</b> Barra lateral</span>
+
+    <div class="statusbar__spacer"></div>
+
+    <span class="statusbar__msg">{{ status() }}</span>
+
+    <div class="statusbar__spacer"></div>
+
+    <span class="statusbar__stat" [class.statusbar__stat--warn]="overBudget()">
+      Entidades {{ entities().length }}
+    </span>
+    <span class="statusbar__stat">Eventos {{ events().length }}</span>
+    <span class="statusbar__stat">{{ zoomLabel() }}</span>
+  </footer>
+</div>

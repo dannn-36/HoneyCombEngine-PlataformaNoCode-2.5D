@@ -1,0 +1,46 @@
+// Puente entre el proceso principal (main.js, con acceso a disco) y la UI de
+// Angular, que corre aislada. Es el UNICO lugar donde se decide que puede
+// hacer el renderer: cada funcion de aca es un permiso concedido a mano.
+//
+// Se exponen funciones, nunca "ipcRenderer" entero ni "require": si la UI
+// pudiera invocar cualquier canal, el aislamiento no serviria de nada.
+//
+// El contrato tipado de esta API vive en src/app/electron-api.d.ts, y quien la
+// consume es ProjectService. Los tres archivos tienen que cambiar juntos.
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('honeycombProject', {
+  save: (defaultPath, contents) => ipcRenderer.invoke('project:save', { defaultPath, contents }),
+  open: () => ipcRenderer.invoke('project:open'),
+
+  openFolder: () => ipcRenderer.invoke('project:openFolder'),
+  // La raiz del proyecto sin pasar por "Abrir carpeta": la deduce, o la pregunta.
+  ensureRoot: () => ipcRenderer.invoke('project:ensureRoot'),
+  readFile: (relativePath) => ipcRenderer.invoke('project:readFile', relativePath),
+  writeFile: (relativePath, contents) =>
+    ipcRenderer.invoke('project:writeFile', { filePath: relativePath, contents }),
+  listDir: (relativeDir) => ipcRenderer.invoke('project:listDir', relativeDir),
+  // Para el explorador de archivos: el contenido de UNA carpeta (se piden de a
+  // una, al desplegarla), y la lectura de cualquier archivo para mirarlo.
+  listEntries: (relativeDir) => ipcRenderer.invoke('project:listEntries', relativeDir),
+  readFileData: (relativePath) => ipcRenderer.invoke('project:readFileData', relativePath),
+  // Importar imagenes como texturas, en tres pasos (ver project:beginImport en
+  // main.js). Los dos ultimos reciben un indice del plan, nunca una ruta.
+  beginImport: () => ipcRenderer.invoke('project:beginImport'),
+  readImportImage: (index) => ipcRenderer.invoke('project:readImportImage', index),
+  writeImportedTexture: (index, pngBase64) =>
+    ipcRenderer.invoke('project:writeImportedTexture', { index, pngBase64 }),
+
+  // Lanza el runtime con un nivel ya guardado. Recibe la ruta del nivel y no
+  // la del ejecutable: quien decide que binario correr es el proceso principal,
+  // no la UI.
+  run: (levelPath) => ipcRenderer.invoke('project:run', levelPath),
+});
+
+// Control de la ventana. Existe porque se quito el menu nativo de Electron
+// (el editor tiene su propia barra de menus), y con el se iban las
+// herramientas de desarrollo.
+contextBridge.exposeInMainWorld('honeycombWindow', {
+  toggleDevTools: () => ipcRenderer.invoke('window:toggleDevTools'),
+});
