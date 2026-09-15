@@ -67,9 +67,9 @@
 
     <!-- Interruptores de los paneles laterales, a la derecha como los de
          diseño de VS Code. Tambien estan en el menu Ver. -->
-    <button class="menu" [class.is-active]="sidebarVisible()" (click)="toggleSidebar()"
+    <button class="menu" [class.is-active]="panels.sidebarVisible()" (click)="panels.toggleSidebar()"
             title="Mostrar u ocultar el panel izquierdo (Ctrl+B)">☰</button>
-    <button class="menu" [class.is-active]="inspectorVisible()" (click)="toggleInspector()"
+    <button class="menu" [class.is-active]="panels.inspectorVisible()" (click)="panels.toggleInspector()"
             title="Mostrar u ocultar el panel de propiedades">⚙</button>
 
     <!-- [selected] en cada opcion, y no solo [value] en el select: Angular
@@ -243,17 +243,17 @@
        otra eligiendo de que lado va, o dejar donde se la dibujo con la
        herramienta Grilla. La vista previa verde del viewport muestra el lugar
        mientras se cambian los numeros. -->
-  @if (roomDraft(); as draft) {
-    <div class="modal-backdrop" (click)="cancelRoomDialog()">
+  @if (map.roomDraft(); as draft) {
+    <div class="modal-backdrop" (click)="map.cancelRoomDialog()">
       <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="room-dialog-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="room-dialog-title">{{ draft.editId ? 'Grilla “' + draft.editId + '”' : 'Agregar grilla al mapa' }}</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="cancelRoomDialog()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelRoomDialog()">×</button>
         </div>
 
         <div class="modal__body">
-          @if (!draft.editId && rooms().length === 0) {
+          @if (!draft.editId && map.rooms().length === 0) {
             <p class="hint">
               El nivel todavía es una sola grilla. Al agregar esta, el área actual pasa a llamarse
               “sala_1” y se puede unir con la nueva.
@@ -264,14 +264,14 @@
             @if (!draft.editId) {
               <label class="field">
                 <span>Nombre</span>
-                <input class="input" [value]="draft.id" (input)="patchRoomDraft({ id: str($event) })" />
+                <input class="input" [value]="draft.id" (input)="map.patchRoomDraft({ id: str($event) })" />
               </label>
             }
             <label class="field">
               <span>Ubicar junto a</span>
-              <select class="input" [value]="draft.anchor" (change)="setRoomAnchor(str($event))">
+              <select class="input" [value]="draft.anchor" (change)="map.setRoomAnchor(str($event))">
                 <option value="" [selected]="draft.anchor === ''">— posición libre —</option>
-                @for (room of anchorRooms(); track room.id) {
+                @for (room of map.anchorRooms(); track room.id) {
                   <option [value]="room.id" [selected]="draft.anchor === room.id">{{ room.id }}</option>
                 }
               </select>
@@ -282,36 +282,36 @@
             <div class="fieldblock">
               <span class="fieldblock__label">De qué lado</span>
               <div class="seg seg--wrap">
-                @for (side of roomSides; track side.value) {
+                @for (side of map.roomSides; track side.value) {
                   <button class="tool" type="button" [class.is-active]="draft.side === side.value"
-                          [title]="side.hint" (click)="setRoomSide(side.value)">{{ side.label }}</button>
+                          [title]="side.hint" (click)="map.setRoomSide(side.value)">{{ side.label }}</button>
                 }
               </div>
             </div>
           }
 
           <!-- Escribir columna o fila suelta la grilla de la de al lado; el
-               tamano, en cambio, la mantiene pegada. Ver patchRoomPosition. -->
+               tamano, en cambio, la mantiene pegada. Ver map.patchRoomPosition. -->
           <div class="field-row">
             <label class="field">
               <span>Columna</span>
               <input class="input" type="number" step="1" [value]="draft.col"
-                     (input)="patchRoomPosition({ col: int($event) })" />
+                     (input)="map.patchRoomPosition({ col: int($event) })" />
             </label>
             <label class="field">
               <span>Fila</span>
               <input class="input" type="number" step="1" [value]="draft.row"
-                     (input)="patchRoomPosition({ row: int($event) })" />
+                     (input)="map.patchRoomPosition({ row: int($event) })" />
             </label>
             <label class="field">
               <span>Ancho</span>
               <input class="input" type="number" min="1" step="1" [value]="draft.width"
-                     (input)="patchRoomSize({ width: int($event) })" />
+                     (input)="map.patchRoomSize({ width: int($event) })" />
             </label>
             <label class="field">
               <span>Alto</span>
               <input class="input" type="number" min="1" step="1" [value]="draft.height"
-                     (input)="patchRoomSize({ height: int($event) })" />
+                     (input)="map.patchRoomSize({ height: int($event) })" />
             </label>
           </div>
 
@@ -319,9 +319,9 @@
             <div class="field-row">
               <label class="field">
                 <span>Conectar con</span>
-                <select class="input" [value]="draft.connectTo" (change)="patchRoomDraft({ connectTo: str($event) })">
+                <select class="input" [value]="draft.connectTo" (change)="map.patchRoomDraft({ connectTo: str($event) })">
                   <option value="" [selected]="draft.connectTo === ''">— sin túnel —</option>
-                  @for (room of connectableRooms(); track room.id) {
+                  @for (room of map.connectableRooms(); track room.id) {
                     <option [value]="room.id" [selected]="draft.connectTo === room.id">{{ room.id }}</option>
                   }
                 </select>
@@ -330,7 +330,7 @@
                 <label class="field">
                   <span>Ancho del túnel (celdas)</span>
                   <input class="input" type="number" min="1" step="1" [value]="draft.tunnelWidth"
-                         (input)="patchRoomDraft({ tunnelWidth: int($event) })" />
+                         (input)="map.patchRoomDraft({ tunnelWidth: int($event) })" />
                 </label>
               }
             </div>
@@ -343,8 +343,8 @@
         </div>
 
         <div class="modal__actions">
-          <button class="btn" type="button" (click)="cancelRoomDialog()">Cancelar</button>
-          <button class="btn btn--primary" type="button" (click)="confirmRoomDialog()">
+          <button class="btn" type="button" (click)="map.cancelRoomDialog()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="map.confirmRoomDialog()">
             {{ draft.editId ? 'Guardar' : 'Agregar grilla' }}
           </button>
         </div>
@@ -355,31 +355,31 @@
   <!-- Menu del tunel: nuevo, recien trazado a mano, o uno existente (clic
        derecho sobre el, o ✎ en el panel Mapa). Los lados deciden por donde
        sale y entra; el trazado, por donde pasa. -->
-  @if (tunnelDraft(); as draft) {
-    <div class="modal-backdrop" (click)="cancelTunnelDialog()">
+  @if (map.tunnelDraft(); as draft) {
+    <div class="modal-backdrop" (click)="map.cancelTunnelDialog()">
       <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="tunnel-dialog-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="tunnel-dialog-title">
             {{ draft.editId ? 'Túnel “' + draft.editId + '”' : 'Conectar grillas con un túnel' }}
           </h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="cancelTunnelDialog()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelTunnelDialog()">×</button>
         </div>
 
         <div class="modal__body">
           <div class="field-row">
             <label class="field">
               <span>Desde</span>
-              <select class="input" [value]="draft.from" (change)="patchTunnelDraft({ from: str($event) })">
-                @for (room of rooms(); track room.id) {
+              <select class="input" [value]="draft.from" (change)="map.patchTunnelDraft({ from: str($event) })">
+                @for (room of map.rooms(); track room.id) {
                   <option [value]="room.id" [selected]="draft.from === room.id">{{ room.id }}</option>
                 }
               </select>
             </label>
             <label class="field">
               <span>Hasta</span>
-              <select class="input" [value]="draft.to" (change)="patchTunnelDraft({ to: str($event) })">
-                @for (room of rooms(); track room.id) {
+              <select class="input" [value]="draft.to" (change)="map.patchTunnelDraft({ to: str($event) })">
+                @for (room of map.rooms(); track room.id) {
                   <option [value]="room.id" [selected]="draft.to === room.id">{{ room.id }}</option>
                 }
               </select>
@@ -389,18 +389,18 @@
           <div class="field-row">
             <label class="field">
               <span>Sale por</span>
-              <select class="input" [value]="draft.fromSide" (change)="patchTunnelDraft({ fromSide: sideValue($event) })">
+              <select class="input" [value]="draft.fromSide" (change)="map.patchTunnelDraft({ fromSide: map.sideValue($event) })">
                 <option value="" [selected]="draft.fromSide === ''">Automático (centro)</option>
-                @for (side of roomSides; track side.value) {
+                @for (side of map.roomSides; track side.value) {
                   <option [value]="side.value" [selected]="draft.fromSide === side.value">{{ side.label }}</option>
                 }
               </select>
             </label>
             <label class="field">
               <span>Entra por</span>
-              <select class="input" [value]="draft.toSide" (change)="patchTunnelDraft({ toSide: sideValue($event) })">
+              <select class="input" [value]="draft.toSide" (change)="map.patchTunnelDraft({ toSide: map.sideValue($event) })">
                 <option value="" [selected]="draft.toSide === ''">Automático (centro)</option>
-                @for (side of roomSides; track side.value) {
+                @for (side of map.roomSides; track side.value) {
                   <option [value]="side.value" [selected]="draft.toSide === side.value">{{ side.label }}</option>
                 }
               </select>
@@ -410,7 +410,7 @@
           <label class="field">
             <span>Ancho (celdas caminables)</span>
             <input class="input" type="number" min="1" step="1" [value]="draft.width"
-                   (input)="patchTunnelDraft({ width: int($event) })" />
+                   (input)="map.patchTunnelDraft({ width: int($event) })" />
           </label>
 
           <div class="fieldblock">
@@ -421,16 +421,16 @@
               <p class="hint">Automático: tramos rectos entre sus dos extremos.</p>
             }
             <div class="field-row">
-              <button class="btn" style="flex: 1" type="button" (click)="retraceTunnel()">Trazar a mano…</button>
+              <button class="btn" style="flex: 1" type="button" (click)="map.retraceTunnel()">Trazar a mano…</button>
               <button class="btn" style="flex: 1" type="button" [disabled]="draft.path.length === 0"
-                      (click)="patchTunnelDraft({ path: [] })">Volver a automático</button>
+                      (click)="map.patchTunnelDraft({ path: [] })">Volver a automático</button>
             </div>
           </div>
         </div>
 
         <div class="modal__actions">
-          <button class="btn" type="button" (click)="cancelTunnelDialog()">Cancelar</button>
-          <button class="btn btn--primary" type="button" (click)="confirmTunnelDialog()">
+          <button class="btn" type="button" (click)="map.cancelTunnelDialog()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="map.confirmTunnelDialog()">
             {{ draft.editId ? 'Guardar' : 'Conectar' }}
           </button>
         </div>
@@ -1058,19 +1058,19 @@
        columnas del grid, asi que arrastrar su borde o esconderla con Ctrl+B no
        necesita tocar el DOM a mano: cambia el signal y el layout se recalcula.
        Con la barra oculta esa columna directamente no existe. -->
-  <div class="body" [style.grid-template-columns]="bodyColumns()">
+  <div class="body" [style.grid-template-columns]="panels.bodyColumns()">
     <!-- --------- AREA IZQUIERDA: outliner + paletas --------- -->
-    @if (sidebarVisible()) {
-    <div class="stack" [style.grid-template-rows]="sidebarRows()">
+    @if (panels.sidebarVisible()) {
+    <div class="stack" [style.grid-template-rows]="panels.sidebarRows()">
       <!-- Borde arrastrable, como el de VS Code. Va dentro de la barra y
            posicionado sobre su canto derecho para no ocupar una columna
            propia del grid. -->
-      <div class="grip grip--right" [class.is-active]="isResizing('sidebar')"
+      <div class="grip grip--right" [class.is-active]="panels.isResizing('sidebar')"
            title="Arrastra para cambiar el ancho"
-           (pointerdown)="onResizeStart('sidebar', $event)"
-           (pointermove)="onResizeMove($event)"
-           (pointerup)="onResizeEnd($event)"
-           (pointercancel)="onResizeEnd($event)"></div>
+           (pointerdown)="panels.onResizeStart('sidebar', $event)"
+           (pointermove)="panels.onResizeMove($event)"
+           (pointerup)="panels.onResizeEnd($event)"
+           (pointercancel)="panels.onResizeEnd($event)"></div>
       <!-- Un area, dos editores. Las pestanas de la cabecera no abren otra
            pantalla: cambian QUE editor ocupa este espacio, igual que el
            selector de tipo de editor de Blender. "Escena" es el outliner de
@@ -1080,9 +1080,9 @@
         <div class="area__head">
           <!-- Plegar la seccion, como en VS Code. Elegir una de las dos
                pestanas de al lado la vuelve a desplegar. -->
-          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-main')"
-                  [attr.aria-expanded]="!isCollapsed('side-main')"
-                  (click)="togglePanel('side-main')" title="Plegar o desplegar esta seccion">
+          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-main')"
+                  [attr.aria-expanded]="!panels.isCollapsed('side-main')"
+                  (click)="panels.togglePanel('side-main')" title="Plegar o desplegar esta seccion">
             <span class="area__chevron">▾</span>
           </button>
           <div class="seg">
@@ -1096,11 +1096,11 @@
           @if (leftEditor() === 'escena') {
             <span class="area__title">{{ entities().length }}</span>
           } @else {
-            <button class="tool" (click)="refreshTree()" title="Releer la carpeta del proyecto">⟳</button>
+            <button class="tool" (click)="explorer.refreshTree()" title="Releer la carpeta del proyecto">⟳</button>
           }
         </div>
 
-        @if (!isCollapsed('side-main') && leftEditor() === 'escena') {
+        @if (!panels.isCollapsed('side-main') && leftEditor() === 'escena') {
           <div class="area__body tree">
             <!-- Raiz del arbol: deseleccionar todo. Las entidades cuelgan de ella
                  con sangria, como los objetos bajo una coleccion en Blender. -->
@@ -1126,7 +1126,7 @@
               <p class="empty">Sin entidades. Elige una textura y usa la herramienta Colocar.</p>
             }
           </div>
-        } @else if (!isCollapsed('side-main')) {
+        } @else if (!panels.isCollapsed('side-main')) {
           <div class="area__body filetree">
             <!-- Los dos puntos de entrada del panel: elegir una escena ya
                  existente con el dialogo del sistema (sirva o no la carpeta
@@ -1139,17 +1139,17 @@
             </div>
 
             <!-- Una sola lista plana: la sangria la da la profundidad que
-                 calculo projectRows(). Cada fila es un boton porque todas
+                 calculo explorer.rows(). Cada fila es un boton porque todas
                  hacen algo -- abrir la carpeta, cargar el nivel, elegir la
                  textura, o mostrar el archivo en el visor de abajo. -->
-            @for (row of projectRows(); track row.node.path) {
+            @for (row of explorer.rows(); track row.node.path) {
               <button class="tree__item filerow"
-                      [class.is-active]="isOpenLevel(row.node) || isOpenFile(row.node)"
+                      [class.is-active]="explorer.isOpenLevel(row.node) || explorer.isOpenFile(row.node)"
                       [class.filerow--dir]="row.node.kind === 'dir'"
                       [style.padding-left.px]="8 + row.depth * 12"
                       [title]="row.node.path"
-                      (click)="openTreeEntry(row.node)">
-                <span class="tree__icon">{{ treeGlyph(row.node) }}</span>
+                      (click)="explorer.openTreeEntry(row.node)">
+                <span class="tree__icon">{{ explorer.treeGlyph(row.node) }}</span>
                 <span class="tree__label">{{ row.node.name }}</span>
               </button>
             } @empty {
@@ -1168,9 +1168,9 @@
            para crear una entidad nueva con ella. -->
       <section class="area">
         <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-assets')"
-                  [attr.aria-expanded]="!isCollapsed('side-assets')"
-                  (click)="togglePanel('side-assets')" title="Plegar o desplegar Recursos">
+          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-assets')"
+                  [attr.aria-expanded]="!panels.isCollapsed('side-assets')"
+                  (click)="panels.togglePanel('side-assets')" title="Plegar o desplegar Recursos">
             <span class="area__chevron">▾</span>▦
           </button>
           <span class="area__title">Recursos</span>
@@ -1182,8 +1182,8 @@
           </button>
         </div>
 
-        @if (!isCollapsed('side-assets')) {
-        <div class="area__body assets" [class.assets--fill]="isCollapsed('side-main')">
+        @if (!panels.isCollapsed('side-assets')) {
+        <div class="area__body assets" [class.assets--fill]="panels.isCollapsed('side-main')">
           @for (texture of textures(); track texture) {
             <button class="asset" [class.is-active]="activeTexture() === texture"
                     draggable="true"
@@ -1213,9 +1213,9 @@
            dibuja en el canvas (ver core/iso-shapes.ts). -->
       <section class="area">
         <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-shapes')"
-                  [attr.aria-expanded]="!isCollapsed('side-shapes')"
-                  (click)="togglePanel('side-shapes')" title="Plegar o desplegar Figuras">
+          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-shapes')"
+                  [attr.aria-expanded]="!panels.isCollapsed('side-shapes')"
+                  (click)="panels.togglePanel('side-shapes')" title="Plegar o desplegar Figuras">
             <span class="area__chevron">▾</span>◆
           </button>
           <span class="area__title">Figuras</span>
@@ -1223,7 +1223,7 @@
           <span class="area__title">arrastra a la grilla</span>
         </div>
 
-        @if (!isCollapsed('side-shapes')) {
+        @if (!panels.isCollapsed('side-shapes')) {
         <div class="area__body shapes">
           @for (shape of shapes; track shape.id) {
             <button
@@ -1252,9 +1252,9 @@
            espera el motor (ver core/characters.ts). -->
       <section class="area">
         <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-characters')"
-                  [attr.aria-expanded]="!isCollapsed('side-characters')"
-                  (click)="togglePanel('side-characters')" title="Plegar o desplegar Personajes">
+          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-characters')"
+                  [attr.aria-expanded]="!panels.isCollapsed('side-characters')"
+                  (click)="panels.togglePanel('side-characters')" title="Plegar o desplegar Personajes">
             <span class="area__chevron">▾</span>☻
           </button>
           <span class="area__title">Personajes</span>
@@ -1266,7 +1266,7 @@
         <!-- Cada tipo es un boton que DESPLIEGA sus personajes: el base y los
              configurados en "Configurar…". Arrastrar el boton del tipo coloca
              el base; arrastrar uno de la lista coloca ese. -->
-        @if (!isCollapsed('side-characters')) {
+        @if (!panels.isCollapsed('side-characters')) {
         <div class="area__body">
           <div class="shapes">
             @for (character of characters; track character.id) {
@@ -1316,9 +1316,9 @@
            definicion al nivel (ver core/items.ts). -->
       <section class="area">
         <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="isCollapsed('side-items')"
-                  [attr.aria-expanded]="!isCollapsed('side-items')"
-                  (click)="togglePanel('side-items')" title="Plegar o desplegar Objetos">
+          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-items')"
+                  [attr.aria-expanded]="!panels.isCollapsed('side-items')"
+                  (click)="panels.togglePanel('side-items')" title="Plegar o desplegar Objetos">
             <span class="area__chevron">▾</span>⚔
           </button>
           <span class="area__title">Objetos</span>
@@ -1327,7 +1327,7 @@
                   title="Crear y editar armas, curaciones y monedas">Configurar…</button>
         </div>
 
-        @if (!isCollapsed('side-items')) {
+        @if (!panels.isCollapsed('side-items')) {
         <div class="area__body">
           <div class="presetlist">
             @for (item of itemLibrary.items(); track item.id) {
@@ -1468,7 +1468,7 @@
           @if (selectionCount() > 1) {
             <span>{{ selectionCount() }} seleccionadas</span>
           }
-          @if (tunnelTrace(); as trace) {
+          @if (map.tunnelTrace(); as trace) {
             <span>túnel desde {{ trace.from }} · {{ trace.points.length }} puntos · Retroceso deshace · Escape cancela</span>
           }
         </div>
@@ -1480,15 +1480,15 @@
          plegables a la derecha, como el Properties editor de Blender. Cada
          control escribe con un patch* del componente, nunca directo sobre el
          objeto del nivel. -->
-    @if (inspectorVisible()) {
+    @if (panels.inspectorVisible()) {
     <section class="area inspector">
       <!-- Mismo borde arrastrable que el panel izquierdo, en su canto interno. -->
-      <div class="grip grip--left" [class.is-active]="isResizing('inspector')"
+      <div class="grip grip--left" [class.is-active]="panels.isResizing('inspector')"
            title="Arrastra para cambiar el ancho"
-           (pointerdown)="onResizeStart('inspector', $event)"
-           (pointermove)="onResizeMove($event)"
-           (pointerup)="onResizeEnd($event)"
-           (pointercancel)="onResizeEnd($event)"></div>
+           (pointerdown)="panels.onResizeStart('inspector', $event)"
+           (pointermove)="panels.onResizeMove($event)"
+           (pointerup)="panels.onResizeEnd($event)"
+           (pointercancel)="panels.onResizeEnd($event)"></div>
 
       <div class="area__head">
         <span class="area__kind" title="Propiedades">⚙</span>
@@ -1519,11 +1519,11 @@
               }
 
               <section class="panel">
-                <button class="panel__head" (click)="togglePanel('obj')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('obj')">▶</span>
+                <button class="panel__head" (click)="panels.togglePanel('obj')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('obj')">▶</span>
                   Objeto
                 </button>
-                @if (!isCollapsed('obj')) {
+                @if (!panels.isCollapsed('obj')) {
                   <div class="panel__body">
                     <label class="field">
                       <span>ID</span>
@@ -1543,11 +1543,11 @@
               </section>
 
               <section class="panel">
-                <button class="panel__head" (click)="togglePanel('transform')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('transform')">▶</span>
+                <button class="panel__head" (click)="panels.togglePanel('transform')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('transform')">▶</span>
                   Transformacion
                 </button>
-                @if (!isCollapsed('transform')) {
+                @if (!panels.isCollapsed('transform')) {
                   <div class="panel__body">
                     <label class="field">
                       <span>Columna</span>
@@ -1564,11 +1564,11 @@
               </section>
 
               <section class="panel">
-                <button class="panel__head" (click)="togglePanel('sprite')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('sprite')">▶</span>
+                <button class="panel__head" (click)="panels.togglePanel('sprite')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('sprite')">▶</span>
                   Sprite
                 </button>
-                @if (!isCollapsed('sprite')) {
+                @if (!panels.isCollapsed('sprite')) {
                   <div class="panel__body">
                     <div class="field-row">
                       <label class="field">
@@ -1599,11 +1599,11 @@
               </section>
 
               <section class="panel">
-                <button class="panel__head" (click)="togglePanel('collider')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('collider')">▶</span>
+                <button class="panel__head" (click)="panels.togglePanel('collider')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('collider')">▶</span>
                   Fisica
                 </button>
-                @if (!isCollapsed('collider')) {
+                @if (!panels.isCollapsed('collider')) {
                   <div class="panel__body">
                     <!-- Lo mismo que ofrece el menu del click derecho. Esta
                          tambien aca porque es una propiedad del objeto, y el
@@ -1637,11 +1637,11 @@
               </section>
 
               <section class="panel">
-                <button class="panel__head" (click)="togglePanel('anim')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('anim')">▶</span>
+                <button class="panel__head" (click)="panels.togglePanel('anim')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('anim')">▶</span>
                   Animación y tamaño
                 </button>
-                @if (!isCollapsed('anim')) {
+                @if (!panels.isCollapsed('anim')) {
                   <div class="panel__body">
                     <div class="field-row">
                       <label class="field">
@@ -1671,11 +1671,11 @@
 
               @if (isCharacter(entity)) {
                 <section class="panel">
-                  <button class="panel__head" (click)="togglePanel('stats')">
-                    <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('stats')">▶</span>
+                  <button class="panel__head" (click)="panels.togglePanel('stats')">
+                    <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('stats')">▶</span>
                     Características
                   </button>
-                  @if (!isCollapsed('stats')) {
+                  @if (!panels.isCollapsed('stats')) {
                     <div class="panel__body">
                       <div class="field-row">
                         <label class="field">
@@ -1710,11 +1710,11 @@
                    esta en combat/combat-inspector.controller.ts. -->
               @let role = combat.roleOf(entity);
               <section class="panel">
-                <button class="panel__head" (click)="togglePanel('combat')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('combat')">▶</span>
+                <button class="panel__head" (click)="panels.togglePanel('combat')">
+                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('combat')">▶</span>
                   {{ role === 'npc' ? 'Tienda' : role === 'item' ? 'Objeto para juntar' : role === 'other' ? 'Puzzle' : 'Combate' }}
                 </button>
-                @if (!isCollapsed('combat')) {
+                @if (!panels.isCollapsed('combat')) {
                   <div class="panel__body">
                     @switch (role) {
                       @case ('player') {
@@ -1933,11 +1933,11 @@
             <!-- Fuera del @if de la seleccion: sirve para colocar, asi que
                  tiene que estar aunque no haya nada elegido. -->
             <section class="panel">
-              <button class="panel__head" (click)="togglePanel('shapes')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('shapes')">▶</span>
+              <button class="panel__head" (click)="panels.togglePanel('shapes')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('shapes')">▶</span>
                 Figuras
               </button>
-              @if (!isCollapsed('shapes')) {
+              @if (!panels.isCollapsed('shapes')) {
                 <div class="panel__body">
                   <label class="check">
                     <input type="checkbox" [checked]="paintShapes()" (change)="paintShapes.set(checked($event))" />
@@ -1949,11 +1949,11 @@
             </section>
           } @else {
             <section class="panel">
-              <button class="panel__head" (click)="togglePanel('level')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('level')">▶</span>
+              <button class="panel__head" (click)="panels.togglePanel('level')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('level')">▶</span>
                 Nivel
               </button>
-              @if (!isCollapsed('level')) {
+              @if (!panels.isCollapsed('level')) {
                 <div class="panel__body">
                   <label class="field">
                     <span>Nombre</span>
@@ -1964,11 +1964,11 @@
             </section>
 
             <section class="panel">
-              <button class="panel__head" (click)="togglePanel('background')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('background')">▶</span>
+              <button class="panel__head" (click)="panels.togglePanel('background')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('background')">▶</span>
                 Fondo y colores
               </button>
-              @if (!isCollapsed('background')) {
+              @if (!panels.isCollapsed('background')) {
                 <div class="panel__body">
                   <!-- Selector a lo Photoshop, sin ventana aparte: el cuadro
                        elige saturacion (X) y brillo (Y), la barra el tono. -->
@@ -2016,11 +2016,11 @@
             </section>
 
             <section class="panel">
-              <button class="panel__head" (click)="togglePanel('grid')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('grid')">▶</span>
+              <button class="panel__head" (click)="panels.togglePanel('grid')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('grid')">▶</span>
                 Grilla
               </button>
-              @if (!isCollapsed('grid')) {
+              @if (!panels.isCollapsed('grid')) {
                 <div class="panel__body">
                   <div class="field-row">
                     <label class="field">
@@ -2056,76 +2056,76 @@
                  cada tecla dibujaria salas de tamaños intermedios sin sentido
                  mientras se escribe un "12". -->
             <section class="panel">
-              <button class="panel__head" (click)="togglePanel('map')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('map')">▶</span>
+              <button class="panel__head" (click)="panels.togglePanel('map')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('map')">▶</span>
                 Mapa
               </button>
-              @if (!isCollapsed('map')) {
+              @if (!panels.isCollapsed('map')) {
                 <div class="panel__body">
-                  @if (rooms().length === 0) {
+                  @if (map.rooms().length === 0) {
                     <p class="hint">
                       El nivel es una sola grilla. Agregá otra para armar salas unidas por túneles.
                     </p>
                   }
 
-                  @for (room of rooms(); track room.id) {
+                  @for (room of map.rooms(); track room.id) {
                     <div class="maprow">
                       <div class="maprow__head">
                         <span class="maprow__name">▦ {{ room.id }}</span>
                         <span class="maprow__actions">
                           <button class="btn btn--small" type="button" title="Configurar la grilla"
-                                  (click)="editRoom(room.id)">✎</button>
+                                  (click)="map.editRoom(room.id)">✎</button>
                           <button class="btn btn--small btn--danger" type="button"
-                                  title="Quitar la grilla y sus túneles" (click)="removeRoom(room.id)">×</button>
+                                  title="Quitar la grilla y sus túneles" (click)="map.removeRoom(room.id)">×</button>
                         </span>
                       </div>
                       <div class="field-row">
                         <label class="field">
                           <span>Col</span>
                           <input class="input" type="number" step="1" [value]="room.col"
-                                 (change)="updateRoom(room.id, { col: int($event) })" />
+                                 (change)="map.updateRoom(room.id, { col: int($event) })" />
                         </label>
                         <label class="field">
                           <span>Fila</span>
                           <input class="input" type="number" step="1" [value]="room.row"
-                                 (change)="updateRoom(room.id, { row: int($event) })" />
+                                 (change)="map.updateRoom(room.id, { row: int($event) })" />
                         </label>
                         <label class="field">
                           <span>Ancho</span>
                           <input class="input" type="number" min="1" step="1" [value]="room.width"
-                                 (change)="updateRoom(room.id, { width: int($event) })" />
+                                 (change)="map.updateRoom(room.id, { width: int($event) })" />
                         </label>
                         <label class="field">
                           <span>Alto</span>
                           <input class="input" type="number" min="1" step="1" [value]="room.height"
-                                 (change)="updateRoom(room.id, { height: int($event) })" />
+                                 (change)="map.updateRoom(room.id, { height: int($event) })" />
                         </label>
                       </div>
                     </div>
                   }
 
-                  @if (tunnels().length > 0) {
+                  @if (map.tunnels().length > 0) {
                     <div class="maplist__title">Túneles</div>
-                    @for (tunnel of tunnels(); track tunnel.id) {
+                    @for (tunnel of map.tunnels(); track tunnel.id) {
                       <div class="maprow maprow--inline">
                         <span class="maprow__name"
                               [title]="tunnel.path?.length ? 'Trazado a mano' : 'Trazado automático'">
                           {{ tunnel.from }} → {{ tunnel.to }}{{ tunnel.path?.length ? ' · a mano' : '' }}
                         </span>
                         <input class="input maprow__num" type="number" min="1" step="1" [value]="tunnel.width"
-                               title="Ancho en celdas caminables" (change)="updateTunnel(tunnel.id, int($event))" />
+                               title="Ancho en celdas caminables" (change)="map.updateTunnel(tunnel.id, int($event))" />
                         <button class="btn btn--small" type="button" title="Configurar: lados, trazado y ancho"
-                                (click)="editTunnel(tunnel.id)">✎</button>
+                                (click)="map.editTunnel(tunnel.id)">✎</button>
                         <button class="btn btn--small btn--danger" type="button" title="Quitar el túnel"
-                                (click)="removeTunnel(tunnel.id)">×</button>
+                                (click)="map.removeTunnel(tunnel.id)">×</button>
                       </div>
                     }
                   }
 
                   <div class="field-row" style="margin-top: 8px">
-                    <button class="btn" style="flex: 1" type="button" (click)="openRoomDialog()">+ Grilla</button>
-                    <button class="btn" style="flex: 1" type="button" [disabled]="rooms().length < 2"
-                            (click)="openTunnelDialog()">+ Túnel</button>
+                    <button class="btn" style="flex: 1" type="button" (click)="map.openRoomDialog()">+ Grilla</button>
+                    <button class="btn" style="flex: 1" type="button" [disabled]="map.rooms().length < 2"
+                            (click)="map.openTunnelDialog()">+ Túnel</button>
                   </div>
 
                   @if (tileEditCount() > 0) {
@@ -2133,7 +2133,7 @@
                       {{ tileEditCount() }} celdas retocadas a mano con Piso/Pared se aplican encima de las
                       grillas.
                     </p>
-                    <button class="btn btn--small" type="button" (click)="clearTileEdits()">
+                    <button class="btn btn--small" type="button" (click)="map.clearTileEdits()">
                       Descartar retoques
                     </button>
                   }
@@ -2145,11 +2145,11 @@
                  zona" y "Al entrar a una zona". Las salas del mapa ya cuentan
                  como zonas; esto es para lo que no es una sala entera. -->
             <section class="panel">
-              <button class="panel__head" (click)="togglePanel('zones')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('zones')">▶</span>
+              <button class="panel__head" (click)="panels.togglePanel('zones')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('zones')">▶</span>
                 Zonas de puzzle
               </button>
-              @if (!isCollapsed('zones')) {
+              @if (!panels.isCollapsed('zones')) {
                 <div class="panel__body">
                   <p class="hint">Las salas del mapa ya sirven como zonas. Agregá una para una parte de una sala o un pasillo.</p>
                   @for (zone of zones(); track zone.id) {
@@ -2194,11 +2194,11 @@
             </section>
 
             <section class="panel">
-              <button class="panel__head" (click)="togglePanel('project')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="isCollapsed('project')">▶</span>
+              <button class="panel__head" (click)="panels.togglePanel('project')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('project')">▶</span>
                 Proyecto
               </button>
-              @if (!isCollapsed('project')) {
+              @if (!panels.isCollapsed('project')) {
                 <div class="panel__body">
                   <p class="hint">{{ project.projectRoot() ?? 'Sin proyecto abierto.' }}</p>
                   @if (!hasFileSystem) {
@@ -2243,11 +2243,11 @@
           <span class="head__label">{{ events().length }} eventos</span>
         } @else if (workspace() === 'archivo') {
           <span class="area__kind" title="Visor de archivos">◈</span>
-          <span class="area__title">{{ openFile()?.path ?? 'Archivo' }}</span>
+          <span class="area__title">{{ explorer.openFile()?.path ?? 'Archivo' }}</span>
           <div class="head__spacer"></div>
-          @if (openFile(); as file) {
-            <span class="head__label">{{ fileSize(file.data.size) }}</span>
-            <button class="tool" (click)="closeOpenFile()" title="Cerrar el archivo">×</button>
+          @if (explorer.openFile(); as file) {
+            <span class="head__label">{{ explorer.fileSize(file.data.size) }}</span>
+            <button class="tool" (click)="explorer.closeOpenFile()" title="Cerrar el archivo">×</button>
           }
         } @else {
           <span class="area__kind" title="Consola">›_</span>
@@ -2388,7 +2388,7 @@
           <!-- Visor de solo lectura. El proceso principal decide por extension
                si el archivo llega como texto, como imagen o si no se puede
                mostrar; aca solo se elige con que caja dibujarlo. -->
-          @if (openFile(); as file) {
+          @if (explorer.openFile(); as file) {
             @switch (file.data.kind) {
               @case ('text') {
                 @if (file.data.truncated) {
@@ -2405,11 +2405,11 @@
               }
               @default {
                 <p class="empty">
-                  @if (isTooLargeToPreview(file)) {
-                    {{ file.path }} pesa {{ fileSize(file.data.size) }}: es una imagen, pero demasiado
+                  @if (explorer.isTooLargeToPreview(file)) {
+                    {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }}: es una imagen, pero demasiado
                     pesada para previsualizarla aca.
                   } @else {
-                    {{ file.path }} pesa {{ fileSize(file.data.size) }} y no es texto ni imagen:
+                    {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }} y no es texto ni imagen:
                     el editor no puede mostrarlo.
                   }
                 </p>

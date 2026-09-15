@@ -15,13 +15,22 @@
 // visual vive entero en app.scss.
 //
 // El estado NO vive aca: vive en los servicios (LevelService el nivel abierto,
-// ProjectService el disco, CatalogService el catalogo de eventos). Este archivo
-// es la capa de interaccion: traduce clicks y teclas a llamadas a esos
-// servicios, y dibuja el canvas isometrico.
+// SelectionService lo seleccionado, ProjectService el disco, CatalogService el
+// catalogo de eventos). Este archivo es la capa de interaccion: traduce clicks
+// y teclas a llamadas a esos servicios y a los controladores.
 //
-// El canvas se dibuja a mano con la API 2D, sin libreria: la proyeccion tiene
+// Lo que tiene entidad propia vive en un controlador, con su markup todavia en
+// app.html para compartir los estilos de App:
+//
+//   ui/panels.controller.ts       anchos, paneles escondidos y plegados
+//   project/explorer.controller.ts  el arbol de archivos y el visor
+//   map/map.controller.ts         salas, tuneles y sus herramientas
+//   combat/*.controller.ts        objetos, puzzles e inspector de combate
+//
+// El dibujo del viewport y las conversiones pantalla<->celda estan en
+// core/iso-canvas-renderer.ts, que no depende de Angular. Su proyeccion tiene
 // que ser identica a la del runtime (ver core/iso-projection.ts, espejo de
-// IsoGridSystem en C++), asi que conviene controlar cada pixel.
+// IsoGridSystem en C++).
 // =============================================================================
 
 import {
@@ -34,8 +43,17 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
-import { Hsv, clampChannel, hexToRgb, hsvToRgb, rgbToHex, rgbToHsv } from './core/color';
+import {
+  NgTemplateOutlet,
+} from '@angular/common';
+import {
+  Hsv,
+  clampChannel,
+  hexToRgb,
+  hsvToRgb,
+  rgbToHex,
+  rgbToHsv,
+} from './core/color';
 
 import {
   CHARACTERS,
@@ -51,10 +69,19 @@ import {
   presetFromArchetype,
   presetIdFromName,
 } from './core/characters';
-import { spriteCropStyle } from './core/sprite-style';
-import { CharacterPreset } from './models/character-preset.model';
-import { CharacterPresetService } from './services/character-preset.service';
-import { GridCoord, IsoProjection } from './core/iso-projection';
+import {
+  spriteCropStyle,
+} from './core/sprite-style';
+import {
+  CharacterPreset,
+} from './models/character-preset.model';
+import {
+  CharacterPresetService,
+} from './services/character-preset.service';
+import {
+  GridCoord,
+  IsoProjection,
+} from './core/iso-projection';
 import {
   CanvasPoint,
   CanvasScene,
@@ -68,17 +95,18 @@ import {
   renderPngBase64,
   usesNearestNeighbor,
 } from './core/texture-fit';
-import type { ImportSession, ProjectFileData, ProjectNode } from './electron-api';
-import { MenuBar, MenuDef, MenuLeaf } from './menu-bar/menu-bar';
+import type {
+  ImportSession,
+  ProjectNode,
+} from './electron-api';
 import {
-  implicitRoom,
+  MenuBar,
+  MenuDef,
+  MenuLeaf,
+} from './menu-bar/menu-bar';
+import {
   nextFreeId,
-  oppositeSide,
-  placeBeside,
-  rectBetween,
   roomAt,
-  roomCenter,
-  sideFacing,
   tunnelAt,
 } from './core/dungeon-layout';
 import {
@@ -93,35 +121,71 @@ import {
   shapeDef,
   shapeOf,
 } from './core/iso-shapes';
-import { CatalogEntry, CatalogParamDef } from './models/event-catalog.model';
+import {
+  CatalogEntry,
+  CatalogParamDef,
+} from './models/event-catalog.model';
 import {
   EntityStats,
   EventStep,
   GridConfig,
   GridPosition,
   LevelEntity,
-  MapRoom,
   RgbColor,
-  RoomSide,
   Zone,
 } from './models/level.model';
 import {
-  blockCenter,
   blocksOverlap,
   clampBlockPosition,
   entitySpan,
 } from './core/entity-blocks';
-import { AttackPreviewDirective } from './combat/attack-preview.directive';
-import { CombatInspectorController } from './combat/combat-inspector.controller';
-import { ItemEditorController } from './combat/item-editor.controller';
-import { PuzzleController } from './combat/puzzle.controller';
-import { ITEM_KINDS, describeAttack, entityFromItem, itemKindDef } from './core/items';
-import { ItemDef, ItemKind, OnFullInventory } from './models/item.model';
-import { CatalogService } from './services/catalog.service';
-import { ItemLibraryService } from './services/item-library.service';
-import { LevelService } from './services/level.service';
-import { SelectionService } from './services/selection.service';
-import { ProjectService } from './services/project.service';
+import {
+  AttackPreviewDirective,
+} from './combat/attack-preview.directive';
+import {
+  CombatInspectorController,
+} from './combat/combat-inspector.controller';
+import {
+  ItemEditorController,
+} from './combat/item-editor.controller';
+import {
+  PuzzleController,
+} from './combat/puzzle.controller';
+import {
+  ITEM_KINDS,
+  describeAttack,
+  entityFromItem,
+  itemKindDef,
+} from './core/items';
+import {
+  ItemDef,
+  ItemKind,
+  OnFullInventory,
+} from './models/item.model';
+import {
+  ExplorerController,
+} from './project/explorer.controller';
+import {
+  MapController,
+} from './map/map.controller';
+import {
+  PanelsController,
+} from './ui/panels.controller';
+import {
+  CatalogService,
+} from './services/catalog.service';
+import {
+  ItemLibraryService,
+} from './services/item-library.service';
+import {
+  LevelService,
+} from './services/level.service';
+import {
+  SelectionService,
+} from './services/selection.service';
+import {
+  ProjectService,
+} from './services/project.service';
 
 /** Herramienta activa del viewport: seleccionar entidades o colocarlas. */
 type Tool = 'select' | 'place' | 'floor' | 'wall' | 'room' | 'tunnel';
@@ -160,21 +224,6 @@ type InspectorTab = 'objeto' | 'escena';
  * "proyecto", el organizador de archivos de la carpeta abierta.
  */
 type LeftEditor = 'escena' | 'proyecto';
-
-/**
- * Una fila del explorador de archivos ya aplanada: el nodo y a que profundidad
- * va sangrado. Ver projectRows().
- */
-interface TreeRow {
-  node: ProjectNode;
-  depth: number;
-}
-
-/** El archivo que se esta mirando en el visor, con su ruta. */
-interface OpenFile {
-  path: string;
-  data: ProjectFileData;
-}
 
 /**
  * Algo que quedo esperando respuesta porque cayo sobre celdas ocupadas, y que
@@ -218,10 +267,6 @@ const CLICK_SLOP = 4;
 // Limites del ancho de los dos paneles laterales al arrastrar su borde. El
 // minimo es lo que necesita una fila para no cortar todos los nombres; el
 // maximo, dejarle al viewport la mitad de una pantalla chica.
-const SIDEBAR_MIN_WIDTH = 170;
-const SIDEBAR_MAX_WIDTH = 560;
-const SIDEBAR_DEFAULT_WIDTH = 230;
-const INSPECTOR_DEFAULT_WIDTH = 290;
 
 /** Cuanto mueve cada flecha del teclado, en celdas de la grilla. */
 const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
@@ -255,27 +300,6 @@ const FALLBACK_SOURCE_RECT = { x: 0, y: 0, width: 16, height: 16 };
 /** Nombre de archivo de una textura a partir de su ruta en el nivel ("textures/x.png" -> "x.png"). */
 const textureName = (path: string) => path.replace(/^textures\//, '');
 
-/**
- * Que hace cada herramienta, para decirlo en la barra de estado al elegirla.
- * Varias no cambian nada en pantalla hasta el primer click en la grilla, y sin
- * este mensaje el boton se siente muerto aunque haya respondido.
- */
-/** Borrador del dialogo de grilla, tanto para agregar una como para cambiarla. */
-interface RoomDraft {
-  /** La grilla que se esta cambiando, o null si es una nueva. */
-  editId: string | null;
-  id: string;
-  col: number;
-  row: number;
-  width: number;
-  height: number;
-  /** Grilla junto a la que se ubica. Vacio = posicion libre (columna y fila a mano). */
-  anchor: string;
-  side: RoomSide;
-  /** Grilla con la que se une por un tunel. Vacio = sin tunel. */
-  connectTo: string;
-  tunnelWidth: number;
-}
 
 /**
  * Borrador del dialogo "Pasar a otro nivel". Es un atajo para armar el evento
@@ -290,39 +314,8 @@ interface TransitionDraft {
   message: string;
 }
 
-/** Borrador del dialogo de tunel. Un lado vacio = automatico (desde el centro). */
-interface TunnelDraft {
-  /** El tunel que se esta cambiando, o null si es uno nuevo. */
-  editId: string | null;
-  from: string;
-  to: string;
-  width: number;
-  fromSide: RoomSide | '';
-  toSide: RoomSide | '';
-  path: GridPosition[];
-}
 
-/**
- * Los cuatro lados, como se ven en PANTALLA. Los ejes de la grilla van en
- * diagonal en la vista isometrica (+columna es abajo a la derecha), asi que
- * "derecha" a secas no le diria a nadie donde va a aparecer la grilla.
- */
-const ROOM_SIDES: readonly { value: RoomSide; label: string; hint: string }[] = [
-  { value: 'right', label: '↘ Abajo der.', hint: 'Hacia +columna: en pantalla, abajo a la derecha' },
-  { value: 'bottom', label: '↙ Abajo izq.', hint: 'Hacia +fila: en pantalla, abajo a la izquierda' },
-  { value: 'top', label: '↗ Arriba der.', hint: 'Hacia −fila: en pantalla, arriba a la derecha' },
-  { value: 'left', label: '↖ Arriba izq.', hint: 'Hacia −columna: en pantalla, arriba a la izquierda' },
-];
 
-/** Tamano inicial de una grilla nueva. */
-const NEW_ROOM_SIZE = 6;
-/**
- * Celdas libres entre una grilla nueva y la anterior: una de pared de cada
- * lado y una de pasillo en el medio, lo minimo para que un tunel se vea.
- */
-const NEW_ROOM_GAP = 4;
-/** Ancho de tunel que propone el dialogo: el 3×3 del ejemplo del diseño. */
-const DEFAULT_TUNNEL_WIDTH = 3;
 
 /** Nombre de cada herramienta en el menu Editar > Herramienta. */
 const TOOL_LABELS: Record<Tool, string> = {
@@ -450,36 +443,25 @@ export class App {
   // --- Explorador de archivos del proyecto ----------------------------------
   readonly leftEditor = signal<LeftEditor>('escena');
   /**
-   * Hijos ya leidos de cada carpeta, indexados por su ruta ("" es la raiz del
-   * proyecto). El arbol se llena de a una carpeta por vez, al desplegarla.
+   * El explorador de archivos del proyecto. Ver project/explorer.controller.ts.
+   * Lo que no decide el (abrir un nivel, elegir una textura) se le pasa por
+   * constructor, porque toca partes del editor que el explorador no conoce.
    */
-  private readonly treeChildren = signal<Record<string, ProjectNode[]>>({});
-  /**
-   * Carpetas desplegadas. Aca se guardan las ABIERTAS -- al reves que los
-   * paneles del inspector -- porque con carga perezosa abrir es la accion que
-   * cuesta: lo que nadie desplego no se leyo del disco, y arrancar con todo
-   * abierto significaria leer el proyecto entero.
-   */
-  private readonly expandedDirs = signal<Record<string, boolean>>({});
-  /** El archivo que se esta mirando en el visor (workspace "archivo"). */
-  readonly openFile = signal<OpenFile | null>(null);
-
-  // --- Paneles laterales: ancho y visibilidad -------------------------------
-  // Los dos se comportan igual: se arrastra su borde interior para cambiar el
-  // ancho y se esconden con su boton del topbar.
-  readonly sidebarWidth = signal(SIDEBAR_DEFAULT_WIDTH);
-  readonly sidebarVisible = signal(true);
-  readonly inspectorWidth = signal(INSPECTOR_DEFAULT_WIDTH);
-  readonly inspectorVisible = signal(true);
-  /** Que borde se esta arrastrando, si alguno. La plantilla lo usa para resaltarlo. */
-  private readonly resizing = signal<'sidebar' | 'inspector' | null>(null);
+  readonly explorer = new ExplorerController(
+    (message) => this.note(message),
+    (error) => this.describe(error),
+    (node) => this.openProjectLevel(node),
+    (name) => this.selectTexture(name),
+    () => this.workspace.set('archivo'),
+  );
 
   /**
-   * Paneles del inspector plegados, por id. Se guarda el conjunto de PLEGADOS y
-   * no el de abiertos para que un panel nuevo aparezca desplegado sin tener que
-   * inicializarlo en ningun lado.
+   * La disposicion de la ventana: anchos, paneles escondidos y paneles
+   * plegados. Ver ui/panels.controller.ts. La plantilla lo usa directamente
+   * como "panels.X"; aca solo se lo toca desde las acciones que llevan a un
+   * panel concreto.
    */
-  private readonly collapsedPanels = signal<Record<string, boolean>>({});
+  readonly panels = new PanelsController();
 
   readonly zoomSteps = ZOOM_STEPS;
   readonly shapes = SHAPES;
@@ -557,8 +539,6 @@ export class App {
   // solo recalcula (y redibuja el canvas) cuando eso cambia de verdad.
   readonly entities = computed(() => this.levels.level().entities);
   readonly events = computed(() => this.levels.level().events);
-  readonly rooms = computed(() => this.levels.level().rooms ?? []);
-  readonly tunnels = computed(() => this.levels.level().tunnels ?? []);
   readonly tileEditCount = computed(() => this.levels.level().tileEdits?.length ?? 0);
   readonly grid = computed(() => this.levels.level().grid);
   /** El objeto ACTIVO: el ultimo seleccionado, el unico que muestra el inspector. */
@@ -668,8 +648,8 @@ export class App {
         id: 'ver',
         label: 'Ver',
         items: [
-          { kind: 'action', label: 'Barra lateral', shortcut: 'Ctrl+B', checked: this.sidebarVisible(), run: () => this.toggleSidebar() },
-          { kind: 'action', label: 'Panel de propiedades', checked: this.inspectorVisible(), run: () => this.toggleInspector() },
+          { kind: 'action', label: 'Barra lateral', shortcut: 'Ctrl+B', checked: this.panels.sidebarVisible(), run: () => this.panels.toggleSidebar() },
+          { kind: 'action', label: 'Panel de propiedades', checked: this.panels.inspectorVisible(), run: () => this.panels.toggleInspector() },
           {
             kind: 'submenu',
             label: 'Espacio de trabajo',
@@ -758,7 +738,7 @@ export class App {
         id: 'mapa',
         label: 'Mapa',
         items: [
-          { kind: 'action', label: 'Agregar grilla al mapa…', run: () => this.openRoomDialog() },
+          { kind: 'action', label: 'Agregar grilla al mapa…', run: () => this.map.openRoomDialog() },
           {
             kind: 'action',
             label: 'Dibujar grilla en el viewport',
@@ -769,20 +749,20 @@ export class App {
           {
             kind: 'action',
             label: 'Conectar grillas con un túnel…',
-            disabled: this.rooms().length < 2,
-            run: () => this.openTunnelDialog(),
+            disabled: this.map.rooms().length < 2,
+            run: () => this.map.openTunnelDialog(),
           },
           {
             kind: 'action',
             label: 'Trazar túnel a mano',
             checked: this.tool() === 'tunnel',
-            disabled: this.rooms().length < 2,
+            disabled: this.map.rooms().length < 2,
             run: () => this.setTool('tunnel'),
           },
           {
             kind: 'action',
             label: 'Tamaño de las conexiones…',
-            disabled: this.tunnels().length === 0,
+            disabled: this.map.tunnels().length === 0,
             run: () => this.showMapPanel(),
           },
           separator,
@@ -838,7 +818,7 @@ export class App {
 
   /** Abre el panel de propiedades en la pestaña de escena, donde estan las medidas de la grilla. */
   showGridProperties(): void {
-    this.inspectorVisible.set(true);
+    this.panels.inspectorVisible.set(true);
     this.inspectorTab.set('escena');
   }
 
@@ -939,7 +919,7 @@ export class App {
 
   readonly zones = computed(() => this.levels.level().zones ?? []);
   /** Salas y zonas: lo que acepta un parametro zone_ref (el motor usa las dos). */
-  readonly zoneIds = computed(() => [...this.rooms().map((room) => room.id), ...this.zones().map((zone) => zone.id)]);
+  readonly zoneIds = computed(() => [...this.map.rooms().map((room) => room.id), ...this.zones().map((zone) => zone.id)]);
 
   itemGlyph(item: ItemDef): string {
     return itemKindDef(item.kind).glyph;
@@ -1431,464 +1411,27 @@ export class App {
     this.patchEntity({ scale: scale === 1 ? undefined : scale });
   }
 
-  // --- Mapa: grillas y tuneles (parte 1) ------------------------------------
+  // --- Mapa: grillas y tuneles ----------------------------------------------
   //
-  // Un nivel puede ser un MAPA de varias grillas (salas) unidas por tuneles.
-  // Salas y tuneles se guardan en el JSON para seguir editandolos, y el editor
-  // los traduce a las celdas de piso y pared que el motor ya sabe leer (ver
-  // core/dungeon-layout.ts). Aca solo estan los dialogos y el panel; las
-  // cuentas viven en LevelService y en ese modulo.
-
-  readonly roomDraft = signal<RoomDraft | null>(null);
-  readonly tunnelDraft = signal<TunnelDraft | null>(null);
-  readonly roomSides = ROOM_SIDES;
+  // Salas, tuneles, sus dos dialogos y sus herramientas viven en
+  // map/map.controller.ts. Aca quedan el atajo al panel y el cableado.
 
   /**
-   * Arrastre en curso de la herramienta Grilla: dibujar el rectangulo de una
-   * nueva, o mover una existente. Es un signal porque el canvas dibuja la
-   * vista previa mientras dura.
+   * Salas y tuneles del mapa. Ver map/map.controller.ts. Las herramientas
+   * reciben la celda ya proyectada porque el controlador no sabe de canvas.
    */
-  readonly roomDrag = signal<
-    | { kind: 'create'; start: GridCoord; end: GridCoord }
-    | { kind: 'move'; id: string; grab: GridCoord; origin: GridCoord; delta: GridCoord }
-    | null
-  >(null);
-
-  /**
-   * Tunel a medio trazar con la herramienta Tunel: de que grilla sale, los
-   * puntos marcados hasta ahora, el ancho que va a tener, y que tunel se esta
-   * redibujando (null si es uno nuevo).
-   */
-  readonly tunnelTrace = signal<{
-    from: string;
-    points: GridCoord[];
-    width: number;
-    editId: string | null;
-  } | null>(null);
+  readonly map = new MapController(
+    (message) => this.note(message),
+    () => this.dirty.set(true),
+    () => this.frameAll(),
+    (tool) => this.tool.set(tool),
+    (cell) => this.hovered.set(cell),
+  );
 
   /** Abre Propiedades en la pestaña de escena con el panel Mapa desplegado. */
   showMapPanel(): void {
     this.showGridProperties();
-    this.collapsedPanels.update((state) => ({ ...state, map: false }));
-  }
-
-  /**
-   * Las salas con las que se puede conectar una grilla nueva. En un nivel que
-   * todavia es una sola grilla, es la sala en la que se va a convertir: asi el
-   * dialogo ya ofrece unir la nueva con el area de siempre.
-   */
-  connectableRooms() {
-    return this.rooms().length > 0 ? this.rooms() : [implicitRoom(this.grid())];
-  }
-
-  /**
-   * Abre el dialogo de grilla nueva. Sin argumentos propone pegarla a la
-   * ultima grilla, del lado de siempre (↘, +columna) y unida por un tunel
-   * recto; con un rectangulo -- el que se dibujo con la herramienta Grilla --
-   * la deja justo ahi, sin tunel, para trazarlo despues a mano si se quiere.
-   */
-  openRoomDialog(area?: { col: number; row: number; width: number; height: number }): void {
-    const existing = this.connectableRooms();
-    const last = existing[existing.length - 1];
-    const id = nextFreeId('sala', existing.map((room) => room.id));
-
-    if (area) {
-      this.roomDraft.set({
-        editId: null,
-        id,
-        ...area,
-        anchor: '',
-        side: 'right',
-        connectTo: '',
-        tunnelWidth: DEFAULT_TUNNEL_WIDTH,
-      });
-      return;
-    }
-    this.roomDraft.set(
-      this.placedDraft({
-        editId: null,
-        id,
-        col: 0,
-        row: 0,
-        width: NEW_ROOM_SIZE,
-        height: NEW_ROOM_SIZE,
-        anchor: last.id,
-        side: 'right',
-        connectTo: last.id,
-        tunnelWidth: DEFAULT_TUNNEL_WIDTH,
-      }),
-    );
-  }
-
-  /** El mismo dialogo, para cambiar una grilla que ya existe. */
-  editRoom(id: string): void {
-    const room = this.rooms().find((candidate) => candidate.id === id);
-    if (!room) {
-      return;
-    }
-    this.roomDraft.set({
-      editId: id,
-      ...room,
-      anchor: '',
-      side: 'right',
-      connectTo: '',
-      tunnelWidth: DEFAULT_TUNNEL_WIDTH,
-    });
-  }
-
-  /** Grillas junto a las que se puede ubicar la del dialogo: todas menos ella misma. */
-  anchorRooms(): MapRoom[] {
-    const editing = this.roomDraft()?.editId;
-    return this.connectableRooms().filter((room) => room.id !== editing);
-  }
-
-  /** Si el borrador esta pegado a otra grilla, recalcula su columna y fila. */
-  private placedDraft(draft: RoomDraft): RoomDraft {
-    const anchor = this.connectableRooms().find((room) => room.id === draft.anchor);
-    return anchor ? { ...draft, ...placeBeside(anchor, draft.side, draft, NEW_ROOM_GAP) } : draft;
-  }
-
-  patchRoomDraft(changes: Partial<RoomDraft>): void {
-    this.roomDraft.update((draft) => (draft ? { ...draft, ...changes } : draft));
-  }
-
-  /**
-   * Columna o fila escritas a mano: la grilla deja de estar pegada a otra. Si
-   * no, el numero que se escribio se pisaria al instante con la posicion de
-   * al lado.
-   */
-  patchRoomPosition(changes: { col?: number; row?: number }): void {
-    this.roomDraft.update((draft) => (draft ? { ...draft, ...changes, anchor: '' } : draft));
-  }
-
-  /**
-   * El tamano mueve la posicion cuando la grilla esta pegada a la izquierda o
-   * arriba de otra: tiene que seguir terminando justo antes del hueco.
-   */
-  patchRoomSize(changes: { width?: number; height?: number }): void {
-    this.roomDraft.update((draft) => (draft ? this.placedDraft({ ...draft, ...changes }) : draft));
-  }
-
-  setRoomAnchor(id: string): void {
-    this.roomDraft.update((draft) =>
-      draft
-        ? this.placedDraft({
-            ...draft,
-            anchor: id,
-            // Pegarla a otra propone unirse con esa misma, que es lo que casi
-            // siempre se quiere. Al editar una existente no hay tunel que tocar.
-            connectTo: draft.editId ? draft.connectTo : id || draft.connectTo,
-          })
-        : draft,
-    );
-  }
-
-  setRoomSide(side: RoomSide): void {
-    this.roomDraft.update((draft) => (draft ? this.placedDraft({ ...draft, side }) : draft));
-  }
-
-  cancelRoomDialog(): void {
-    this.roomDraft.set(null);
-  }
-
-  confirmRoomDialog(): void {
-    const draft = this.roomDraft();
-    if (!draft) {
-      return;
-    }
-    const area = { col: draft.col, row: draft.row, width: draft.width, height: draft.height };
-
-    if (draft.editId) {
-      this.levels.updateRoom(draft.editId, area);
-      this.roomDraft.set(null);
-      this.dirty.set(true);
-      this.frameAll();
-      this.note('Grilla "' + draft.editId + '" actualizada.');
-      return;
-    }
-
-    const id = draft.id.trim();
-    if (!id || this.connectableRooms().some((room) => room.id === id)) {
-      this.note(id ? 'Ya hay una grilla llamada "' + id + '".' : 'La grilla necesita un nombre.');
-      return;
-    }
-
-    // Unida a la grilla junto a la que se ubico, el tunel sale por ese lado y
-    // entra por el opuesto: queda un pasillo recto entre las dos, en vez de
-    // una L que arranca en el medio de la sala.
-    const facing = draft.anchor !== '' && draft.connectTo === draft.anchor;
-    const connection = draft.connectTo
-      ? {
-          to: draft.connectTo,
-          width: Math.max(1, Math.round(draft.tunnelWidth) || 1),
-          fromSide: facing ? draft.side : undefined,
-          toSide: facing ? oppositeSide(draft.side) : undefined,
-        }
-      : null;
-
-    this.levels.addRoom({ id, ...area }, connection);
-    this.roomDraft.set(null);
-    this.dirty.set(true);
-    // La grilla del nivel pudo haber crecido, o el mapa correrse: se encuadra.
-    this.frameAll();
-    this.note(
-      'Grilla "' + id + '" agregada' +
-        (connection
-          ? ', unida a "' + connection.to + '" por un túnel de ' + connection.width + ' celdas.'
-          : '.'),
-    );
-  }
-
-  /** Propone unir las dos ultimas grillas, que suele ser la que se acaba de agregar. */
-  openTunnelDialog(): void {
-    const rooms = this.rooms();
-    if (rooms.length < 2) {
-      this.note('Hacen falta al menos dos grillas para conectarlas. Agregá una desde Mapa.');
-      return;
-    }
-    this.tunnelDraft.set({
-      editId: null,
-      from: rooms[rooms.length - 2].id,
-      to: rooms[rooms.length - 1].id,
-      width: DEFAULT_TUNNEL_WIDTH,
-      fromSide: '',
-      toSide: '',
-      path: [],
-    });
-  }
-
-  /** El menu de un tunel que ya existe: lados, trazado y ancho. */
-  editTunnel(id: string): void {
-    const tunnel = this.tunnels().find((candidate) => candidate.id === id);
-    if (!tunnel) {
-      return;
-    }
-    this.tunnelDraft.set({
-      editId: id,
-      from: tunnel.from,
-      to: tunnel.to,
-      width: tunnel.width,
-      fromSide: tunnel.fromSide ?? '',
-      toSide: tunnel.toSide ?? '',
-      path: [...(tunnel.path ?? [])],
-    });
-  }
-
-  patchTunnelDraft(changes: Partial<TunnelDraft>): void {
-    this.tunnelDraft.update((draft) => (draft ? { ...draft, ...changes } : draft));
-  }
-
-  cancelTunnelDialog(): void {
-    this.tunnelDraft.set(null);
-  }
-
-  /** El <select> de lados devuelve texto: se valida antes de aceptarlo. */
-  sideValue(event: Event): RoomSide | '' {
-    const value = this.str(event);
-    return value === 'top' || value === 'bottom' || value === 'left' || value === 'right' ? value : '';
-  }
-
-  confirmTunnelDialog(): void {
-    const draft = this.tunnelDraft();
-    if (!draft) {
-      return;
-    }
-    if (draft.from === draft.to) {
-      this.note('Un túnel tiene que unir dos grillas distintas.');
-      return;
-    }
-    // Vacio pasa a undefined, no a '' ni a []: asi la clave desaparece del
-    // JSON, y al editar un tunel "volver a automatico" borra el trazado viejo.
-    const tunnel = {
-      from: draft.from,
-      to: draft.to,
-      width: Math.max(1, Math.round(draft.width) || 1),
-      fromSide: draft.fromSide || undefined,
-      toSide: draft.toSide || undefined,
-      path: draft.path.length > 0 ? draft.path : undefined,
-    };
-    if (draft.editId) {
-      this.levels.updateTunnel(draft.editId, tunnel);
-    } else {
-      this.levels.addTunnel(tunnel);
-    }
-    this.tunnelDraft.set(null);
-    this.dirty.set(true);
-    this.note(
-      draft.editId
-        ? 'Túnel "' + draft.editId + '" actualizado.'
-        : 'Túnel de ' + tunnel.width + ' celdas entre "' + draft.from + '" y "' + draft.to + '".',
-    );
-  }
-
-  /**
-   * Cierra el menu del tunel y deja trazandolo a mano desde su grilla de
-   * origen. Al terminar en otra grilla, el menu se vuelve a abrir con el
-   * trazado nuevo; si era un tunel que ya existia, lo reemplaza al guardar.
-   */
-  retraceTunnel(): void {
-    const draft = this.tunnelDraft();
-    if (!draft) {
-      return;
-    }
-    this.tunnelDraft.set(null);
-    this.tool.set('tunnel');
-    this.tunnelTrace.set({ from: draft.from, points: [], width: draft.width, editId: draft.editId });
-    this.note('Trazando desde "' + draft.from + '": clics para marcar el camino, y clic en la grilla de destino.');
-  }
-
-  // --- Herramientas de mapa del viewport ------------------------------------
-
-  private roomToolDown(event: PointerEvent): void {
-    const cell = this.coordAt(event);
-    const room = roomAt(this.rooms(), cell);
-    this.roomDrag.set(
-      room
-        ? { kind: 'move', id: room.id, grab: cell, origin: { col: room.col, row: room.row }, delta: { col: 0, row: 0 } }
-        : { kind: 'create', start: cell, end: cell },
-    );
-    // Con captura, el arrastre sigue aunque el cursor salga del canvas.
-    (event.target as HTMLElement).setPointerCapture(event.pointerId);
-    event.preventDefault();
-  }
-
-  private roomToolMove(event: PointerEvent): void {
-    const drag = this.roomDrag();
-    if (!drag) {
-      return;
-    }
-    const cell = this.coordAt(event);
-    this.hovered.set(cell);
-    if (drag.kind === 'create') {
-      this.roomDrag.set({ ...drag, end: cell });
-      return;
-    }
-    const delta = { col: cell.col - drag.grab.col, row: cell.row - drag.grab.row };
-    if (delta.col !== drag.delta.col || delta.row !== drag.delta.row) {
-      this.roomDrag.set({ ...drag, delta });
-    }
-  }
-
-  /**
-   * Al soltar: una grilla movida se guarda en su lugar nuevo (el mapa se
-   * recalcula una sola vez, no con cada celda del arrastre), y un rectangulo
-   * dibujado abre el dialogo con ese lugar. Un clic sin arrastrar propone una
-   * grilla del tamano de siempre en esa celda.
-   */
-  private roomToolUp(event: PointerEvent): void {
-    const drag = this.roomDrag();
-    if (!drag) {
-      return;
-    }
-    this.roomDrag.set(null);
-    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
-
-    if (drag.kind === 'move') {
-      if (drag.delta.col === 0 && drag.delta.row === 0) {
-        return;
-      }
-      this.levels.updateRoom(drag.id, {
-        col: drag.origin.col + drag.delta.col,
-        row: drag.origin.row + drag.delta.row,
-      });
-      this.dirty.set(true);
-      this.note('Grilla "' + drag.id + '" movida.');
-      return;
-    }
-
-    const area = rectBetween(drag.start, drag.end);
-    const clickOnly = area.width === 1 && area.height === 1;
-    this.openRoomDialog(
-      clickOnly ? { col: area.col, row: area.row, width: NEW_ROOM_SIZE, height: NEW_ROOM_SIZE } : area,
-    );
-  }
-
-  private tunnelToolClick(event: PointerEvent): void {
-    if (this.rooms().length < 2) {
-      this.note('Hacen falta al menos dos grillas para trazar un túnel. Agregá una desde Mapa.');
-      return;
-    }
-    const cell = this.coordAt(event);
-    const room = roomAt(this.rooms(), cell);
-    const trace = this.tunnelTrace();
-
-    if (!trace) {
-      if (!room) {
-        this.note('Empezá el túnel con un clic dentro de una grilla.');
-        return;
-      }
-      this.tunnelTrace.set({ from: room.id, points: [], width: DEFAULT_TUNNEL_WIDTH, editId: null });
-      this.note('Túnel desde "' + room.id + '": clics para marcar el camino, y clic en otra grilla para terminar.');
-      return;
-    }
-
-    if (room && room.id !== trace.from) {
-      this.finishTunnelTrace(room.id);
-      return;
-    }
-    if (room) {
-      this.note('Esa es la grilla de origen: terminá el túnel en otra.');
-      return;
-    }
-    this.tunnelTrace.set({ ...trace, points: [...trace.points, cell] });
-  }
-
-  /**
-   * Termina el trazado y abre el menu del tunel con todo ya deducido. Los
-   * lados salen de hacia donde se trazo: sale por el lado de "from" que mira
-   * al primer punto marcado, y entra por el lado de "to" que mira al ultimo.
-   * Sin puntos, cada una por el lado que da a la otra.
-   */
-  private finishTunnelTrace(toId: string): void {
-    const trace = this.tunnelTrace();
-    const from = this.rooms().find((room) => room.id === trace?.from);
-    const to = this.rooms().find((room) => room.id === toId);
-    if (!trace || !from || !to) {
-      return;
-    }
-    const path = trace.points;
-    this.tunnelTrace.set(null);
-    this.tunnelDraft.set({
-      editId: trace.editId,
-      from: from.id,
-      to: to.id,
-      width: trace.width,
-      fromSide: sideFacing(from, path[0] ?? roomCenter(to)),
-      toSide: sideFacing(to, path[path.length - 1] ?? roomCenter(from)),
-      path,
-    });
-  }
-
-  updateRoom(id: string, changes: { col?: number; row?: number; width?: number; height?: number }): void {
-    this.levels.updateRoom(id, changes);
-    this.dirty.set(true);
-  }
-
-  removeRoom(id: string): void {
-    this.levels.removeRoom(id);
-    this.dirty.set(true);
-    this.note(
-      this.rooms().length === 0
-        ? 'Se quitó la última grilla: el nivel vuelve a ser una sola grilla rectangular.'
-        : 'Grilla "' + id + '" quitada, con sus túneles.',
-    );
-  }
-
-  updateTunnel(id: string, width: number): void {
-    this.levels.updateTunnel(id, { width });
-    this.dirty.set(true);
-  }
-
-  removeTunnel(id: string): void {
-    this.levels.removeTunnel(id);
-    this.dirty.set(true);
-    this.note('Túnel "' + id + '" quitado.');
-  }
-
-  clearTileEdits(): void {
-    this.levels.clearTileEdits();
-    this.dirty.set(true);
-    this.note('Retoques descartados: el mapa queda como lo generan las grillas y los túneles.');
+    this.panels.expand('map');
   }
 
   constructor() {
@@ -1961,8 +1504,7 @@ export class App {
       // tiene por que esperar a que se procese una carpeta de 150 imagenes.
       void this.loadTextureThumbnails();
       // El explorador arranca con la raiz y nada desplegado, como VS Code.
-      this.treeChildren.set({ '': await this.project.listEntries('') });
-      this.expandedDirs.set({});
+      await this.explorer.loadRoot();
       this.note('Proyecto abierto: ' + this.project.projectRoot());
     } catch (error) {
       this.note('No se pudo leer el proyecto: ' + this.describe(error));
@@ -2154,7 +1696,7 @@ export class App {
       await this.levels.save();
       this.dirty.set(false);
       this.levelFiles.set(await this.project.listLevels());
-      await this.reloadDir('levels');
+      await this.explorer.reloadDir('levels');
       this.note('Guardado en levels/' + this.levels.fileName());
     } catch (error) {
       this.note('Error al guardar: ' + this.describe(error));
@@ -2204,7 +1746,7 @@ export class App {
     if (inLevels) {
       this.levels.fileName.set(inLevels);
       this.levelFiles.set(await this.project.listLevels());
-      await this.reloadDir('levels');
+      await this.explorer.reloadDir('levels');
     }
     this.note('Guardado en ' + path);
   }
@@ -2232,260 +1774,12 @@ export class App {
     return rest.includes('/') ? null : path.slice(path.length - rest.length);
   }
 
-  // --- Explorador de archivos -----------------------------------------------
-  //
-  // Muestra la carpeta del proyecto entera, como el explorador de VS Code, y
-  // deja ABRIR lo que encuentra: un nivel se carga en el viewport, una textura
-  // queda elegida para colocar, y cualquier otro archivo se muestra en el
-  // visor de abajo. Eso es lo que lo separa de una lista decorativa.
-  //
-  // Las carpetas se leen de a una, al desplegarlas (ver el handler en main.js).
-
-  /**
-   * El arbol aplanado a filas con su profundidad, salteando lo que cuelga de
-   * una carpeta cerrada.
-   *
-   * Se aplana aca en vez de dibujarlo recursivamente porque las plantillas de
-   * Angular no tienen recursion: habria que montar un ng-template con
-   * ngTemplateOutlet que se invoca a si mismo, mucha mas maquinaria que este
-   * recorrido. De paso, la plantilla queda con un solo @for plano.
-   */
-  readonly projectRows = computed<TreeRow[]>(() => {
-    const children = this.treeChildren();
-    const expanded = this.expandedDirs();
-    const rows: TreeRow[] = [];
-
-    const walk = (parentPath: string, depth: number): void => {
-      for (const node of children[parentPath] ?? []) {
-        rows.push({ node, depth });
-        if (node.kind === 'dir' && expanded[node.path]) {
-          walk(node.path, depth + 1);
-        }
-      }
-    };
-
-    walk('', 0);
-    return rows;
-  });
-
-  /**
-   * Relee el proyecto desde la raiz y olvida lo que tenia cacheado, para que
-   * aparezca lo que se creo o borro fuera del editor. Las carpetas que estaban
-   * abiertas se vuelven a leer; las cerradas siguen sin costar nada.
-   */
-  async refreshTree(): Promise<void> {
-    if (!this.project.projectRoot()) {
-      this.note('No hay un proyecto abierto. Elige la carpeta raiz con "Carpeta...".');
-      return;
-    }
-    try {
-      const open = Object.keys(this.expandedDirs()).filter((path) => this.expandedDirs()[path]);
-      const children: Record<string, ProjectNode[]> = { '': await this.project.listEntries('') };
-      for (const path of open) {
-        children[path] = await this.project.listEntries(path);
-      }
-      this.treeChildren.set(children);
-      this.note('Proyecto releido: ' + this.project.projectRoot());
-    } catch (error) {
-      // La carpeta pudo haberse movido o borrado desde que se abrio.
-      this.note('No se pudo leer el proyecto: ' + this.describe(error));
-    }
-  }
-
-  /**
-   * Relee UNA carpeta si el explorador ya la tenia cargada. Se usa despues de
-   * guardar, para que el nivel nuevo aparezca en la lista; si esa carpeta
-   * nunca se desplego no hay nada que actualizar y no se toca el disco.
-   */
-  private async reloadDir(path: string): Promise<void> {
-    if (!this.treeChildren()[path]) {
-      return;
-    }
-    const children = await this.project.listEntries(path);
-    this.treeChildren.update((state) => ({ ...state, [path]: children }));
-  }
-
-  isDirExpanded(path: string): boolean {
-    return this.expandedDirs()[path] === true;
-  }
-
-  /** true si esa fila es el nivel que esta abierto ahora, para marcarlo en la lista. */
-  isOpenLevel(node: ProjectNode): boolean {
-    const fileName = this.levels.fileName();
-    return !!fileName && node.path.toLowerCase() === ('levels/' + fileName).toLowerCase();
-  }
-
-  /** true si es el archivo que se esta mirando en el visor. */
-  isOpenFile(node: ProjectNode): boolean {
-    return this.openFile()?.path === node.path;
-  }
-
-  /**
-   * Glifo de la fila: la flecha de plegado si es carpeta, o un icono segun la
-   * extension si es archivo. Los niveles y las imagenes llevan uno propio
-   * porque son los dos tipos que el editor hace algo mas que mostrar.
-   */
-  treeGlyph(node: ProjectNode): string {
-    if (node.kind === 'dir') {
-      return this.isDirExpanded(node.path) ? '▾' : '▸';
-    }
-    if (/\.json$/i.test(node.name)) {
-      return '◈';
-    }
-    if (/\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(node.name)) {
-      return '▦';
-    }
-    return '·';
-  }
-
-  /**
-   * Click sobre una fila. Una carpeta se abre o se cierra (leyendo su contenido
-   * la primera vez); un archivo se abre con lo que corresponda a su tipo, y lo
-   * que el editor no sabe editar se muestra igual en el visor -- que es el
-   * punto de tener un explorador y no una lista de niveles.
-   */
-  async openTreeEntry(node: ProjectNode): Promise<void> {
-    if (node.kind === 'dir') {
-      await this.toggleDir(node);
-      return;
-    }
-
-    if (/^levels\/.+\.json$/i.test(node.path)) {
-      await this.openProjectLevel(node);
-      return;
-    }
-
-    // Solo las texturas de arriba de assets/textures/: lo que guarda
-    // activeTexture es el nombre suelto, y en una subcarpeta perderia el camino.
-    //
-    // Ademas de elegirla se MUESTRA en el visor. Antes solo se elegia, y por
-    // eso la pestana Archivo mostraba una imagen de cualquier otra carpeta pero
-    // nunca las de texturas, que son justo las que uno quiere mirar.
-    if (/^assets\/textures\/[^/]+\.(png|jpg|jpeg|gif)$/i.test(node.path)) {
-      this.selectTexture(node.name);
-      await this.viewFile(node);
-      this.note('Textura activa: ' + node.name + '. Clic en la grilla para colocarla.');
-      return;
-    }
-
-    await this.viewFile(node);
-  }
-
-  /** Abre o cierra una carpeta, leyendo su contenido la primera vez. */
-  private async toggleDir(node: ProjectNode): Promise<void> {
-    const open = this.isDirExpanded(node.path);
-    this.expandedDirs.update((state) => ({ ...state, [node.path]: !open }));
-    if (open || this.treeChildren()[node.path]) {
-      return; // se cerro, o ya se habia leido antes
-    }
-    try {
-      const children = await this.project.listEntries(node.path);
-      this.treeChildren.update((state) => ({ ...state, [node.path]: children }));
-    } catch (error) {
-      this.note('No se pudo leer ' + node.path + ': ' + this.describe(error));
-    }
-  }
-
-  /**
-   * Muestra un archivo en el visor de abajo y trae esa workspace al frente.
-   * El proceso principal decide si llega como texto, como imagen o si no se
-   * puede mostrar (ver project:readFileData en main.js).
-   */
-  private async viewFile(node: ProjectNode): Promise<void> {
-    try {
-      const data = await this.project.readFileData(node.path);
-      this.openFile.set({ path: node.path, data });
-      this.workspace.set('archivo');
-      this.note(
-        data.kind === 'binary'
-          ? node.path + ': ' + this.fileSize(data.size) + ', no se puede mostrar aca.'
-          : 'Mirando ' + node.path + ' (' + this.fileSize(data.size) + ').',
-      );
-    } catch (error) {
-      this.note('No se pudo leer ' + node.path + ': ' + this.describe(error));
-    }
-  }
-
-  closeOpenFile(): void {
-    this.openFile.set(null);
-  }
-
-  /** Tamano legible para la cabecera del visor. */
-  fileSize(bytes: number): string {
-    if (bytes < 1024) {
-      return bytes + ' B';
-    }
-    if (bytes < 1024 * 1024) {
-      return Math.round(bytes / 1024) + ' KB';
-    }
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  }
-
   // --- Paneles laterales: ocultar y redimensionar ---------------------------
   //
   // Como en VS Code: se arrastra el borde interior de cada panel para cambiar
   // su ancho, y cada uno se esconde con su boton del topbar. Los anchos viven
   // en signals y la plantilla los inyecta en el grid-template-columns del
   // cuerpo, asi que no hace falta tocar el DOM a mano en ningun momento.
-
-  toggleSidebar(): void {
-    this.sidebarVisible.update((visible) => !visible);
-  }
-
-  toggleInspector(): void {
-    this.inspectorVisible.update((visible) => !visible);
-  }
-
-  /** Las columnas del cuerpo. Un panel escondido no ocupa columna: desaparece. */
-  bodyColumns(): string {
-    const columns: string[] = [];
-    if (this.sidebarVisible()) {
-      columns.push(this.sidebarWidth() + 'px');
-    }
-    columns.push('1fr');
-    if (this.inspectorVisible()) {
-      columns.push(this.inspectorWidth() + 'px');
-    }
-    return columns.join(' ');
-  }
-
-  isResizing(panel: 'sidebar' | 'inspector'): boolean {
-    return this.resizing() === panel;
-  }
-
-  onResizeStart(panel: 'sidebar' | 'inspector', event: PointerEvent): void {
-    event.preventDefault();
-    this.resizing.set(panel);
-    // Con captura el arrastre sigue aunque el cursor se vaya sobre el canvas,
-    // que es justo lo que pasa al ensanchar un panel.
-    (event.target as HTMLElement).setPointerCapture(event.pointerId);
-  }
-
-  onResizeMove(event: PointerEvent): void {
-    const panel = this.resizing();
-    if (!panel) {
-      return;
-    }
-    // No hace falta guardar donde arranco el gesto: cada panel esta pegado a un
-    // borde de la ventana, asi que su ancho es la distancia del cursor a ese
-    // borde. El izquierdo mide desde 0; el derecho, desde el ancho total.
-    const width =
-      panel === 'sidebar' ? event.clientX : window.innerWidth - event.clientX;
-    const clamped = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, Math.round(width)));
-    if (panel === 'sidebar') {
-      this.sidebarWidth.set(clamped);
-    } else {
-      this.inspectorWidth.set(clamped);
-    }
-  }
-
-  onResizeEnd(event: PointerEvent): void {
-    if (!this.resizing()) {
-      return;
-    }
-    this.resizing.set(null);
-    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
-  }
 
   /**
    * Abre un nivel elegido en el organizador. Es lo mismo que hace el
@@ -2512,49 +1806,12 @@ export class App {
     }
   }
 
-  // --- Interfaz: workspaces y paneles plegables -----------------------------
-
-  /** Un panel del inspector esta plegado solo si figura en el mapa como true. */
-  isCollapsed(id: string): boolean {
-    return this.collapsedPanels()[id] === true;
-  }
-
-  togglePanel(id: string): void {
-    this.collapsedPanels.update((state) => ({ ...state, [id]: !state[id] }));
-  }
-
-  // Las secciones de la barra izquierda se pliegan con el mismo mapa que los
-  // paneles del inspector, con ids "side-*". Plegada, una seccion queda en su
-  // cabecera sola, como las vistas del explorador de VS Code.
+  // --- Interfaz: workspaces -------------------------------------------------
 
   /** Cambia el editor del area de arriba a la izquierda, y la despliega si estaba plegada. */
   setLeftEditor(editor: LeftEditor): void {
     this.leftEditor.set(editor);
-    this.collapsedPanels.update((state) => ({ ...state, 'side-main': false }));
-  }
-
-  /**
-   * Filas de la barra izquierda. Una seccion plegada mide lo que su cabecera,
-   * y el alto que sobra va a la primera seccion abierta que lo aprovecha: la
-   * escena o el explorador, o Recursos si esa esta plegada. Es el mismo reparto
-   * que hace VS Code con sus vistas.
-   */
-  sidebarRows(): string {
-    const mainOpen = !this.isCollapsed('side-main');
-    const assetsOpen = !this.isCollapsed('side-assets');
-    return [
-      mainOpen ? 'minmax(0, 1fr)' : 'auto',
-      !mainOpen && assetsOpen ? 'minmax(0, 1fr)' : 'auto',
-      'auto',
-      'auto',
-      // Objetos
-      'auto',
-    ].join(' ');
-  }
-
-  /** true si el archivo del visor es una imagen que no se muestra solo por su peso. */
-  isTooLargeToPreview(file: OpenFile): boolean {
-    return file.data.kind === 'binary' && file.data.reason === 'too-large';
+    this.panels.expand('side-main');
   }
 
   // --- Ejecutar en el runtime -----------------------------------------------
@@ -2622,7 +1879,7 @@ export class App {
     // Cambiar de herramienta abandona un tunel a medio trazar: si no, el
     // camino quedaria dibujado en verde sin ninguna forma de terminarlo.
     if (tool !== 'tunnel') {
-      this.tunnelTrace.set(null);
+      this.map.tunnelTrace.set(null);
     }
     this.tool.set(tool);
     this.note(TOOL_HINTS[tool]);
@@ -2745,10 +2002,10 @@ export class App {
       }
       return;
     }
-    if (this.roomDraft() || this.tunnelDraft() || this.characterEditor() || this.transitionDraft()) {
+    if (this.map.roomDraft() || this.map.tunnelDraft() || this.characterEditor() || this.transitionDraft()) {
       if (event.key === 'Escape') {
-        this.cancelRoomDialog();
-        this.cancelTunnelDialog();
+        this.map.cancelRoomDialog();
+        this.map.cancelTunnelDialog();
         this.closeCharacterEditor();
         this.cancelTransitionDialog();
       }
@@ -2757,15 +2014,15 @@ export class App {
     // Un tunel a medio trazar se lleva Escape (abandonarlo) y Retroceso
     // (deshacer el ultimo punto). El resto de las teclas sigue funcionando: se
     // puede hacer zoom o encuadrar sin perder el trazado.
-    if (this.tunnelTrace()) {
+    if (this.map.tunnelTrace()) {
       if (event.key === 'Escape') {
-        this.tunnelTrace.set(null);
+        this.map.tunnelTrace.set(null);
         this.note('Trazado de túnel cancelado.');
         return;
       }
       if (event.key === 'Backspace') {
         event.preventDefault();
-        this.tunnelTrace.update((trace) => (trace ? { ...trace, points: trace.points.slice(0, -1) } : trace));
+        this.map.tunnelTrace.update((trace) => (trace ? { ...trace, points: trace.points.slice(0, -1) } : trace));
         return;
       }
     }
@@ -2811,7 +2068,7 @@ export class App {
     // Ctrl+B esconde la barra lateral, el mismo atajo que en VS Code.
     if (event.ctrlKey && event.key.toLowerCase() === 'b') {
       event.preventDefault();
-      this.toggleSidebar();
+      this.panels.toggleSidebar();
       return;
     }
     if (event.ctrlKey && event.key.toLowerCase() === 'a') {
@@ -2911,11 +2168,11 @@ export class App {
 
     const activeTool = this.tool();
     if (activeTool === 'room') {
-      this.roomToolDown(event);
+      this.map.roomToolDown(event, this.coordAt(event));
       return;
     }
     if (activeTool === 'tunnel') {
-      this.tunnelToolClick(event);
+      this.map.tunnelToolClick(event, this.coordAt(event));
       return;
     }
     if (activeTool === 'place') {
@@ -2956,8 +2213,8 @@ export class App {
       this.continueShapeStroke(event);
       return;
     }
-    if (this.roomDrag()) {
-      this.roomToolMove(event);
+    if (this.map.roomDrag()) {
+      this.map.roomToolMove(event, this.coordAt(event));
       return;
     }
     if (this.panning()) {
@@ -2979,8 +2236,8 @@ export class App {
       this.finishShapeStroke(event);
       return;
     }
-    if (this.roomDrag()) {
-      this.roomToolUp(event);
+    if (this.map.roomDrag()) {
+      this.map.roomToolUp(event, this.coordAt(event));
       return;
     }
     if (this.panning()) {
@@ -3013,14 +2270,14 @@ export class App {
       // haya ahi: la grilla si cae adentro de una, o el tunel que pasa por esa
       // celda. Es el "menu del tunel" que se abre donde se lo ve.
       const cell = this.coordAt(event);
-      const room = roomAt(this.rooms(), cell);
+      const room = roomAt(this.map.rooms(), cell);
       if (room) {
-        this.editRoom(room.id);
+        this.map.editRoom(room.id);
         return;
       }
-      const tunnel = tunnelAt(this.rooms(), this.tunnels(), cell);
+      const tunnel = tunnelAt(this.map.rooms(), this.map.tunnels(), cell);
       if (tunnel) {
-        this.editTunnel(tunnel.id);
+        this.map.editTunnel(tunnel.id);
       }
       return;
     }
@@ -3421,9 +2678,9 @@ export class App {
     try {
       this.textures.set(await this.project.listTextures());
       void this.loadTextureThumbnails();
-      await this.reloadDir('assets/textures');
+      await this.explorer.reloadDir('assets/textures');
       // Si Recursos estaba plegado, se despliega: es donde esta el resultado.
-      this.collapsedPanels.update((state) => ({ ...state, 'side-assets': false }));
+      this.panels.expand('side-assets');
       this.note(this.describeImport(report, session.items.length, maxSide));
     } catch (error) {
       this.note('Se importo, pero no se pudo releer assets/textures: ' + this.describe(error));
@@ -4447,9 +3704,9 @@ export class App {
     showGrid: this.showGrid,
     gridOnTop: this.gridOnTop,
     showColliders: this.showColliders,
-    roomDraft: this.roomDraft,
-    roomDrag: this.roomDrag,
-    tunnelTrace: this.tunnelTrace,
+    roomDraft: this.map.roomDraft,
+    roomDrag: this.map.roomDrag,
+    tunnelTrace: this.map.tunnelTrace,
     shapeSheet: this.shapeSheet,
   };
 
