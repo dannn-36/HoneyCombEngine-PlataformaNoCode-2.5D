@@ -1,9 +1,9 @@
 {
   "name": "combate_demo",
   "backgroundColor": {
-    "r": 34,
-    "g": 36,
-    "b": 44
+    "r": 8,
+    "g": 8,
+    "b": 9
   },
   "grid": {
     "width": 20,
@@ -109,8 +109,8 @@
       "id": "enemy_1",
       "type": "enemy",
       "position": {
-        "col": 6,
-        "row": 3
+        "col": 1,
+        "row": 1
       },
       "texture": "textures/Captura de pantalla 2026-08-19 210144.png",
       "sourceRect": {
@@ -147,12 +147,12 @@
         "col": 8,
         "row": 8
       },
-      "texture": "textures/player2.png",
+      "texture": "textures/Captura de pantalla 2026-08-10 140708.png",
       "sourceRect": {
         "x": 0,
         "y": 0,
-        "width": 16,
-        "height": 16
+        "width": 64,
+        "height": 36
       },
       "scale": 2,
       "collider": {
