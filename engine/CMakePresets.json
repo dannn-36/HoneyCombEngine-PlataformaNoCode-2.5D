@@ -5,7 +5,7 @@
       "name": "default",
       "displayName": "vcpkg (MinGW-w64 / x64-mingw-dynamic)",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
+      "binaryDir": "${sourceDir}/build-mingw",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
@@ -17,9 +17,20 @@
       "name": "msvc",
       "displayName": "vcpkg (MSVC / x64-windows)",
       "inherits": "default",
+      "binaryDir": "${sourceDir}/build-msvc",
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-windows",
         "VCPKG_HOST_TRIPLET": "x64-windows"
+      }
+    },
+    {
+      "name": "linux",
+      "displayName": "vcpkg (Linux / x64-linux)",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "VCPKG_HOST_TRIPLET": "x64-linux"
       }
     }
   ]
