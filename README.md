@@ -3,6 +3,40 @@
 
 ---
 
+## ⚡ Instalación rápida (asistente)
+
+Para **instalar y probar el proyecto** no hace falta seguir las secciones 1 a 8 a mano: el repositorio incluye un asistente que revisa los requisitos, instala lo que falte (pidiendo confirmación), compila el motor y el editor, y al terminar abre el editor.
+
+| Sistema | Qué ejecutar |
+| :--- | :--- |
+| **Windows** | Doble clic en **`HoneyComb-Setup.cmd`** |
+| **Linux** | `./HoneyComb-Setup.sh` |
+
+El asistente hace, en orden:
+
+1. **Requisitos** — Git, Node.js 20+, CMake 3.20+, Ninja, compilador C++17 (MinGW-w64 vía MSYS2 en Windows) y vcpkg. Muestra qué hay y qué falta.
+2. **Instalación de lo que falte** — con `winget` en Windows y `apt`/`dnf`/`pacman` en Linux; vcpkg se clona y se deja configurado en `VCPKG_ROOT`. **Cada instalación pide confirmación** antes de ejecutarse.
+3. **Editor** — `npm install` y compilación de la interfaz Angular.
+4. **Motor** — configuración con CMake + vcpkg y compilación en `engine/build`, con barra de progreso.
+5. **Verificación** — confirma que existan `engine/build/engine.exe`, `editor/dist` y los `assets/`+`levels/` junto al binario.
+6. **Fin** — crea el acceso directo (Escritorio en Windows, menú de aplicaciones en Linux) y abre el editor.
+
+La primera vez tarda entre **10 y 25 minutos**: raylib y el motor se compilan desde el código fuente. Hace falta conexión a internet.
+
+> **Nota sobre Windows:** el asistente es un `.cmd` y no un `.ps1` a propósito — Windows trae la *ExecutionPolicy* en `Restricted`, así que un `.ps1` no se ejecuta con doble clic. La ventana del asistente está hecha con Windows Forms, que ya viene con el sistema: tiene que poder correr **antes** de que exista Node.js. Si prefieres verlo en la consola: `HoneyComb-Setup.cmd /texto`.
+
+### Después de instalar
+
+| Comando | Para qué |
+| :--- | :--- |
+| `HoneyComb.cmd` *(Windows)* / `./editor.sh build` *(Linux)* | Abre el editor ya compilado (arranque rápido, sin dev server) |
+| `editor.cmd` / `./editor.sh` | Abre el editor en modo desarrollo, con recarga en vivo |
+| `engine.sh` *(Linux)* | Recompila y abre el motor por separado |
+
+El asistente **no reemplaza** la guía de abajo: si prefieres montar el entorno paso a paso, o algo falla y quieres entender qué hace cada pieza, las secciones 1 a 9 siguen siendo la referencia completa.
+
+---
+
 ## Descripción del proyecto!
 
 **HoneyComb Engine** es un prototipo de plataforma de desarrollo **NoCode** orientada a la creación de experiencias interactivas isométricas 2.5D de puzle y acción. El proyecto combina:

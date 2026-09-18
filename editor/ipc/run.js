@@ -18,6 +18,20 @@ const { ipcMain } = require('electron');
 
 const { getProjectRoot } = require('./project-root');
 
+// Donde puede haber quedado el binario, en orden de preferencia. "build" es lo
+// que usan el instalador y el preset de Linux, pero los presets de Windows
+// escriben en build-mingw y build-msvc, y los generadores multi-configuracion
+// (Visual Studio) meten un Debug/ mas adentro. Buscar en todos evita el caso de
+// un motor compilado correctamente que Ejecutar decia no encontrar.
+const ENGINE_BUILD_DIRS = [
+  ['build'],
+  ['build', 'Debug'],
+  ['build-mingw'],
+  ['build-msvc'],
+  ['build-msvc', 'Debug'],
+  ['build-msvc', 'Release'],
+];
+
 /**
  * Busca el ejecutable del motor a partir de la ruta del nivel.
  *
@@ -31,8 +45,10 @@ function findEngineExecutable(levelPath) {
   const roots = [path.dirname(path.dirname(levelPath)), getProjectRoot()].filter(Boolean);
 
   for (const root of roots) {
-    const candidate = path.join(root, 'engine', 'build', exeName);
-    if (fsSync.existsSync(candidate)) return candidate;
+    for (const buildDir of ENGINE_BUILD_DIRS) {
+      const candidate = path.join(root, 'engine', ...buildDir, exeName);
+      if (fsSync.existsSync(candidate)) return candidate;
+    }
   }
   return null;
 }

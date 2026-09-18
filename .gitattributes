@@ -1,2 +1,10 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Los scripts de shell siempre con LF: clonados en Windows, "text=auto" los
+# dejaria con CRLF y bash falla con "bad interpreter: /usr/bin/env bash^M" al
+# copiarlos o usarlos desde WSL.
+*.sh text eol=lf
+
+# Los .cmd siempre con CRLF: cmd.exe corta mal las lineas que terminan en LF.
+*.cmd text eol=crlf
