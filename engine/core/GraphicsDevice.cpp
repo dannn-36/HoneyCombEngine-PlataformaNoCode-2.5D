@@ -47,6 +47,14 @@ void GraphicsDevice::EndFrame() {
     EndDrawing();
 }
 
+void GraphicsDevice::BeginWorld(const Camera2D& camera) {
+    BeginMode2D(camera);
+}
+
+void GraphicsDevice::EndWorld() {
+    EndMode2D();
+}
+
 void GraphicsDevice::DrawSprite(const Texture2D& texture, Rectangle source, Rectangle dest,
                                  Vector2 origin, float rotation, Color tint) {
     DrawTexturePro(texture, source, dest, origin, rotation, tint);

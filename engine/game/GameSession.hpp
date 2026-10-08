@@ -19,6 +19,7 @@
 #include "loader/LevelLoader.hpp"
 #include "systems/animation/AnimationSystem.hpp"
 #include "systems/audio/AudioSystem.hpp"
+#include "systems/camera/CameraSystem.hpp"
 #include "systems/collision/CollisionSystem.hpp"
 #include "systems/event_system/EventSystem.hpp"
 #include "systems/input/InputSystem.hpp"
@@ -77,6 +78,16 @@ private:
     void BeginTransition(const std::filesystem::path &target, const std::string &title, bool restart);
 
     void ShowMessage(const std::string &text, float seconds);
+
+    // Calcula lo que la camara necesita saber del nivel cargado: el centro del
+    // encuadre fijo y el rectangulo del mundo que ocupa el mapa.
+    void FrameCamera();
+
+    // Lo que sigue la camara: los pies del jugador, o el centro del encuadre
+    // fijo si el nivel no tiene jugador.
+    Vector2 CameraFocus() const;
+
+    Vector2 ScreenSize() const;
 
     // Un frame entero. El orden de sus pasos es semantico: ver el comentario
     // que lo encabeza en GameSession.cpp.
@@ -169,6 +180,13 @@ private:
 
     ZSortSystem zsort;
     CollisionSystem collision;
+
+    // La camara, y lo que necesita saber del nivel para encuadrarlo. Los dos
+    // datos dependen solo del nivel, asi que se calculan al cargarlo
+    // (FrameCamera) y no en cada frame.
+    CameraSystem camera;
+    Vector2 cameraFixedCenter{0, 0};
+    Rectangle cameraBounds{0, 0, 0, 0};
     Font defaultFont;
     bool showGrid = false;
     bool showHitboxes = false;  // F2, independiente de F1: se pueden ver los dos

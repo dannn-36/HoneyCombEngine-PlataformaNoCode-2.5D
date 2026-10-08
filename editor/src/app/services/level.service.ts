@@ -11,6 +11,7 @@ import {
   shiftLevel,
 } from '../core/dungeon-layout';
 import {
+  CameraConfig,
   EventDefinition,
   GridConfig,
   Level,
@@ -21,6 +22,7 @@ import {
   RoomSide,
   Zone,
 } from '../models/level.model';
+import { cameraOf, sanitizeCamera } from '../core/camera';
 import { withItemDefs } from '../core/items';
 import { ItemDef } from '../models/item.model';
 import { ProjectService } from './project.service';
@@ -157,6 +159,20 @@ export class LevelService {
     const fileName = this.fileName() ?? `${this.level().name}.json`;
     await this.project.saveLevel(fileName, this.level());
     this.fileName.set(fileName);
+  }
+
+  /**
+   * Cambia la camara del nivel. Se guarda el bloque COMPLETO, con los valores
+   * por defecto ya resueltos y en rango: el JSON queda explicito para quien lo
+   * lea o lo edite a mano, y nunca lleva un NaN (ver sanitizeCamera).
+   */
+  updateCamera(changes: Partial<CameraConfig>): void {
+    this.level.update((level) => ({ ...level, camera: sanitizeCamera({ ...cameraOf(level), ...changes }) }));
+  }
+
+  /** Quita el bloque "camera": el nivel vuelve a la camara de siempre. */
+  resetCamera(): void {
+    this.level.update(({ camera: _, ...level }) => level);
   }
 
   updateGrid(changes: Partial<GridConfig>): void {

@@ -115,87 +115,160 @@ void GameSession::RegisterEvents()
 
 void GameSession::PrepareLevel(LevelStart start)
 {
-        entityById.clear();
-        animInstances.clear();
-        flags.clear();
-        for (auto &entity : level.entities)
+    entityById.clear();
+    animInstances.clear();
+    flags.clear();
+    for (auto &entity : level.entities)
+    {
+        entityById[entity.id] = &entity;
+    }
+
+    // AnimationSystem: un clip por entidad animada, armado desde el nivel.
+    // Cada entidad declara cuantos cuadros tiene ("frames") y el clip se
+    // arma desde SU recorte: los cuadros van uno al lado del otro, del
+    // ancho de ese recorte. (Antes habia un unico clip escrito aca, con
+    // cuadros fijos de 16x16, y ese era el tope de tamano del jugador.)
+    for (auto &entity : level.entities)
+    {
+        if (entity.frames <= 1)
         {
-            entityById[entity.id] = &entity;
+            continue;
         }
-
-        // AnimationSystem: un clip por entidad animada, armado desde el nivel.
-        // Cada entidad declara cuantos cuadros tiene ("frames") y el clip se
-        // arma desde SU recorte: los cuadros van uno al lado del otro, del
-        // ancho de ese recorte. (Antes habia un unico clip escrito aca, con
-        // cuadros fijos de 16x16, y ese era el tope de tamano del jugador.)
-        for (auto &entity : level.entities)
+        AnimationClip clip{{}, entity.frameDuration, true};
+        for (int frame = 0; frame < entity.frames; ++frame)
         {
-            if (entity.frames <= 1)
-            {
-                continue;
-            }
-            AnimationClip clip{{}, entity.frameDuration, true};
-            for (int frame = 0; frame < entity.frames; ++frame)
-            {
-                clip.frames.push_back(Rectangle{
-                    entity.sourceRect.x + frame * entity.sourceRect.width,
-                    entity.sourceRect.y,
-                    entity.sourceRect.width,
-                    entity.sourceRect.height});
-            }
-            // Registrado con el id de la entidad. Registrar de nuevo el mismo
-            // id (al recargar) pisa el clip en su lugar, y GetClip devuelve una
-            // referencia al elemento del mapa, que sigue valida.
-            animations.RegisterClip(entity.id, std::move(clip));
-            AnimationInstance instance;
-            instance.Play(animations.GetClip(entity.id));
-            animInstances[entity.id] = instance;
+            clip.frames.push_back(Rectangle{
+                entity.sourceRect.x + frame * entity.sourceRect.width,
+                entity.sourceRect.y,
+                entity.sourceRect.width,
+                entity.sourceRect.height});
         }
+        // Registrado con el id de la entidad. Registrar de nuevo el mismo
+        // id (al recargar) pisa el clip en su lugar, y GetClip devuelve una
+        // referencia al elemento del mapa, que sigue valida.
+        animations.RegisterClip(entity.id, std::move(clip));
+        AnimationInstance instance;
+        instance.Play(animations.GetClip(entity.id));
+        animInstances[entity.id] = instance;
+    }
 
-        player = entityById.count("player_1") ? entityById["player_1"] : nullptr;
+    player = entityById.count("player_1") ? entityById["player_1"] : nullptr;
 
-        // Todo lo del combate apunta a entidades del nivel anterior: se vacia.
-        combatState.Clear();
-        loot.ClearLevel();
-        mobility = Mobility::State{};
-        shopNpc = nullptr;
-        abilitiesUsedThisFrame.clear();
-        const InventoryConfig noConfig;
-        const InventoryConfig &inventoryConfig = player ? player->inventory : noConfig;
-        switch (start)
-        {
-        case LevelStart::Fresh:
-            inventory.Configure(inventoryConfig, level.items);
-            break;
-        case LevelStart::Carry:
-            inventory.CarryInto(inventoryConfig, level.items);
-            break;
-        case LevelStart::Restart:
-            inventory = inventoryAtLevelStart;
-            break;
-        }
-        inventoryAtLevelStart = inventory;
+    // Todo lo del combate apunta a entidades del nivel anterior: se vacia.
+    combatState.Clear();
+    loot.ClearLevel();
+    mobility = Mobility::State{};
+    shopNpc = nullptr;
+    abilitiesUsedThisFrame.clear();
+    const InventoryConfig noConfig;
+    const InventoryConfig &inventoryConfig = player ? player->inventory : noConfig;
+    switch (start)
+    {
+    case LevelStart::Fresh:
+        inventory.Configure(inventoryConfig, level.items);
+        break;
+    case LevelStart::Carry:
+        inventory.CarryInto(inventoryConfig, level.items);
+        break;
+    case LevelStart::Restart:
+        inventory = inventoryAtLevelStart;
+        break;
+    }
+    inventoryAtLevelStart = inventory;
 
-        std::cout << "Nivel cargado: " << level.name
-                  << " (" << level.entities.size() << " entidades)" << std::endl;
+    // La camara del nivel nuevo, puesta en su lugar sin transicion. Va al
+    // final porque necesita saber quien es el jugador.
+    camera.Configure(level.camera);
+    camera.SetScreenSize(ScreenSize());
+    FrameCamera();
+    camera.SnapTo(CameraFocus(), cameraFixedCenter, cameraBounds);
+
+    std::cout << "Nivel cargado: " << level.name
+              << " (" << level.entities.size() << " entidades)" << std::endl;
 }
 
 void GameSession::BeginTransition(const std::filesystem::path &target, const std::string &title, bool restart)
 {
-        // Una sola a la vez: la primera que se pida es la que vale.
-        if (transition.active)
-        {
-            return;
-        }
-        transition = Transition{true, target, title,
-                                "Cargando " + target.stem().string() + "...", kTransitionSeconds, restart};
-        std::cout << title << " -> " << target.string() << std::endl;
+    // Una sola a la vez: la primera que se pida es la que vale.
+    if (transition.active)
+    {
+        return;
+    }
+    transition = Transition{true, target, title,
+                            "Cargando " + target.stem().string() + "...", kTransitionSeconds, restart};
+    std::cout << title << " -> " << target.string() << std::endl;
 }
 
 void GameSession::ShowMessage(const std::string &text, float seconds)
 {
     message = text;
     messageRemaining = seconds;
+}
+
+void GameSession::FrameCamera()
+{
+    const IsoGridSystem &grid = level.grid;
+
+    // El encuadre fijo: el centro horizontal en x = 0 y, en vertical, la mitad
+    // de la altura proyectada del rombo del nivel. Es EXACTAMENTE la cuenta que
+    // el motor hacia en cada frame antes de tener camara ("levelOriginY"), y se
+    // conserva tal cual, en el mismo orden, porque es la que define el modo
+    // Fixed: un nivel sin bloque "camera" tiene que verse igual que siempre.
+    cameraFixedCenter =
+        Vector2{0.0f, (grid.GetGridWidth() + grid.GetGridHeight() - 2) * grid.GetTileHeight() / 4.0f};
+
+    // Los limites: la caja que encierra todas las celdas de piso y de pared,
+    // cada una con su rombo entero (las celdas van centradas en su punto).
+    // Arriba se deja un tile de ancho de margen para lo que se levanta sobre
+    // su celda -- una pared se dibuja hacia arriba --, asi la fila de atras no
+    // queda cortada contra el borde de la pantalla.
+    bool any = false;
+    Vector2 min{0, 0};
+    Vector2 max{0, 0};
+    const auto include = [&](const GridCoord &cell)
+    {
+        const Vector2 point = grid.GridToScreen(Vector2{static_cast<float>(cell.col), static_cast<float>(cell.row)});
+        if (!any)
+        {
+            min = max = point;
+            any = true;
+            return;
+        }
+        min = Vector2{std::min(min.x, point.x), std::min(min.y, point.y)};
+        max = Vector2{std::max(max.x, point.x), std::max(max.y, point.y)};
+    };
+    for (const auto &cell : level.floorTiles)
+    {
+        include(cell);
+    }
+    for (const auto &cell : level.wallTiles)
+    {
+        include(cell);
+    }
+    if (!any)
+    {
+        // Un nivel sin celdas: sin limites, la camara no se frena en ningun lado.
+        cameraBounds = Rectangle{0, 0, 0, 0};
+        return;
+    }
+    const float halfTileWidth = grid.GetTileWidth() / 2.0f;
+    const float halfTileHeight = grid.GetTileHeight() / 2.0f;
+    const float top = min.y - halfTileHeight - static_cast<float>(grid.GetTileWidth());
+    cameraBounds = Rectangle{min.x - halfTileWidth, top, (max.x - min.x) + 2.0f * halfTileWidth,
+                             (max.y + halfTileHeight) - top};
+}
+
+Vector2 GameSession::CameraFocus() const
+{
+    // Los pies del jugador: el mismo punto que usa el motor para ordenar por
+    // profundidad. Si cae, se sigue mirando donde quedo; saltar al centro del
+    // nivel justo en la pantalla de "Derrotado" se veria como un error.
+    return player ? level.grid.GridToScreen(Movement::BoxCenter(*player)) : cameraFixedCenter;
+}
+
+Vector2 GameSession::ScreenSize() const
+{
+    return Vector2{static_cast<float>(gfx.GetScreenWidth()), static_cast<float>(gfx.GetScreenHeight())};
 }
 
 void GameSession::Run()
@@ -213,13 +286,15 @@ void GameSession::Run()
 //
 // Orden de cada frame. NO es arbitrario:
 //   1. teclas de depuracion (F1 grilla / F2 hitboxes / F11 pantalla completa)
-//   2. encuadre de camara (se recalcula: la ventana es redimensionable)
+//   2. tamano de la ventana para la camara, y apuntar con el mouse
 //   3. si no se esta pasando de nivel: movimiento del jugador y combate
-//   4. encolar en el ZSortSystem: piso -> paredes -> entidades
-//   5. Flush del ZSort (ordena por profundidad y recien ahi dibuja)
-//   6. overlays: grilla (F1), hitboxes (F2), golpe, barras de vida, HUD
+//   4. la camara sigue al jugador (en modo Fixed, el encuadre de siempre)
+//   5. pasada del MUNDO, por la camara: piso -> paredes -> entidades al
+//      ZSortSystem, Flush (ordena por profundidad y recien ahi dibuja),
+//      overlays de depuracion, golpes y proyectiles
+//   6. barras de vida, ya en pantalla
 //   7. resolver colisiones -> correr eventos -> actualizar audio
-//   8. pantalla de paso de nivel, y la carga cuando termina
+//   8. HUD, pantalla de paso de nivel, y la carga cuando termina
 // =============================================================================
 void GameSession::Update(float deltaTime)
 {
@@ -236,32 +311,27 @@ void GameSession::Update(float deltaTime)
         ToggleFullscreen();
     }
 
-    // --- Encuadre: centrar el rombo del nivel en la ventana -------------
-    // Proyectado, el nivel completo mide (ancho + alto - 2) * tileHeight/2
-    // de alto; se le resta la mitad de eso al centro vertical para que la
-    // grilla quede centrada. Se recalcula cada frame porque la ventana se
-    // puede redimensionar en cualquier momento.
-    float levelOriginY = gfx.GetScreenHeight() / 2.0f -
-                         (level.grid.GetGridWidth() + level.grid.GetGridHeight() - 2) *
-                             level.grid.GetTileHeight() / 4.0f;
-    // Atajo local: proyeccion isometrica + offset de camara en un solo paso.
-    // El editor hace exactamente lo mismo en App.origin() (app.ts), y ese
-    // paralelismo es lo que garantiza que lo que se ve en el canvas del
-    // editor coincida con lo que termina dibujando el runtime.
-    auto gridToScreen = [&](Vector2 gridPosition)
-    {
-        Vector2 screenPosition = level.grid.GridToScreen(gridPosition);
-        screenPosition.x += gfx.GetScreenWidth() / 2.0f;
-        screenPosition.y += levelOriginY;
-        return screenPosition;
-    };
+    // --- Camara: tamano de la ventana -------------------------------------
+    // Antes de apuntar: el mouse tiene que leerse con el mismo encuadre que se
+    // va a dibujar, y la ventana se puede redimensionar en cualquier momento.
+    camera.SetScreenSize(ScreenSize());
+
+    // Proyeccion isometrica al MUNDO, sin encuadre: el encuadre lo pone la
+    // camara al dibujar (GraphicsDevice::BeginWorld). Todo lo que se dibuja
+    // del nivel y todo lo que colisiona usa estas coordenadas, asi que las
+    // colisiones no dependen ni de la ventana ni de la camara.
+    //
+    // El editor proyecta con la misma cuenta (core/iso-projection.ts), y ese
+    // paralelismo es lo que garantiza que lo que se ve en el canvas del editor
+    // coincida con lo que termina dibujando el runtime.
+    auto gridToWorld = [&](Vector2 gridPosition) { return level.grid.GridToScreen(gridPosition); };
 
     // --- Apuntar ----------------------------------------------------------
     // El mouse apunta a un LUGAR del mapa, no a una casilla: su posicion en
-    // pantalla se lleva a celdas continuas con la inversa de gridToScreen.
+    // pantalla se lleva al mundo con la inversa de la camara, y de ahi a
+    // celdas continuas con la inversa de la proyeccion.
     const Vector2 mouse = input.GetMousePosition();
-    const Vector2 aim = level.grid.ScreenToGridContinuous(
-        Vector2{mouse.x - gfx.GetScreenWidth() / 2.0f, mouse.y - levelOriginY});
+    const Vector2 aim = level.grid.ScreenToGridContinuous(camera.ScreenToWorld(mouse));
 
     // --- Jugador, combate y objetos --------------------------------------
     // Con la pantalla de paso de nivel en marcha el juego queda congelado:
@@ -378,6 +448,11 @@ void GameSession::Update(float deltaTime)
     }
     messageRemaining = std::max(0.0f, messageRemaining - deltaTime);
 
+    // --- Camara: seguir al jugador ----------------------------------------
+    // Despues de moverlo y antes de dibujar: la camara mira donde el jugador
+    // ESTA en este frame. En modo Fixed solo sostiene el encuadre de siempre.
+    camera.Update(CameraFocus(), cameraFixedCenter, cameraBounds, deltaTime);
+
     // Fondo elegido en el editor. El texto del HUD cambia a claro sobre un
     // fondo oscuro, porque el gris oscuro de siempre ahi no se leeria.
     const Color background = level.backgroundColor;
@@ -385,6 +460,9 @@ void GameSession::Update(float deltaTime)
         0.299f * background.r + 0.587f * background.g + 0.114f * background.b < 128.0f;
     const Color hudText = darkBackground ? LIGHTGRAY : DARKGRAY;
     gfx.BeginFrame(background);
+    // Pasada del MUNDO: todo lo que sigue, hasta los proyectiles, pasa por la
+    // camara. El HUD se dibuja despues de EndWorld, en pantalla.
+    gfx.BeginWorld(camera.GetCamera());
 
     // --- Piso (SpriteLayer::Ground) --------------------------------------
     // Nada se dibuja directo: todo se ENCOLA en el ZSortSystem, que al final
@@ -395,7 +473,7 @@ void GameSession::Update(float deltaTime)
     // profundidad y lo dibuja entero primero, asi nunca tapa a nadie.
     for (const auto& floorTile : level.floorTiles)
     {
-        Vector2 screenPos = gridToScreen(
+        Vector2 screenPos = gridToWorld(
             Vector2{static_cast<float>(floorTile.col), static_cast<float>(floorTile.row)});
 
         if (level.floorTexture)
@@ -429,7 +507,7 @@ void GameSession::Update(float deltaTime)
     {
         for (const auto& wallTile : level.wallTiles)
         {
-            Vector2 screenPos = gridToScreen(
+            Vector2 screenPos = gridToWorld(
                 Vector2{static_cast<float>(wallTile.col), static_cast<float>(wallTile.row)});
             zsort.Submit(SpriteInstance{
                 level.wallTexture,
@@ -482,7 +560,7 @@ void GameSession::Update(float deltaTime)
         // apoya en el CENTRO de ese bloque. El tamano de dibujo combina las
         // celdas que ocupa (span) con la escala configurada (scale).
         const float spanScale = static_cast<float>(entity.span) * entity.scale;
-        const Vector2 sortPosition = gridToScreen(Movement::BoxCenter(entity));
+        const Vector2 sortPosition = gridToWorld(Movement::BoxCenter(entity));
 
         // El sprite se apoya en el suelo: centrado en X y con los "pies"
         // sobre el punto de la celda, por eso se resta el alto completo.
@@ -541,14 +619,14 @@ void GameSession::Update(float deltaTime)
         if (&entity == player || Combat::IsEnemy(entity))
         {
             healthBars.push_back(HealthBarMark{
-                Vector2{sortPosition.x, drawPosition.y - 8.0f},
+                Vector2{sortPosition.x, drawPosition.y},
                 entity.health / entity.maxHealth,
                 &entity == player});
         }
     }
 
     // Objetos tirados en el piso: sprites como los demas, ordenados con ellos.
-    CombatView::SubmitGroundItems(zsort, loot, gridToScreen, static_cast<float>(GetTime()));
+    CombatView::SubmitGroundItems(zsort, loot, gridToWorld, static_cast<float>(GetTime()));
 
     // Recien aca se dibuja todo lo encolado, ya ordenado por profundidad.
     zsort.Flush();
@@ -568,7 +646,7 @@ void GameSession::Update(float deltaTime)
         {
             for (int col = 0; col < level.grid.GetGridWidth(); ++col)
             {
-                Vector2 screenPos = gridToScreen(
+                Vector2 screenPos = gridToWorld(
                     Vector2{static_cast<float>(col), static_cast<float>(row)});
 
                 // Los cuatro vertices del rombo que representa la celda.
@@ -603,7 +681,7 @@ void GameSession::Update(float deltaTime)
         {
             for (size_t i = 0; i < cells.size(); ++i)
             {
-                DrawLineEx(gridToScreen(cells[i]), gridToScreen(cells[(i + 1) % cells.size()]),
+                DrawLineEx(gridToWorld(cells[i]), gridToWorld(cells[(i + 1) % cells.size()]),
                            thickness, color);
             }
         };
@@ -668,7 +746,7 @@ void GameSession::Update(float deltaTime)
             }
             else
             {
-                const Vector2 anchor = gridToScreen(center);
+                const Vector2 anchor = gridToWorld(center);
                 DrawRectangleLinesEx(
                     Rectangle{anchor.x, anchor.y, entity.colliderSize.x, entity.colliderSize.y},
                     thickness, sensorColor);
@@ -679,13 +757,18 @@ void GameSession::Update(float deltaTime)
     // --- Golpes, areas y proyectiles --------------------------------------
     // Encima de la escena: son la lectura del combate y no deben quedar
     // tapados por una pared.
-    CombatView::DrawEffects(combatState, gridToScreen);
-    CombatView::DrawProjectiles(combatState, gridToScreen);
+    CombatView::DrawEffects(combatState, gridToWorld);
+    CombatView::DrawProjectiles(combatState, gridToWorld);
+    gfx.EndWorld();
 
     // --- Barras de vida sobre las cabezas --------------------------------
+    // En PANTALLA, no en el mundo: se ubican sobre cada sprite con la camara
+    // pero no se agrandan con el zoom. Una barra es lectura, no escenario, y
+    // con zoom 3 una barra de mundo seria mas ancha que el personaje.
     for (const auto &bar : healthBars)
     {
-        DrawHealthBar(bar.topCenter.x - 16.0f, bar.topCenter.y, 32.0f, 4.0f, bar.ratio,
+        const Vector2 top = camera.WorldToScreen(bar.topCenter);
+        DrawHealthBar(top.x - 16.0f, top.y - 8.0f, 32.0f, 4.0f, bar.ratio,
                       bar.isPlayer ? Color{90, 200, 90, 255} : Color{220, 70, 70, 255});
     }
 

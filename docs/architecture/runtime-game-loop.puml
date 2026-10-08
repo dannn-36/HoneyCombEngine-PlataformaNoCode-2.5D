@@ -1,30 +1,43 @@
 @startuml runtime-game-loop
-title Runtime - Ciclo principal de simulacion y renderizado
+title Runtime - Un frame de GameSession::Update
 autonumber
 
-participant "GraphicsDevice" as graphics
+participant "GameSession" as session
 participant "InputSystem" as input
-participant "LevelEntity / mundo" as world
-participant "AnimationSystem" as animation
+participant "CameraSystem" as camera
+participant "Mobility / Combat / Loot" as rules
+participant "GraphicsDevice" as graphics
+participant "ZSortSystem" as zsort
 participant "CollisionSystem" as collision
 participant "EventSystem" as events
-participant "ZSortSystem" as zsort
 participant "AudioSystem" as audio
 
 loop Mientras la ventana no se cierre
-  graphics -> input : leer acciones del frame
-  input -> world : aplicar movimiento valido
-  graphics -> animation : actualizar clips(deltaTime)
-  graphics -> collision : Submit(colliders)
-  collision --> events : colisiones detectadas
-  graphics -> zsort : Submit(sprites)
-  zsort -> graphics : Flush() en orden Z
-  graphics -> events : Update()
-  events -> world : ejecutar acciones
-  events -> audio : reproducir sonidos si corresponde
-  audio --> graphics : estado de audio actualizado
-  graphics -> graphics : BeginFrame()
-  graphics -> graphics : dibujar texto y frame
-  graphics -> graphics : EndFrame()
+  session -> camera : SetScreenSize(ventana)
+  session -> input : leer acciones y mouse
+  session -> camera : ScreenToWorld(mouse) -> apuntar
+  session -> rules : mover al jugador, combate, objetos
+  session -> camera : Update(jugador, limites del mapa)
+  session -> graphics : BeginFrame(fondo)
+  session -> graphics : BeginWorld(camara)
+  session -> zsort : Submit(piso, paredes, entidades)
+  session -> collision : Submit(colliders, en coordenadas del mundo)
+  zsort -> graphics : Flush() en orden de profundidad
+  session -> graphics : overlays F1/F2, golpes y proyectiles
+  session -> graphics : EndWorld()
+  session -> graphics : barras de vida (en pantalla, via WorldToScreen)
+  collision --> session : Flush() -> pares que se tocan
+  session -> events : Update() (salvo durante el paso de nivel)
+  session -> audio : Update()
+  session -> graphics : HUD, tienda, pantalla de paso de nivel
+  session -> graphics : EndFrame()
+  opt el paso de nivel termino
+    session -> session : cargar el nivel siguiente y PrepareLevel
+  end
 end
+
+note over camera
+Sin bloque "camera" en el nivel, Update deja
+el encuadre de siempre: nivel centrado, zoom 1.
+end note
 @enduml

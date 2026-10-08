@@ -2051,6 +2051,65 @@
               }
             </section>
 
+            <!-- Camara del runtime. Los numeros usan (change) y no (input):
+                 con (input), borrar el campo para escribir un "2" mandaria un
+                 valor vacio y el zoom saltaria al minimo mientras se escribe.
+                 El viewport del editor NO simula la camara: sigue mostrando el
+                 nivel entero, que es lo que hace falta para armarlo. -->
+            <section class="panel">
+              <button class="panel__head" (click)="panels.togglePanel('camera')">
+                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('camera')">▶</span>
+                Cámara
+              </button>
+              @if (!panels.isCollapsed('camera')) {
+                <div class="panel__body">
+                  <label class="field">
+                    <span>Modo</span>
+                    <select class="input"
+                            (change)="inspector.patchCamera({ mode: str($event) === 'follow' ? 'follow' : 'fixed' })">
+                      <option value="fixed" [selected]="inspector.camera().mode === 'fixed'">Fija — el nivel entero centrado</option>
+                      <option value="follow" [selected]="inspector.camera().mode === 'follow'">Seguir al jugador</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Zoom</span>
+                    <input class="input" type="number" step="0.25" min="0.25" max="8" [value]="inspector.camera().zoom"
+                           (change)="inspector.patchCamera({ zoom: num($event) })" />
+                  </label>
+                  @if (inspector.camera().mode === 'follow') {
+                    <label class="field">
+                      <span>Suavizado (s)</span>
+                      <input class="input" type="number" step="0.05" min="0" max="2" [value]="inspector.camera().smoothing"
+                             (change)="inspector.patchCamera({ smoothing: num($event) })" />
+                    </label>
+                    <div class="field-row">
+                      <label class="field">
+                        <span>Zona muerta W</span>
+                        <input class="input" type="number" step="10" min="0" [value]="inspector.camera().deadzone.width"
+                               (change)="inspector.patchDeadzone('width', num($event))" />
+                      </label>
+                      <label class="field">
+                        <span>Zona muerta H</span>
+                        <input class="input" type="number" step="10" min="0" [value]="inspector.camera().deadzone.height"
+                               (change)="inspector.patchDeadzone('height', num($event))" />
+                      </label>
+                    </div>
+                    <label class="check">
+                      <input type="checkbox" [checked]="inspector.camera().clampToLevel"
+                             (change)="inspector.patchCamera({ clampToLevel: checked($event) })" />
+                      <span>No mostrar el vacío fuera del mapa</span>
+                    </label>
+                    <p class="hint">Sigue a player_1. La zona muerta va en píxeles de pantalla: dentro de ella el jugador se mueve sin arrastrar la cámara. Suavizado 0 = rígida.</p>
+                  } @else {
+                    <p class="hint">El nivel entero centrado en la ventana, como siempre. Con zoom se acerca sobre el centro.</p>
+                  }
+                  @if (inspector.hasCustomCamera()) {
+                    <button class="btn" type="button" (click)="inspector.resetCamera()">Volver a la cámara de siempre</button>
+                  }
+                </div>
+              }
+            </section>
+
             <!-- Grillas y tuneles del mapa. Los numeros usan (change) y no
                  (input): cada cambio recalcula el mapa entero, y hacerlo con
                  cada tecla dibujaria salas de tamaños intermedios sin sentido

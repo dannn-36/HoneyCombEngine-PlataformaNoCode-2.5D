@@ -3,11 +3,16 @@ title Runtime - Componentes internos
 top to bottom direction
 skinparam componentStyle rectangle
 
-component "main.cpp\norquestacion" as main
+component "main.cpp\npunto de entrada:\nresuelve la ruta del nivel" as main
 
 package "Core" as core {
   component "GraphicsDevice\nventana y dibujo" as graphics
   component "ResourceManager\ncache de recursos" as resources
+}
+
+package "World (modelo del nivel)" as world {
+  component "Level\nLevelEntity, LoadedLevel" as levelModel
+  component "ItemDefs\nobjetos, inventario,\nzonas" as itemDefs
 }
 
 package "Loaders" as loaders {
@@ -25,9 +30,12 @@ package "Systems" as systems {
   component "AnimationSystem\nclips e instancias" as animation
   component "AudioSystem\nsonido" as audio
   component "InputSystem\nacciones" as input
+  component "CameraSystem\nencuadre, zoom,\nseguimiento" as camera
 }
 
 package "Game (reglas del juego)" as game {
+  component "GameSession\nla partida: capas,\nnivel y bucle" as session
+  component "EventBindings\nque significa cada\nbloque del catalogo" as bindings
   component "Movement\npiso, paredes, solidos" as movement
   component "Mobility\ncaminar, esquive, defensa" as mobility
   component "Combat\nataques, proyectiles,\nhabilidades, IA" as combat
@@ -41,20 +49,29 @@ database "Proyecto en disco" as disk
 component "raylib / SDL2" as raylib
 component "nlohmann::json" as json
 
-main --> graphics
-main --> resources
-main --> levelLoader
-main --> events
-main --> zsort
-main --> collision
-main --> animation
-main --> audio
-main --> input
-main --> mobility
-main --> combat
-main --> loot
-main --> zones
-main --> combatView
+main --> session
+session --> graphics
+session --> resources
+session --> levelLoader
+session --> events
+session --> bindings
+session --> zsort
+session --> collision
+session --> animation
+session --> audio
+session --> input
+session --> camera
+session --> mobility
+session --> combat
+session --> loot
+session --> zones
+session --> combatView
+bindings --> events
+levelLoader --> levelModel
+levelModel --> itemDefs
+levelModel --> iso
+levelModel --> camera
+game --> levelModel
 levelLoader --> itemLoader
 levelLoader --> eventLoader
 levelLoader --> assetResolver
@@ -86,9 +103,19 @@ directamente para renderizado;
 GraphicsDevice es el facade grafico.
 end note
 
+note right of camera
+Decide QUE parte del mundo se ve; no dibuja
+ni sabe de niveles. GameSession le pasa el
+punto a seguir y los limites del mapa, y
+GraphicsDevice::BeginWorld la aplica.
+Sin bloque "camera" en el nivel: el encuadre
+de siempre, identico al de antes.
+end note
+
 note bottom of game
 Capa 4: trabaja sobre el LoadedLevel ya cargado.
-Loaders arma los datos (loader/ItemDefs.hpp);
-game/ decide que pasa con ellos cada frame.
+loader/ arma el modelo de world/ desde el JSON;
+game/ decide que pasa con el cada frame.
+world/ no depende de ninguna de las dos.
 end note
 @enduml

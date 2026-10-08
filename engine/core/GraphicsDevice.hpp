@@ -19,6 +19,12 @@ public:
     void BeginFrame(Color clearColor);
     void EndFrame();
 
+    // Pasada del MUNDO, dentro de un frame: lo que se dibuje entre estos dos
+    // pasa por la camara (encuadre y zoom). El HUD se dibuja despues de
+    // EndWorld, en coordenadas de pantalla.
+    void BeginWorld(const Camera2D& camera);
+    void EndWorld();
+
     void DrawSprite(const Texture2D& texture, Rectangle source, Rectangle dest,
                      Vector2 origin, float rotation, Color tint);
     void DrawText(const Font& font, const char* text, Vector2 position,

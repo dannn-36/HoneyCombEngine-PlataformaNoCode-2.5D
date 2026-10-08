@@ -5,6 +5,7 @@
 
 #include "raylib.h"
 
+#include "systems/camera/CameraSystem.hpp"
 #include "systems/iso_grid/IsoGridSystem.hpp"
 #include "world/ItemDefs.hpp"
 
@@ -98,6 +99,9 @@ struct LoadedLevel {
     std::vector<GridCoord> wallTiles;
     // Fondo de la escena ("backgroundColor" en el JSON). RAYWHITE si falta.
     Color backgroundColor = RAYWHITE;
+    // Como encuadra la camara ("camera" en el JSON). Si falta, la de siempre:
+    // fija, con el nivel centrado y zoom 1.
+    CameraSettings camera;
     // Definiciones de objetos ("items") por id, y las zonas de los puzzles: las
     // de "zones" mas una por cada sala de "rooms".
     ItemCatalog items;

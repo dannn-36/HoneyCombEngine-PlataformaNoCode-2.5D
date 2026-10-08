@@ -181,10 +181,30 @@ export interface RgbColor {
   b: number;
 }
 
+/**
+ * Como encuadra la camara del runtime ("camera" en el schema). Los campos que
+ * faltan toman los valores por defecto de core/camera.ts, que son los mismos
+ * que CameraSettings en engine/systems/camera/CameraSystem.hpp.
+ */
+export interface CameraConfig {
+  /** fixed = el nivel centrado en la ventana. follow = sigue al jugador (player_1). */
+  mode: 'fixed' | 'follow';
+  /** Pixeles de pantalla por pixel del mundo: 2 = todo al doble. */
+  zoom?: number;
+  /** Solo follow. Segundos hasta recorrer ~63% de la distancia al jugador. 0 = rigida. */
+  smoothing?: number;
+  /** Solo follow. Rectangulo centrado, en pixeles de pantalla, donde el jugador no arrastra la camara. */
+  deadzone?: { width: number; height: number };
+  /** Solo follow. No mostrar el vacio mas alla del mapa. */
+  clampToLevel?: boolean;
+}
+
 export interface Level {
   name: string;
   /** Color con el que el runtime pinta el fondo de la escena. Ausente = RAYWHITE (245, 245, 245). */
   backgroundColor?: RgbColor;
+  /** Camara del runtime. Ausente = fija, con el nivel centrado y zoom 1, como siempre. */
+  camera?: CameraConfig;
   grid: GridConfig;
   entities: LevelEntity[];
   events: EventDefinition[];

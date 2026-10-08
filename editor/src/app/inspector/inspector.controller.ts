@@ -1,14 +1,15 @@
-import { inject } from '@angular/core';
+import { computed, inject } from '@angular/core';
 
+import { cameraOf } from '../core/camera';
 import { characterOf, defaultStatsFor } from '../core/characters';
-import { EntityStats, GridConfig, LevelEntity } from '../models/level.model';
+import { CameraConfig, EntityStats, GridConfig, LevelEntity } from '../models/level.model';
 import { LevelService } from '../services/level.service';
 import { SelectionService } from '../services/selection.service';
 
 /**
  * Los formularios del inspector: lo que se escribe en el panel de propiedades
  * de la entidad activa (posicion, recorte, collider, animacion, estadisticas)
- * y del nivel (grilla y nombre).
+ * y del nivel (grilla, nombre y camara).
  *
  * Cada patch* parte de la entidad ACTIVA -- la ultima seleccionada, la que
  * muestra el inspector -- aunque haya varias seleccionadas: un campo de
@@ -142,4 +143,31 @@ export class InspectorController {
   }
 
   /** Fondo del runtime. Sin "backgroundColor" el motor usa RAYWHITE, asi que se muestra ese. */
+
+  // --- Camara del runtime ----------------------------------------------------
+  //
+  // La pestana Escena configura la camara que va a usar el motor. El editor no
+  // la simula: su viewport sigue mostrando el nivel entero, que es lo que hace
+  // falta para armarlo.
+
+  /** La camara del nivel con todo resuelto, para mostrar los campos aunque el nivel no la declare. */
+  readonly camera = computed(() => cameraOf(this.levels.level()));
+
+  /** true si el nivel declara su propia camara; si no, usa la de siempre. */
+  readonly hasCustomCamera = computed(() => this.levels.level().camera !== undefined);
+
+  patchCamera(changes: Partial<CameraConfig>): void {
+    this.levels.updateCamera(changes);
+    this.markDirty();
+  }
+
+  patchDeadzone(field: 'width' | 'height', value: number): void {
+    this.patchCamera({ deadzone: { ...this.camera().deadzone, [field]: value } });
+  }
+
+  /** Vuelve a la camara de siempre: quita el bloque del nivel. */
+  resetCamera(): void {
+    this.levels.resetCamera();
+    this.markDirty();
+  }
 }

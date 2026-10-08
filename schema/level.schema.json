@@ -16,6 +16,24 @@
         "b": { "type": "integer", "minimum": 0, "maximum": 255 }
       }
     },
+    "camera": {
+      "type": "object",
+      "description": "Opcional. Como encuadra la camara del runtime. Si falta, la de siempre: fija, con el nivel entero centrado en la ventana y zoom 1.",
+      "properties": {
+        "mode": { "type": "string", "enum": ["fixed", "follow"], "description": "fixed = el nivel centrado en la ventana. follow = la camara sigue al jugador (la entidad player_1). Por defecto fixed." },
+        "zoom": { "type": "number", "minimum": 0.25, "maximum": 8, "description": "Pixeles de pantalla por pixel del mundo: 2 = todo se ve al doble. Por defecto 1." },
+        "smoothing": { "type": "number", "minimum": 0, "maximum": 2, "description": "Solo follow. Segundos que tarda la camara en recorrer ~63% de la distancia hasta el jugador. 0 = rigida. Por defecto 0.15." },
+        "deadzone": {
+          "type": "object",
+          "description": "Solo follow. Rectangulo centrado en la pantalla, en pixeles de pantalla, dentro del cual el jugador se mueve sin arrastrar la camara. Por defecto 0x0: siempre centrado.",
+          "properties": {
+            "width": { "type": "number", "minimum": 0 },
+            "height": { "type": "number", "minimum": 0 }
+          }
+        },
+        "clampToLevel": { "type": "boolean", "description": "Solo follow. No mostrar el vacio mas alla del mapa: la camara se frena antes de que el borde del nivel entre en pantalla. Por defecto true." }
+      }
+    },
     "grid": {
       "type": "object",
       "description": "Medidas del tablero isometrico: cuantas celdas tiene y cuanto mide cada tile en pixeles.",

@@ -60,6 +60,28 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
         level.backgroundColor = Color{channel("r"), channel("g"), channel("b"), 255};
     }
 
+    // --- Camara -------------------------------------------------------------
+    // Bloque opcional. Sin el quedan los valores por defecto de CameraSettings,
+    // que son la camara de siempre: fija, con el nivel centrado y zoom 1.
+    // Igual que en el resto del loader, un valor fuera de rango se lleva al
+    // rango en vez de romper el nivel (el editor lo valida, pero el JSON se
+    // puede editar a mano).
+    if (levelJson.contains("camera")) {
+        const auto& cameraJson = levelJson.at("camera");
+        level.camera.mode =
+            cameraJson.value("mode", std::string("fixed")) == "follow" ? CameraFraming::Follow : CameraFraming::Fixed;
+        level.camera.zoom =
+            std::clamp(cameraJson.value("zoom", 1.0f), CameraSystem::kMinZoom, CameraSystem::kMaxZoom);
+        level.camera.smoothing =
+            std::clamp(cameraJson.value("smoothing", 0.15f), 0.0f, CameraSystem::kMaxSmoothing);
+        if (cameraJson.contains("deadzone")) {
+            const auto& deadzoneJson = cameraJson.at("deadzone");
+            level.camera.deadzone = Vector2{std::max(0.0f, deadzoneJson.value("width", 0.0f)),
+                                            std::max(0.0f, deadzoneJson.value("height", 0.0f))};
+        }
+        level.camera.clampToBounds = cameraJson.value("clampToLevel", true);
+    }
+
     // --- Visuales del nivel (piso y pared) ----------------------------------
     // Bloque opcional. Si falta, las texturas quedan en nullptr y main.cpp
     // simplemente no dibuja piso ni paredes (y sin pared tampoco hay bloqueo

@@ -2,13 +2,14 @@
 title Runtime - Carga de nivel
 autonumber
 
-participant "main.cpp" as main
+participant "GameSession" as main
 participant "LevelLoader" as loader
 participant "nlohmann::json" as json
 participant "AssetResolver" as resolver
 participant "ResourceManager" as resources
 participant "EventLoader" as eventLoader
 participant "EventSystem" as events
+participant "CameraSystem" as camera
 database "levels/test_level.json" as levelFile
 database "assets/" as assets
 
@@ -16,7 +17,7 @@ main -> loader : Load(levelPath, eventSystem)
 loader -> levelFile : abrir y leer
 levelFile --> loader : JSON de nivel
 loader -> json : parse y validar estructura
-json --> loader : datos de grid y entidades
+json --> loader : datos de grid, entidades y camara
 loader -> resolver : Resolve(texturePath)
 resolver -> assets : localizar recurso
 assets --> resolver : ruta absoluta/normalizada
@@ -28,5 +29,8 @@ eventLoader -> json : parse definiciones
 json --> eventLoader : triggers y acciones
 eventLoader -> events : registrar eventos
 loader --> main : LoadedLevel
+main -> main : PrepareLevel: indices, animaciones, inventario
+main -> camera : Configure(level.camera)
+main -> camera : SnapTo(jugador) -- sin barrido desde el nivel anterior
 main -> events : Update() durante el loop
 @enduml
