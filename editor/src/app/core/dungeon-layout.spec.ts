@@ -15,6 +15,7 @@ import {
   tunnelAt,
   tunnelFloor,
   tunnelRoute,
+  zoneIdsOf,
 } from './dungeon-layout';
 
 const room = (id: string, col: number, row: number, width: number, height: number): MapRoom => ({
@@ -255,5 +256,20 @@ describe('sanitizeRoom y nextFreeId', () => {
 
   it('elige el primer id libre', () => {
     expect(nextFreeId('sala', ['sala_1', 'sala_2'])).toBe('sala_3');
+  });
+});
+
+describe('zoneIdsOf', () => {
+  it('lista primero las salas y despues las zonas sueltas, como LevelLoader.cpp', () => {
+    expect(
+      zoneIdsOf({
+        rooms: [{ id: 'sala_1' } as MapRoom, { id: 'sala_2' } as MapRoom],
+        zones: [{ id: 'zona_1', col: 0, row: 0, width: 1, height: 1 }],
+      }),
+    ).toEqual(['sala_1', 'sala_2', 'zona_1']);
+  });
+
+  it('un nivel sin salas ni zonas no tiene zonas', () => {
+    expect(zoneIdsOf({})).toEqual([]);
   });
 });

@@ -53,3 +53,17 @@ export function clampBlockPosition(
     row: Math.min(Math.max(0, position.row), Math.max(0, grid.height - span)),
   };
 }
+
+/**
+ * Primer id libre de la forma "base_N". Los ids tienen que ser unicos porque
+ * los eventos referencian entidades por id (params de tipo entity_ref), y un
+ * duplicado haria que el motor resuelva siempre la misma de las dos.
+ */
+export function nextEntityId(base: string, taken: readonly string[]): string {
+  const used = new Set(taken);
+  let index = 1;
+  while (used.has(base + '_' + index)) {
+    index += 1;
+  }
+  return base + '_' + index;
+}

@@ -14,192 +14,81 @@
 // rueda (zoom al cursor), boton medio (desplazar) e Inicio (encuadrar). El tema
 // visual vive entero en app.scss.
 //
-// El estado NO vive aca: vive en los servicios (LevelService el nivel abierto,
-// SelectionService lo seleccionado, ProjectService el disco, CatalogService el
-// catalogo de eventos). Este archivo es la capa de interaccion: traduce clicks
-// y teclas a llamadas a esos servicios y a los controladores.
+// App es el SHELL: el estado que es de la ventana entera, la superficie de
+// comandos (barra de menus y atajos) y el cableado. Lo demas vive afuera:
 //
-// Lo que tiene entidad propia vive en un controlador, con su markup todavia en
-// app.html para compartir los estilos de App:
+//   services/    el estado: el nivel abierto, la seleccion, el disco, el
+//                catalogo de eventos, las bibliotecas del proyecto
+//   core/        logica pura, sin Angular y con tests; core/iso-projection.ts
+//                es el espejo de IsoGridSystem en C++, y su proyeccion tiene
+//                que ser identica a la del runtime
+//   */*.controller.ts  cada area del editor, con su markup todavia en
+//                app.html para compartir los estilos de App
 //
-//   ui/panels.controller.ts       anchos, paneles escondidos y plegados
-//   project/explorer.controller.ts  el arbol de archivos y el visor
-//   map/map.controller.ts         salas, tuneles y sus herramientas
-//   combat/*.controller.ts        objetos, puzzles e inspector de combate
+// Los controladores de la escena forman capas, y las dependencias van en un
+// solo sentido -- de la entrada hacia el dominio, nunca al reves:
 //
-// El dibujo del viewport y las conversiones pantalla<->celda estan en
-// core/iso-canvas-renderer.ts, que no depende de Angular. Su proyeccion tiene
-// que ser identica a la del runtime (ver core/iso-projection.ts, espejo de
-// IsoGridSystem en C++).
+//   viewport/       camara, gestos sobre el canvas, drops, redibujo
+//      |
+//      v
+//   entities/       colocar, celda ocupada, tamano, colision, pared, grupo
+//   map/            salas, tuneles y zonas
+//      |
+//      v
+//   selection/  palette/  inspector/      que esta elegido y como se edita
+//
+// Alrededor: project/ (el nivel como documento y el explorador), characters/,
+// textures/ y combat/ (las bibliotecas del proyecto y sus ventanas), events/
+// (el panel Eventos y el dialogo de pasar de nivel), ui/ (paneles).
+//
+// El dibujo y la proyeccion pantalla<->celda estan en core/iso-canvas-renderer.ts.
 // =============================================================================
 
 import {
   Component,
-  DestroyRef,
   ElementRef,
   computed,
-  effect,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import {
-  NgTemplateOutlet,
-} from '@angular/common';
-import {
-  Hsv,
-  clampChannel,
-  hexToRgb,
-  hsvToRgb,
-  rgbToHex,
-  rgbToHsv,
-} from './core/color';
+import { NgTemplateOutlet } from '@angular/common';
 
-import {
-  CHARACTERS,
-  CharacterId,
-  ENGINE_PLAYER_ID,
-  basePresetId,
-  characterDef,
-  characterOf,
-  defaultStatsFor,
-  entityFromPreset,
-  isCharacterKind,
-  normalizePreset,
-  presetFromArchetype,
-  presetIdFromName,
-} from './core/characters';
-import {
-  spriteCropStyle,
-} from './core/sprite-style';
-import {
-  CharacterPreset,
-} from './models/character-preset.model';
-import {
-  CharacterPresetService,
-} from './services/character-preset.service';
-import {
-  GridCoord,
-  IsoProjection,
-} from './core/iso-projection';
-import {
-  CanvasPoint,
-  CanvasScene,
-  IsoCanvasRenderer,
-  VIEW_TOP_MARGIN,
-} from './core/iso-canvas-renderer';
-import {
-  decodeImage,
-  fitTextureSize,
-  renderPng,
-  renderPngBase64,
-  usesNearestNeighbor,
-} from './core/texture-fit';
-import type {
-  ImportSession,
-  ProjectNode,
-} from './electron-api';
-import {
-  MenuBar,
-  MenuDef,
-  MenuLeaf,
-} from './menu-bar/menu-bar';
-import {
-  nextFreeId,
-  roomAt,
-  tunnelAt,
-} from './core/dungeon-layout';
+import { CHARACTERS } from './core/characters';
+import { CharacterPresetService } from './services/character-preset.service';
+import type { ProjectNode } from './electron-api';
+import { MenuBar, MenuDef, MenuLeaf } from './menu-bar/menu-bar';
 import {
   SHAPES,
   SHAPE_SHEET_DATA_URL,
   SHAPE_SHEET_HEIGHT,
   SHAPE_SHEET_WIDTH,
-  SHAPE_TEXTURE,
   ShapeDef,
-  ShapeId,
-  shapeCollider,
-  shapeDef,
-  shapeOf,
 } from './core/iso-shapes';
-import {
-  CatalogEntry,
-  CatalogParamDef,
-} from './models/event-catalog.model';
-import {
-  EntityStats,
-  EventStep,
-  GridConfig,
-  GridPosition,
-  LevelEntity,
-  RgbColor,
-  Zone,
-} from './models/level.model';
-import {
-  blocksOverlap,
-  clampBlockPosition,
-  entitySpan,
-} from './core/entity-blocks';
-import {
-  AttackPreviewDirective,
-} from './combat/attack-preview.directive';
-import {
-  CombatInspectorController,
-} from './combat/combat-inspector.controller';
-import {
-  ItemEditorController,
-} from './combat/item-editor.controller';
-import {
-  PuzzleController,
-} from './combat/puzzle.controller';
-import {
-  ITEM_KINDS,
-  describeAttack,
-  entityFromItem,
-  itemKindDef,
-} from './core/items';
-import {
-  ItemDef,
-  ItemKind,
-  OnFullInventory,
-} from './models/item.model';
-import {
-  ExplorerController,
-} from './project/explorer.controller';
-import {
-  MapController,
-} from './map/map.controller';
-import {
-  PanelsController,
-} from './ui/panels.controller';
-import {
-  CatalogService,
-} from './services/catalog.service';
-import {
-  ItemLibraryService,
-} from './services/item-library.service';
-import {
-  LevelService,
-} from './services/level.service';
-import {
-  SelectionService,
-} from './services/selection.service';
-import {
-  ProjectService,
-} from './services/project.service';
-
-/** Herramienta activa del viewport: seleccionar entidades o colocarlas. */
-type Tool = 'select' | 'place' | 'floor' | 'wall' | 'room' | 'tunnel';
-/** Las tres secciones de event_catalog.json, para acceder a ellas por nombre. */
-type CatalogKind = 'triggers' | 'conditions' | 'actions';
-/** Un paso de un evento, en singular: lo que edita cada fila del panel Eventos. */
-type StepKind = 'trigger' | 'condition' | 'action';
-const CATALOG_KIND: Record<StepKind, CatalogKind> = {
-  trigger: 'triggers',
-  condition: 'conditions',
-  action: 'actions',
-};
-/** Plantillas del dialogo "nivel nuevo": vacio, con jugador, o escena de prueba. */
-export type NewLevelTemplate = 'empty' | 'player' | 'test-scene';
+import { AttackPreviewDirective } from './combat/attack-preview.directive';
+import { CombatInspectorController } from './combat/combat-inspector.controller';
+import { ItemEditorController } from './combat/item-editor.controller';
+import { PuzzleController } from './combat/puzzle.controller';
+import { ExplorerController } from './project/explorer.controller';
+import { MapController } from './map/map.controller';
+import { CharactersController } from './characters/characters.controller';
+import { EventsController } from './events/events.controller';
+import { TexturesController } from './textures/textures.controller';
+import { BackgroundPickerController } from './inspector/background-picker.controller';
+import { PanelsController } from './ui/panels.controller';
+import { CatalogService } from './services/catalog.service';
+import { ItemLibraryService } from './services/item-library.service';
+import { LevelService } from './services/level.service';
+import { SelectionService } from './services/selection.service';
+import { ProjectService } from './services/project.service';
+import { SelectionController } from './selection/selection.controller';
+import { PaletteController, Tool } from './palette/palette.controller';
+import { InspectorController } from './inspector/inspector.controller';
+import { EntityOpsController } from './entities/entity-ops.controller';
+import { ViewportController } from './viewport/viewport.controller';
+import { ProjectController } from './project/project.controller';
+import { TransitionController } from './events/transition.controller';
+import { ItemsPanelController } from './combat/items-panel.controller';
 
 /**
  * Espacio de trabajo activo, al estilo de las workspaces de Blender: la pestana
@@ -225,97 +114,9 @@ type InspectorTab = 'objeto' | 'escena';
  */
 type LeftEditor = 'escena' | 'proyecto';
 
-/**
- * Algo que quedo esperando respuesta porque cayo sobre celdas ocupadas, y que
- * se puede resolver en los tres sentidos (reemplazar, superponer, cancelar)
- * sin rehacer el trabajo. Llega de dos lados:
- *   place  una entidad nueva, YA ARMADA, que todavia no se agrego
- *   move   entidades arrastradas con Ctrl que ya se movieron; "originals"
- *          guarda de donde salieron, para que Cancelar las devuelva ahi
- */
-type PendingPlacement =
-  | { kind: 'place'; entity: LevelEntity; occupants: LevelEntity[] }
-  | {
-      kind: 'move';
-      movedIds: string[];
-      originals: Map<string, GridPosition>;
-      occupants: LevelEntity[];
-    };
-
-// Presets de zoom de la barra: enteros, porque en pixel art un zoom fraccionario
-// reparte mal los pixeles del sprite (unos de 1px y otros de 2px) y arruina la
-// lectura de la imagen.
-const ZOOM_STEPS = [1, 2, 3, 4, 6, 8];
-
-// La rueda, en cambio, hace zoom continuo como el de Blender: encuadrar es una
-// accion de navegacion, no de encuadre final, y saltar de 3x a 4x de golpe hace
-// perder el punto que se estaba mirando. Los presets de arriba siguen ahi para
-// volver a un entero exacto cuando importa ver los pixeles.
-const ZOOM_MIN = 0.25;
-const ZOOM_MAX = 16;
-/** Factor por muesca de rueda. ~1.15 da la misma sensacion de "arrastre" que Blender. */
-const ZOOM_WHEEL_FACTOR = 1.15;
-
-/**
- * Pixeles que puede moverse el cursor entre apretar y soltar sin dejar de
- * contar como un click. Separa "click derecho" (abre el menu) de "arrastre con
- * el derecho" (mueve la camara); con 0 el menu no abriria nunca, porque un
- * mouse siempre se corre uno o dos pixeles al hacer click.
- */
-const CLICK_SLOP = 4;
-
-// Limites del ancho de los dos paneles laterales al arrastrar su borde. El
-// minimo es lo que necesita una fila para no cortar todos los nombres; el
-// maximo, dejarle al viewport la mitad de una pantalla chica.
-
-/** Cuanto mueve cada flecha del teclado, en celdas de la grilla. */
-const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
-  ArrowRight: { col: 1, row: 0 },
-  ArrowLeft: { col: -1, row: 0 },
-  ArrowDown: { col: 0, row: 1 },
-  ArrowUp: { col: 0, row: -1 },
-};
-
-/** Proporcion del viewport que ocupa la grilla al encuadrarla con Inicio. */
-const FRAME_FILL = 0.82;
-
 // Umbral de la matriz de riesgos ("Degradacion de Rendimiento por Usuario"):
 // el editor avisa antes de que la escena comprometa los FPS del runtime.
 const ENTITY_WARN_THRESHOLD = 150;
-/** Textura de respaldo si el proyecto abierto todavia no tiene ninguna. */
-const DEFAULT_STARTER_TEXTURE = 'player.png';
-
-/**
- * Cuantas texturas se procesan para el panel Recursos. Las miniaturas se
- * guardan reducidas, asi que el tope ya no es por memoria sino por tiempo de
- * carga; las que lo pasan se siguen listando por nombre y se usan igual.
- */
-const TEXTURE_THUMBNAIL_LIMIT = 400;
-/** Lado de la miniatura guardada: el doble de lo que se ve, para pantallas de alta densidad. */
-const THUMBNAIL_SIDE = 64;
-
-/** Recorte de respaldo cuando no se pudo averiguar el tamano real de la imagen. */
-const FALLBACK_SOURCE_RECT = { x: 0, y: 0, width: 16, height: 16 };
-
-/** Nombre de archivo de una textura a partir de su ruta en el nivel ("textures/x.png" -> "x.png"). */
-const textureName = (path: string) => path.replace(/^textures\//, '');
-
-
-/**
- * Borrador del dialogo "Pasar a otro nivel". Es un atajo para armar el evento
- * mas comun de un juego por niveles sin tener que componerlo a mano en el
- * panel Eventos: un trigger mas la accion load_level.
- */
-interface TransitionDraft {
-  /** Que dispara el paso: eliminar una entidad, vencer a todos, o tocar una entidad. */
-  when: 'entity_destroyed' | 'all_enemies' | 'touch';
-  entity: string;
-  level: string;
-  message: string;
-}
-
-
-
 
 /** Nombre de cada herramienta en el menu Editar > Herramienta. */
 const TOOL_LABELS: Record<Tool, string> = {
@@ -335,21 +136,13 @@ const WORKSPACE_LABELS: Record<Workspace, string> = {
   archivo: 'Archivo',
 };
 
-const TOOL_HINTS: Record<Tool, string> = {
-  select: 'Seleccionar: clic sobre una entidad para activarla.',
-  place: 'Colocar: elige una textura en Recursos o una figura, y clic en la grilla.',
-  floor: 'Piso: clic en una celda para quitarle o devolverle el suelo.',
-  wall: 'Pared: clic en una celda para levantar o quitar la pared.',
-  room: 'Grilla: arrastrá sobre el vacío para dibujar una nueva, o dentro de una para moverla. Clic derecho la configura.',
-  tunnel:
-    'Túnel: clic en una grilla, clics para marcar el camino y clic en otra grilla para terminar. Retroceso borra el último punto; Escape cancela.',
+/** Cuanto mueve cada flecha del teclado, en celdas de la grilla. */
+const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
+  ArrowRight: { col: 1, row: 0 },
+  ArrowLeft: { col: -1, row: 0 },
+  ArrowDown: { col: 0, row: 1 },
+  ArrowUp: { col: 0, row: -1 },
 };
-
-/** Una fila del formulario dinamico de parametros (ver paramRows()). */
-interface ParamRow {
-  key: string;
-  def: CatalogParamDef;
-}
 
 @Component({
   selector: 'app-root',
@@ -362,98 +155,81 @@ interface ParamRow {
   host: { '(window:keydown)': 'onKeyDown($event)' },
 })
 export class App {
+  // --- Servicios ------------------------------------------------------------
+
   readonly project = inject(ProjectService);
+
   readonly levels = inject(LevelService);
+
   readonly selection = inject(SelectionService);
+
   readonly catalog = inject(CatalogService);
+
   readonly presetsService = inject(CharacterPresetService);
+
   readonly itemLibrary = inject(ItemLibraryService);
-  private readonly destroyRef = inject(DestroyRef);
+
+  // --- Estado del shell -----------------------------------------------------
+  //
+  // Lo que es del editor entero y no de un area: la barra de estado, la marca de
+  // cambios sin guardar, que workspace y que pestana del inspector estan al
+  // frente. Lo leen casi todos los controladores, por eso vive aca.
 
   /** preload.js solo existe bajo Electron; con "ng serve" la UI corre sin acceso a disco. */
   readonly hasFileSystem = typeof window !== 'undefined' && 'honeycombProject' in window;
 
-  // --- Estado del proyecto abierto ------------------------------------------
-  readonly levelFiles = signal<string[]>([]);
-  readonly textures = signal<string[]>([]);
-  /**
-   * Imagen y medidas de cada textura de assets/textures/, por nombre de
-   * archivo. Sirve para dos cosas: mostrar la miniatura de verdad en el panel
-   * Recursos (antes era un cuadrado vacio, y elegir textura era adivinar), y
-   * saber el tamano real al soltarla sobre una entidad, para recortarla entera
-   * en vez de dejar el recorte viejo.
-   */
-  readonly textureAssets = signal<Record<string, { dataUrl: string; width: number; height: number }>>({});
-  /** Hay una importacion en curso; el boton se apaga para no lanzar dos juntas. */
-  readonly importing = signal(false);
-  /** Numero de la pasada de miniaturas vigente. Ver loadTextureThumbnails(). */
-  private thumbnailRun = 0;
+  /** preload.js expone el control de la ventana solo bajo Electron. */
+  readonly hasWindowApi = typeof window !== 'undefined' && 'honeycombWindow' in window;
+
   readonly status = signal('Listo. Abre una carpeta de proyecto, o crea un nivel y usa Guardar como.');
-  /** Ultima ruta usada al guardar por dialogo; se propone en el siguiente. */
-  readonly lastSavedPath = signal<string | null>(null);
+
   /** Hay cambios sin guardar. Lo enciende cualquier edicion; solo save() lo apaga. */
   readonly dirty = signal(false);
 
-  /** Colocacion esperando respuesta porque la celda ya tenia algo. */
-  readonly pendingPlacement = signal<PendingPlacement | null>(null);
-
-  // --- Dialogo "nivel nuevo" ------------------------------------------------
-  readonly showNewLevelDialog = signal(false);
-  readonly newLevelName = signal('nuevo_nivel');
-  readonly newLevelWidth = signal(10);
-  readonly newLevelHeight = signal(10);
-  readonly newLevelTileWidth = signal(64);
-  readonly newLevelTileHeight = signal(32);
-  readonly newLevelTemplate = signal<NewLevelTemplate>('empty');
-
-  // --- Estado del viewport --------------------------------------------------
-  readonly tool = signal<Tool>('select');
-  /** Textura elegida en el panel Recursos; es la que se coloca con la herramienta "place". */
-  readonly activeTexture = signal<string | null>(null);
-  /**
-   * Primitiva elegida en el panel Figuras. Es EXCLUYENTE con activeTexture:
-   * elegir una apaga la otra, porque la herramienta "place" tiene que saber sin
-   * ambiguedad que esta a punto de colocar.
-   */
-  readonly activeShape = signal<ShapeId | null>(null);
-  /** Panel Figuras: arrastrar con una figura elegida la coloca en cada casilla que pisa. */
-  readonly paintShapes = signal(false);
-  /** Trazo en curso de figuras pintadas arrastrando (ver startShapeStroke). */
-  private shapeStroke: { shape: ShapeId; start: GridCoord; last: GridCoord; placed: number } | null = null;
-  /**
-   * Id del personaje elegido en el panel Personajes: un tipo base
-   * ("base-enemy") o uno configurado. Excluyente con los otros dos por el
-   * mismo motivo: la herramienta "place" tiene que saber sin ambiguedad que
-   * esta a punto de colocar.
-   */
-  readonly activeCharacter = signal<string | null>(null);
-  readonly zoom = signal(3);
-  readonly showGrid = signal(true);
-  readonly showColliders = signal(true);
-  /** Lineas de la grilla por encima de las entidades (como F1 en el runtime) o debajo. */
-  readonly gridOnTop = signal(false);
-  /** Desplazamiento de camara en pixeles de pantalla (boton medio o shift-arrastre). */
-  readonly pan = signal({ x: 0, y: 0 });
-  /** Celda bajo el cursor, para resaltarla. Null cuando el mouse sale del canvas. */
-  readonly hovered = signal<GridCoord | null>(null);
-  readonly workspace = signal<Workspace>('layout');
-  readonly inspectorTab = signal<InspectorTab>('objeto');
   readonly log = signal<string[]>([]);
 
-  // --- Explorador de archivos del proyecto ----------------------------------
+  readonly workspace = signal<Workspace>('layout');
+
+  readonly inspectorTab = signal<InspectorTab>('objeto');
+
   readonly leftEditor = signal<LeftEditor>('escena');
-  /**
-   * El explorador de archivos del proyecto. Ver project/explorer.controller.ts.
-   * Lo que no decide el (abrir un nivel, elegir una textura) se le pasa por
-   * constructor, porque toca partes del editor que el explorador no conoce.
-   */
-  readonly explorer = new ExplorerController(
-    (message) => this.note(message),
-    (error) => this.describe(error),
-    (node) => this.openProjectLevel(node),
-    (name) => this.selectTexture(name),
-    () => this.workspace.set('archivo'),
-  );
+
+  // --- El canvas ------------------------------------------------------------
+  //
+  // El viewChild tiene que declararse en el componente: el compilador de Angular
+  // solo reconoce las queries de senal aca. El viewport lo recibe como funcion.
+
+  private readonly viewport = viewChild<ElementRef<HTMLCanvasElement>>('viewport');
+
+  // --- Vistas derivadas del nivel abierto -----------------------------------
+
+  // computed() y no getters: asi Angular sabe exactamente de que dependen y
+  // solo recalcula (y redibuja el canvas) cuando eso cambia de verdad.
+  readonly entities = computed(() => this.levels.level().entities);
+
+  /** Consulta rapida para el outliner y el canvas, que preguntan una vez por entidad. */
+  readonly entityIds = computed(() => this.entities().map((entity) => entity.id));
+
+  readonly grid = computed(() => this.levels.level().grid);
+
+  /** El objeto ACTIVO: el ultimo seleccionado, el unico que muestra el inspector. */
+  readonly selected = this.levels.selectedEntity;
+
+  /** Todos los seleccionados. Sobre estos actuan las operaciones de grupo. */
+  readonly selectedIds = this.selection.selectedEntityIds;
+
+  readonly selectionCount = computed(() => this.selectedIds().length);
+
+  readonly tileEditCount = computed(() => this.levels.level().tileEdits?.length ?? 0);
+
+  readonly overBudget = computed(() => this.entities().length > ENTITY_WARN_THRESHOLD);
+
+  // --- Controladores --------------------------------------------------------
+  //
+  // Cada area del editor vive en su controlador (ver la cabecera del archivo).
+  // El ORDEN de declaracion importa: los campos se inicializan en orden, y los
+  // que reciben otros controladores ya construidos -- view, proj -- van despues
+  // de ellos. Si se rompe, TypeScript lo marca (TS2729).
 
   /**
    * La disposicion de la ventana: anchos, paneles escondidos y paneles
@@ -461,13 +237,157 @@ export class App {
    * como "panels.X"; aca solo se lo toca desde las acciones que llevan a un
    * panel concreto.
    */
-  readonly panels = new PanelsController();
+  readonly panels: PanelsController = new PanelsController();
 
-  readonly zoomSteps = ZOOM_STEPS;
+  /**
+   * El explorador de archivos del proyecto. Ver project/explorer.controller.ts.
+   * Lo que no decide el (abrir un nivel, elegir una textura) se le pasa por
+   * constructor, porque toca partes del editor que el explorador no conoce.
+   */
+  readonly explorer: ExplorerController = new ExplorerController(
+    (message) => this.note(message),
+    (error) => this.describe(error),
+    (node) => this.openProjectLevel(node),
+    (name) => this.palette.selectTexture(name),
+    () => this.workspace.set('archivo'),
+  );
+
+  readonly chars: CharactersController = new CharactersController(
+    (message) => this.note(message),
+    (error) => this.describe(error),
+    () => this.proj.refreshProject(),
+    () => this.tex.textureAssets(),
+    this.hasFileSystem,
+  );
+
+  /** El selector de color del fondo. Ver inspector/background-picker.controller.ts. */
+  /** La biblioteca de texturas del proyecto. Ver textures/textures.controller.ts. */
+  readonly tex: TexturesController = new TexturesController(
+    (message) => this.note(message),
+    (error) => this.describe(error),
+    () => this.proj.refreshProject(),
+    (path) => this.explorer.reloadDir(path),
+    (id) => this.panels.expand(id),
+    () => this.grid(),
+    this.hasFileSystem,
+  );
+
+  /** Como se muestran los objetos. Ver combat/items-panel.controller.ts. */
+  readonly items: ItemsPanelController = new ItemsPanelController(
+    () => this.tex.textureAssets(),
+    () => this.combat.options(),
+    (name, asset) => this.itemEditor.setTexture(name, asset),
+  );
+
+  readonly itemEditor: ItemEditorController = new ItemEditorController(
+    (message) => this.note(message),
+    () => this.dirty.set(true),
+  );
+
+  /** Los gestos de seleccion. Ver selection/selection.controller.ts. */
+  readonly sel: SelectionController = new SelectionController(() => this.inspectorTab.set('objeto'));
+
+  /** Herramienta activa y que se va a colocar. Ver palette/palette.controller.ts. */
+  readonly palette: PaletteController = new PaletteController(
+    (message) => this.note(message),
+    (id) => this.chars.allPresets().find((preset) => preset.id === id),
+    (kind) => this.chars.kindHint(kind),
+    () => this.map.tunnelTrace.set(null),
+  );
+
+  /** Los formularios del inspector. Ver inspector/inspector.controller.ts. */
+  readonly inspector: InspectorController = new InspectorController(() => this.dirty.set(true));
+
+  readonly bg: BackgroundPickerController = new BackgroundPickerController(() => this.dirty.set(true));
+
+  /**
+   * Todo lo que modifica entidades: colocar, celda ocupada, tamano, colision,
+   * pared y operaciones de grupo. Ver entities/entity-ops.controller.ts.
+   */
+  readonly entityOps: EntityOpsController = new EntityOpsController({
+    note: (message) => this.note(message),
+    markDirty: () => this.dirty.set(true),
+    selectEntity: (id) => this.sel.selectEntity(id),
+    findPreset: (id) => this.chars.allPresets().find((preset) => preset.id === id),
+    activeShape: () => this.palette.activeShape(),
+    activeTexture: () => this.palette.activeTexture(),
+  });
+
+  /**
+   * Salas y tuneles del mapa. Ver map/map.controller.ts. Las herramientas
+   * reciben la celda ya proyectada porque el controlador no sabe de canvas.
+   */
+  readonly map: MapController = new MapController(
+    (message) => this.note(message),
+    () => this.dirty.set(true),
+    () => this.view.frameAll(),
+    (tool) => this.palette.tool.set(tool),
+    (cell) => this.view.hovered.set(cell),
+    () => this.showGridProperties(),
+  );
+
+  /**
+   * El viewport: camara, gestos sobre el canvas, drops y redibujo. Ver
+   * viewport/viewport.controller.ts. Va despues de los controladores que usa
+   * porque los recibe ya construidos.
+   */
+  readonly view: ViewportController = new ViewportController({
+    viewport: () => this.viewport(),
+    note: (message) => this.note(message),
+    markDirty: () => this.dirty.set(true),
+    showObjectTab: () => this.inspectorTab.set('objeto'),
+    palette: this.palette,
+    entityOps: this.entityOps,
+    map: this.map,
+    sel: this.sel,
+    chars: this.chars,
+    tex: this.tex,
+  });
+
+  readonly ev: EventsController = new EventsController(
+    (message) => this.note(message),
+    () => this.dirty.set(true),
+    (itemId) => this.combat.use(itemId),
+  );
+
+  /** El dialogo "Pasar a otro nivel". Ver events/transition.controller.ts. */
+  readonly transition: TransitionController = new TransitionController(
+    (message) => this.note(message),
+    () => this.dirty.set(true),
+    () => this.proj.levelFiles(),
+    () => this.workspace.set('eventos'),
+  );
+
+  readonly combat: CombatInspectorController = new CombatInspectorController(() => this.dirty.set(true));
+
+  readonly puzzle: PuzzleController = new PuzzleController(
+    (message) => this.note(message),
+    () => this.dirty.set(true),
+    () => this.workspace.set('eventos'),
+  );
+
+  /**
+   * El nivel como documento: abrir, crear, guardar, ejecutar. Ver
+   * project/project.controller.ts.
+   */
+  readonly proj: ProjectController = new ProjectController({
+    note: (message) => this.note(message),
+    describe: (error) => this.describe(error),
+    dirty: this.dirty,
+    hasFileSystem: this.hasFileSystem,
+    explorer: this.explorer,
+    tex: this.tex,
+    view: this.view,
+    ev: this.ev,
+  });
+
+  // --- Datos para la plantilla ----------------------------------------------
+  //
+  // Constantes y estilos que la plantilla necesita tal cual.
+
   readonly shapes = SHAPES;
+
   readonly characters = CHARACTERS;
-  /** Zoom en porcentaje para la barra de estado, como el de Blender. */
-  readonly zoomLabel = computed(() => Math.round(this.zoom() * 100) + '%');
 
   /**
    * Estilo de una miniatura de la paleta: recorta la celda de la figura del
@@ -488,88 +408,18 @@ export class App {
     };
   }
 
-  /**
-   * El sheet ya decodificado, listo para dibujar en el canvas. Es null hasta
-   * que la imagen termina de cargar (unos milisegundos: son datos embebidos,
-   * no una descarga), y por eso es un signal -- al resolverse dispara el
-   * effect() que redibuja, sin necesidad de un bucle de render.
-   */
-  private readonly shapeSheet = signal<HTMLImageElement | null>(null);
-
-  private readonly viewport = viewChild<ElementRef<HTMLCanvasElement>>('viewport');
-  /** Tamano real del canvas en pixeles. Lo mantiene al dia el ResizeObserver. */
-  private readonly canvasSize = signal({ w: 0, h: 0 });
-  private observer?: ResizeObserver;
-  /**
-   * Hay un arrastre de camara en curso. Es un signal y no un campo suelto
-   * porque la plantilla lo lee para cambiar el cursor a "mano cerrada"; se
-   * escribe dos veces por gesto (al apretar y al soltar), no en cada
-   * movimiento, asi que no cuesta nada.
-   */
-  readonly panning = signal(false);
-  /** Punto donde empezo el arrastre + pan que habia entonces, para calcular el delta. */
-  private dragOrigin = { x: 0, y: 0, panX: 0, panY: 0 };
-  /** Boton que inicio el gesto en curso, para saber al soltar que hacer con el. */
-  private pressedButton: number | null = null;
-  /**
-   * Arrastre con Ctrl+clic en curso: la celda donde empezo, la posicion
-   * original de cada entidad que se lleva, y el desplazamiento ya aplicado.
-   */
-  private moveDrag: {
-    startCell: GridCoord;
-    originals: Map<string, GridPosition>;
-    delta: GridPosition;
-  } | null = null;
-  /** Hay entidades agarradas con Ctrl; la plantilla cambia el cursor a "mano cerrada". */
-  readonly moving = signal(false);
-
-  /**
-   * Id de la entidad cuyo menu del clic derecho esta abierto. Null cuando no
-   * hay ninguno. El menu va centrado en la ventana, asi que no guarda posicion.
-   */
-  readonly contextMenu = signal<string | null>(null);
-  /** La entidad del menu abierto, resuelta; undefined si se borro mientras tanto. */
-  readonly contextMenuEntity = computed(() => {
-    const id = this.contextMenu();
-    return id ? this.entities().find((entity) => entity.id === id) : undefined;
-  });
-
-  // --- Vistas derivadas del nivel abierto -----------------------------------
-  // computed() y no getters: asi Angular sabe exactamente de que dependen y
-  // solo recalcula (y redibuja el canvas) cuando eso cambia de verdad.
-  readonly entities = computed(() => this.levels.level().entities);
-  readonly events = computed(() => this.levels.level().events);
-  readonly tileEditCount = computed(() => this.levels.level().tileEdits?.length ?? 0);
-  readonly grid = computed(() => this.levels.level().grid);
-  /** El objeto ACTIVO: el ultimo seleccionado, el unico que muestra el inspector. */
-  readonly selected = this.levels.selectedEntity;
-  /** Todos los seleccionados. Sobre estos actuan las operaciones de grupo. */
-  readonly selectedIds = this.selection.selectedEntityIds;
-  readonly selectionCount = computed(() => this.selectedIds().length);
-  /** Consulta rapida para el outliner y el canvas, que preguntan una vez por entidad. */
-  private readonly selectedSet = computed(() => new Set(this.selectedIds()));
-  readonly entityIds = computed(() => this.entities().map((entity) => entity.id));
-  readonly overBudget = computed(() => this.entities().length > ENTITY_WARN_THRESHOLD);
-
-  readonly triggers = computed(() => this.catalog.catalog()?.triggers ?? []);
-  readonly conditions = computed(() => this.catalog.catalog()?.conditions ?? []);
-  readonly actions = computed(() => this.catalog.catalog()?.actions ?? []);
-
-  /** preload.js expone el control de la ventana solo bajo Electron. */
-  readonly hasWindowApi = typeof window !== 'undefined' && 'honeycombWindow' in window;
-
   // --- Barra de menus -------------------------------------------------------
   //
   // Toda la barra se describe aca como dato; el componente MenuBar solo la
   // dibuja. Es un computed y no un arreglo fijo porque tiene partes vivas: las
-  // marcas ✓ (barra lateral, grilla, herramienta), las opciones que se apagan
-  // sin seleccion, y la lista de niveles del proyecto.
+  // marcas (barra lateral, grilla, herramienta), las opciones que se apagan sin
+  // seleccion, y la lista de niveles del proyecto.
   //
-  // Archivo, Editar, Ver y Ejecutar llaman a lo que ya existe. Mapa, Niveles y
-  // Generar son las tres partes del sistema de mazmorras que viene -- grillas
-  // unidas por tuneles, pase entre niveles y generacion procedural con semilla
-  // -- y por ahora se muestran como "Proximamente": se ve lo que va a haber y
-  // donde, sin opciones que parezcan andar y no hagan nada.
+  // Es, junto con los atajos de teclado, la superficie de comandos del editor: su
+  // trabajo es referenciar a todos los demas, y por eso vive en App. "Generar"
+  // (generacion procedural con semilla) todavia se muestra como "Proximamente":
+  // se ve lo que va a haber y donde, sin opciones que parezcan andar y no hagan
+  // nada.
 
   readonly menus = computed<MenuDef[]>(() => {
     const separator: MenuLeaf = { kind: 'separator' };
@@ -580,20 +430,20 @@ export class App {
         id: 'archivo',
         label: 'Archivo',
         items: [
-          { kind: 'action', label: 'Nuevo nivel…', shortcut: 'Ctrl+N', run: () => this.newLevel() },
-          { kind: 'action', label: 'Abrir nivel…', shortcut: 'Ctrl+O', run: () => void this.openLevelFile() },
+          { kind: 'action', label: 'Nuevo nivel…', shortcut: 'Ctrl+N', run: () => this.proj.newLevel() },
+          { kind: 'action', label: 'Abrir nivel…', shortcut: 'Ctrl+O', run: () => void this.proj.openLevelFile() },
           {
             kind: 'submenu',
             label: 'Abrir nivel del proyecto',
             emptyLabel: 'Sin proyecto abierto, o sin niveles en levels/',
-            items: this.levelFiles().map((file) => ({
+            items: this.proj.levelFiles().map((file) => ({
               kind: 'action' as const,
               label: file,
               checked: this.levels.fileName() === file,
-              run: () => void this.loadLevel(file),
+              run: () => void this.proj.loadLevel(file),
             })),
           },
-          { kind: 'action', label: 'Abrir carpeta de proyecto…', run: () => void this.openProject() },
+          { kind: 'action', label: 'Abrir carpeta de proyecto…', run: () => void this.proj.openProject() },
           separator,
           {
             kind: 'action',
@@ -601,15 +451,15 @@ export class App {
             // boton "Guardar *" del topbar.
             label: this.dirty() ? 'Guardar  ●' : 'Guardar',
             shortcut: 'Ctrl+S',
-            run: () => void this.save(),
+            run: () => void this.proj.save(),
           },
-          { kind: 'action', label: 'Guardar como…', shortcut: 'Ctrl+Shift+S', run: () => void this.saveAs() },
+          { kind: 'action', label: 'Guardar como…', shortcut: 'Ctrl+Shift+S', run: () => void this.proj.saveAs() },
           separator,
           {
             kind: 'action',
             label: 'Importar texturas…',
-            disabled: this.importing(),
-            run: () => void this.importTextures(),
+            disabled: this.tex.importing(),
+            run: () => void this.tex.importTextures(),
           },
           separator,
           { kind: 'action', label: 'Salir', run: () => window.close() },
@@ -619,17 +469,17 @@ export class App {
         id: 'editar',
         label: 'Editar',
         items: [
-          { kind: 'action', label: 'Duplicar', shortcut: 'Shift+D', disabled: nothingSelected, run: () => this.duplicateSelected() },
-          { kind: 'action', label: 'Eliminar', shortcut: 'X', disabled: nothingSelected, run: () => this.deleteSelected() },
+          { kind: 'action', label: 'Duplicar', shortcut: 'Shift+D', disabled: nothingSelected, run: () => this.entityOps.duplicateSelected() },
+          { kind: 'action', label: 'Eliminar', shortcut: 'X', disabled: nothingSelected, run: () => this.entityOps.deleteSelected() },
           separator,
           {
             kind: 'action',
             label: 'Seleccionar todo',
             shortcut: 'Ctrl+A',
             disabled: this.entities().length === 0,
-            run: () => this.selectAllEntities(),
+            run: () => this.sel.selectAllEntities(),
           },
-          { kind: 'action', label: 'Deseleccionar', disabled: nothingSelected, run: () => this.selectEntity(null) },
+          { kind: 'action', label: 'Deseleccionar', disabled: nothingSelected, run: () => this.sel.selectEntity(null) },
           separator,
           {
             kind: 'submenu',
@@ -638,8 +488,8 @@ export class App {
             items: (['select', 'place', 'floor', 'wall', 'room', 'tunnel'] as const).map((tool) => ({
               kind: 'action' as const,
               label: TOOL_LABELS[tool],
-              checked: this.tool() === tool,
-              run: () => this.setTool(tool),
+              checked: this.palette.tool() === tool,
+              run: () => this.palette.setTool(tool),
             })),
           },
         ],
@@ -662,9 +512,9 @@ export class App {
             })),
           },
           separator,
-          { kind: 'action', label: 'Grilla', checked: this.showGrid(), run: () => this.toggleGrid() },
-          { kind: 'action', label: 'Colisiones', checked: this.showColliders(), run: () => this.toggleColliders() },
-          { kind: 'action', label: 'Encuadrar todo', shortcut: 'Inicio', run: () => this.frameAll() },
+          { kind: 'action', label: 'Grilla', checked: this.view.showGrid(), run: () => this.view.toggleGrid() },
+          { kind: 'action', label: 'Colisiones', checked: this.view.showColliders(), run: () => this.view.toggleColliders() },
+          { kind: 'action', label: 'Encuadrar todo', shortcut: 'Inicio', run: () => this.view.frameAll() },
           separator,
           { kind: 'action', label: 'Recargar ventana', shortcut: 'Ctrl+R', run: () => this.reloadWindow() },
           {
@@ -680,12 +530,12 @@ export class App {
         id: 'personajes',
         label: 'Personajes',
         items: [
-          { kind: 'action', label: 'Configurar personajes…', run: () => this.openCharacterEditor() },
+          { kind: 'action', label: 'Configurar personajes…', run: () => this.chars.openCharacterEditor() },
           separator,
           ...CHARACTERS.map((def) => ({
             kind: 'action' as const,
             label: 'Nuevo ' + def.label.toLowerCase() + '…',
-            run: () => this.openCharacterEditor(def.id),
+            run: () => this.chars.openCharacterEditor(def.id),
           })),
           separator,
           {
@@ -694,8 +544,8 @@ export class App {
             emptyLabel: 'Todavía no hay personajes guardados',
             items: this.presetsService.presets().map((preset) => ({
               kind: 'action' as const,
-              label: preset.name + '  ·  ' + this.kindLabel(preset.kind),
-              run: () => this.editCharacterPreset(preset.id),
+              label: preset.name + '  ·  ' + this.chars.kindLabel(preset.kind),
+              run: () => this.chars.editCharacterPreset(preset.id),
             })),
           },
         ],
@@ -724,13 +574,13 @@ export class App {
             emptyLabel: 'Todavía no hay objetos en items.json',
             items: this.itemLibrary.items().map((item) => ({
               kind: 'action' as const,
-              label: this.itemGlyph(item) + '  ' + item.name,
+              label: this.items.itemGlyph(item) + '  ' + item.name,
               run: () => this.itemEditor.open({ editId: item.id }),
             })),
           },
           separator,
           { kind: 'action', label: 'Puzzle de sala…', run: () => this.puzzle.open() },
-          { kind: 'action', label: 'Agregar zona de puzzle', run: () => this.addZone() },
+          { kind: 'action', label: 'Agregar zona de puzzle', run: () => this.map.addZone() },
           { kind: 'action', label: 'Ver eventos del nivel', run: () => this.workspace.set('eventos') },
         ],
       },
@@ -742,8 +592,8 @@ export class App {
           {
             kind: 'action',
             label: 'Dibujar grilla en el viewport',
-            checked: this.tool() === 'room',
-            run: () => this.setTool('room'),
+            checked: this.palette.tool() === 'room',
+            run: () => this.palette.setTool('room'),
           },
           separator,
           {
@@ -755,9 +605,9 @@ export class App {
           {
             kind: 'action',
             label: 'Trazar túnel a mano',
-            checked: this.tool() === 'tunnel',
+            checked: this.palette.tool() === 'tunnel',
             disabled: this.map.rooms().length < 2,
-            run: () => this.setTool('tunnel'),
+            run: () => this.palette.setTool('tunnel'),
           },
           {
             kind: 'action',
@@ -774,7 +624,7 @@ export class App {
         id: 'niveles',
         label: 'Niveles',
         items: [
-          { kind: 'action', label: 'Pasar a otro nivel…', run: () => this.openTransitionDialog() },
+          { kind: 'action', label: 'Pasar a otro nivel…', run: () => this.transition.openTransitionDialog() },
           { kind: 'action', label: 'Ver eventos del nivel', run: () => this.workspace.set('eventos') },
         ],
       },
@@ -797,7 +647,7 @@ export class App {
       {
         id: 'ejecutar',
         label: 'Ejecutar',
-        items: [{ kind: 'action', label: 'Ejecutar nivel', shortcut: 'F5', run: () => void this.run() }],
+        items: [{ kind: 'action', label: 'Ejecutar nivel', shortcut: 'F5', run: () => void this.proj.run() }],
       },
     ];
   });
@@ -816,1163 +666,10 @@ export class App {
     }
   }
 
-  /** Abre el panel de propiedades en la pestaña de escena, donde estan las medidas de la grilla. */
-  showGridProperties(): void {
-    this.panels.inspectorVisible.set(true);
-    this.inspectorTab.set('escena');
-  }
-
-  // --- Pasar a otro nivel ---------------------------------------------------
+  // --- Atajos de teclado ----------------------------------------------------
   //
-  // Arma el evento "cuando pase X, mostrar la pantalla de nivel superado y
-  // cargar otro nivel". Queda como un evento mas en el panel Eventos, asi que
-  // despues se lo puede cambiar o completar (sumar un sonido, una condicion).
-
-  readonly transitionDraft = signal<TransitionDraft | null>(null);
-
-  /**
-   * Propone lo mas probable: si hay enemigos, pasar al eliminar el primero;
-   * si no, al tocar la primera entidad. El nivel de destino, el primero de
-   * levels/ que no sea el que esta abierto.
-   */
-  openTransitionDialog(): void {
-    const enemies = this.entities().filter((entity) => entity.type === 'enemy');
-    const current = this.levels.fileName();
-    this.transitionDraft.set({
-      when: enemies.length > 0 ? 'entity_destroyed' : 'touch',
-      entity: enemies[0]?.id ?? this.entityIds().find((id) => id !== ENGINE_PLAYER_ID) ?? '',
-      level: this.levelFiles().find((file) => file !== current) ?? '',
-      message: '¡Nivel superado!',
-    });
-  }
-
-  patchTransitionDraft(changes: Partial<TransitionDraft>): void {
-    this.transitionDraft.update((draft) => (draft ? { ...draft, ...changes } : draft));
-  }
-
-  /** El <select> devuelve texto: se valida antes de aceptarlo. */
-  setTransitionWhen(value: string): void {
-    if (value === 'entity_destroyed' || value === 'all_enemies' || value === 'touch') {
-      this.patchTransitionDraft({ when: value });
-    }
-  }
-
-  cancelTransitionDialog(): void {
-    this.transitionDraft.set(null);
-  }
-
-  confirmTransitionDialog(): void {
-    const draft = this.transitionDraft();
-    if (!draft) {
-      return;
-    }
-    const level = draft.level.trim();
-    if (!level) {
-      this.note('Elegí el nivel al que se pasa.');
-      return;
-    }
-    if (draft.when !== 'all_enemies' && !draft.entity) {
-      this.note('Elegí la entidad que dispara el paso de nivel.');
-      return;
-    }
-
-    const trigger =
-      draft.when === 'entity_destroyed'
-        ? { type: 'on_entity_destroyed', params: { entity: draft.entity } }
-        : draft.when === 'all_enemies'
-          ? { type: 'on_all_enemies_defeated', params: {} }
-          : // "Tocar" es siempre el jugador con esa entidad: es quien se mueve.
-            { type: 'on_collision', params: { entityA: ENGINE_PLAYER_ID, entityB: draft.entity } };
-
-    this.levels.addEvent({
-      trigger,
-      actions: [{ type: 'load_level', params: { level, message: draft.message.trim() } }],
-    });
-    this.transitionDraft.set(null);
-    this.dirty.set(true);
-    // Se muestra el evento recien creado, que es donde se lo puede ajustar.
-    this.workspace.set('eventos');
-    this.note('Evento creado: al cumplirse, el juego pasa a ' + level + '.');
-  }
-
-  // --- Combate, objetos y puzzles ---------------------------------------------
-  //
-  // La logica vive en combat/ (un controlador por ventana o panel) y en
-  // core/items.ts y core/puzzles.ts; los controladores son campos de App para
-  // que su markup, en app.html, use los estilos de app.scss. Aca queda solo lo
-  // que toca al viewport, la paleta, las zonas y el panel de eventos.
-
-  readonly itemEditor = new ItemEditorController(
-    (message) => this.note(message),
-    () => this.dirty.set(true),
-  );
-  readonly combat = new CombatInspectorController(() => this.dirty.set(true));
-  readonly puzzle = new PuzzleController(
-    (message) => this.note(message),
-    () => this.dirty.set(true),
-    () => this.workspace.set('eventos'),
-  );
-  readonly itemKinds = ITEM_KINDS;
-
-  /** Objeto de la paleta Objetos elegido para colocar con clic. */
-  readonly activeItem = signal<string | null>(null);
-
-  readonly zones = computed(() => this.levels.level().zones ?? []);
-  /** Salas y zonas: lo que acepta un parametro zone_ref (el motor usa las dos). */
-  readonly zoneIds = computed(() => [...this.map.rooms().map((room) => room.id), ...this.zones().map((zone) => zone.id)]);
-
-  itemGlyph(item: ItemDef): string {
-    return itemKindDef(item.kind).glyph;
-  }
-
-  itemColor(item: ItemDef): string {
-    return itemKindDef(item.kind).color;
-  }
-
-  itemKindHint(kind: ItemKind): string {
-    return itemKindDef(kind).hint;
-  }
-
-  /** El dato corto de la paleta: dano de un arma, vida de una curacion, valor de una moneda. */
-  itemStat(item: ItemDef): string {
-    if (item.kind === 'weapon') {
-      return '⚔' + (item.weapon?.attack.damage ?? 0) + (item.weapon?.ability ? ' ★' : '');
-    }
-    return item.kind === 'healing' ? '✚' + (item.heal ?? 0) : '●' + (item.value ?? 1);
-  }
-
-  /** Resumen del arma de un enemigo, para el inspector. */
-  weaponSummary(id: string): string {
-    const weapon = this.combat.options().find((item) => item.id === id)?.weapon;
-    if (!weapon) {
-      return '';
-    }
-    const ability = weapon.ability ? ' · habilidad cada ' + weapon.ability.hitsRequired + ' golpes' : '';
-    return describeAttack(weapon.attack) + ability;
-  }
-
-  /** Miniatura del recorte de un objeto, sacada de la miniatura de Recursos. */
-  itemSpriteStyle(item: Pick<ItemDef, 'texture' | 'sourceRect'>, box = 22): Record<string, string> | null {
-    const asset = this.textureAssets()[textureName(item.texture)];
-    return asset && asset.width > 0
-      ? spriteCropStyle(asset.dataUrl, asset.width, asset.height, item.sourceRect, box)
-      : null;
-  }
-
-  /** En la ventana de objetos: elegir textura con sus medidas reales, para recortarla entera. */
-  setItemTexture(name: string): void {
-    this.itemEditor.setTexture(name, this.textureAssets()[name]);
-  }
-
-  /** El <select> devuelve texto: se valida antes de aceptarlo. */
-  onFullOf(value: string): OnFullInventory {
-    return value === 'auto_replace' || value === 'block' ? value : 'manual_replace';
-  }
-
-  /** Vuelve un <select> de "+ Agregar…" a su opcion vacia despues de usarlo. */
-  resetSelect(event: Event): void {
-    (event.target as HTMLSelectElement).value = '';
-  }
-
-  selectItem(id: string): void {
-    const item = this.itemLibrary.find(id);
-    if (!item) {
-      return;
-    }
-    this.activeItem.set(id);
-    this.activeCharacter.set(null);
-    this.activeShape.set(null);
-    this.activeTexture.set(null);
-    this.tool.set('place');
-    this.note(item.name + ': clic en la grilla para colocarlo. ' + itemKindDef(item.kind).hint);
-  }
-
-  activeItemLabel(): string | null {
-    const id = this.activeItem();
-    return id ? this.itemLibrary.find(id)?.name ?? id : null;
-  }
-
-  onItemDragStart(event: DragEvent, id: string): void {
-    event.dataTransfer?.setData('text/honeycomb-item', id);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'copy';
-    }
-  }
-
-  /**
-   * Coloca un objeto para juntar. Su definicion se copia al nivel en el mismo
-   * paso: una entidad que referencia un objeto que el nivel no define no la
-   * junta nadie en el juego.
-   */
-  private placeItem(coord: GridCoord, id: string): void {
-    const item = this.itemLibrary.find(id);
-    const grid = this.grid();
-    if (!item || !new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(coord, grid.width, grid.height)) {
-      return;
-    }
-    this.levels.upsertItems([item]);
-    const entity = entityFromItem(item, coord, new Set(this.entityIds()));
-    if (this.commitPlacement(entity)) {
-      this.note(item.name + ' "' + entity.id + '" colocado. El jugador lo junta al tocarlo.');
-    }
-  }
-
-  /** Zona nueva de 4x4 donde esta la entidad activa, o en el centro de la grilla. */
-  addZone(): void {
-    const grid = this.grid();
-    const anchor = this.selected()?.position ?? {
-      col: Math.floor(grid.width / 2) - 2,
-      row: Math.floor(grid.height / 2) - 2,
-    };
-    const zone: Zone = {
-      id: nextFreeId('zona', this.zoneIds()),
-      col: Math.max(0, anchor.col),
-      row: Math.max(0, anchor.row),
-      width: 4,
-      height: 4,
-    };
-    this.levels.addZone(zone);
-    this.dirty.set(true);
-    this.showGridProperties();
-    this.note('Zona "' + zone.id + '" agregada. Ajustá su rectángulo en Escena > Zonas de puzzle.');
-  }
-
-  updateZone(id: string, changes: Partial<Omit<Zone, 'id'>>): void {
-    this.levels.updateZone(id, changes);
-    this.dirty.set(true);
-  }
-
-  removeZone(id: string): void {
-    this.levels.removeZone(id);
-    this.dirty.set(true);
-  }
-
-  // --- Personajes configurados ----------------------------------------------
-  //
-  // Personajes con su asset, tamano y caracteristicas, guardados en el
-  // proyecto (characters.json) para reutilizarlos en cualquier nivel. La paleta
-  // los muestra agrupados por tipo y la ventana "Configurar personajes" los
-  // crea y los edita. Colocar uno COPIA sus valores a la entidad, asi que un
-  // nivel no depende de characters.json para abrirse ni para jugarse.
-
-  readonly basePresetId = basePresetId;
-  readonly characterKinds = CHARACTERS;
-
-  /** Tipo desplegado en la paleta, o null si estan todos plegados. */
-  readonly expandedKind = signal<CharacterId | null>(null);
-
-  /** Los tipos base mas los guardados: todo lo que se puede colocar. */
-  readonly allPresets = computed<CharacterPreset[]>(() => [
-    ...CHARACTERS.map(presetFromArchetype),
-    ...this.presetsService.presets(),
-  ]);
-
-  /** Ventana de configuracion abierta: el borrador y, si ya esta guardado, su id. */
-  readonly characterEditor = signal<{ draft: CharacterPreset; savedId: string | null } | null>(null);
-
-  /**
-   * La imagen COMPLETA de la textura del borrador. Las miniaturas de Recursos
-   * vienen reducidas: sirven para reconocer un personaje en la paleta, pero no
-   * para ajustar un recorte al pixel.
-   */
-  readonly editorTexture = signal<{ name: string; dataUrl: string; width: number; height: number } | null>(null);
-
-  /** Primer cuadro del borrador, para la vista previa de la ventana. */
-  readonly draftPreviewStyle = computed(() => {
-    const editor = this.characterEditor();
-    const image = this.editorTexture();
-    if (!editor || !image || textureName(editor.draft.texture) !== image.name) {
-      return null;
-    }
-    return spriteCropStyle(image.dataUrl, image.width, image.height, editor.draft.sourceRect, 96);
-  });
-
-  toggleKind(kind: CharacterId): void {
-    this.expandedKind.update((current) => (current === kind ? null : kind));
-  }
-
-  /** Lo que se despliega bajo un tipo en la paleta: el base primero, despues los guardados. */
-  presetsOfKind(kind: CharacterId): CharacterPreset[] {
-    return this.allPresets().filter((preset) => preset.kind === kind);
-  }
-
-  savedPresetsOfKind(kind: CharacterId): CharacterPreset[] {
-    return this.presetsService.presets().filter((preset) => preset.kind === kind);
-  }
-
-  kindLabel(kind: CharacterId): string {
-    return characterDef(kind)?.label ?? kind;
-  }
-
-  kindColor(kind: CharacterId): string {
-    return characterDef(kind)?.color ?? '#4772b3';
-  }
-
-  kindHint(kind: CharacterId): string {
-    return characterDef(kind)?.hint ?? '';
-  }
-
-  /** Miniatura de un personaje en la paleta: su primer cuadro, sacado de la miniatura de Recursos. */
-  presetSpriteStyle(preset: CharacterPreset): Record<string, string> | null {
-    const asset = this.textureAssets()[textureName(preset.texture)];
-    return asset && asset.width > 0
-      ? spriteCropStyle(asset.dataUrl, asset.width, asset.height, preset.sourceRect, 22)
-      : null;
-  }
-
-  /** Sin tipo, abre el primer personaje guardado; con tipo, uno nuevo de ese tipo. */
-  openCharacterEditor(kind?: CharacterId): void {
-    if (kind) {
-      this.newCharacterDraft(kind);
-      return;
-    }
-    const first = this.presetsService.presets()[0];
-    if (first) {
-      this.editCharacterPreset(first.id);
-    } else {
-      this.newCharacterDraft('enemy');
-    }
-  }
-
-  /** Borrador nuevo, arrancando de los valores del tipo base. */
-  newCharacterDraft(kind: CharacterId): void {
-    const def = characterDef(kind);
-    if (!def) {
-      return;
-    }
-    const draft = { ...presetFromArchetype(def), id: '', name: 'Nuevo ' + def.label.toLowerCase() };
-    this.characterEditor.set({ draft, savedId: null });
-    void this.loadEditorTexture(textureName(draft.texture));
-  }
-
-  editCharacterPreset(id: string): void {
-    const preset = this.presetsService.presets().find((candidate) => candidate.id === id);
-    if (!preset) {
-      return;
-    }
-    // Copia profunda: editar el borrador no tiene que tocar la lista guardada
-    // hasta que se aprete Guardar.
-    this.characterEditor.set({ draft: structuredClone(preset), savedId: id });
-    void this.loadEditorTexture(textureName(preset.texture));
-  }
-
-  closeCharacterEditor(): void {
-    this.characterEditor.set(null);
-  }
-
-  private updateDraft(change: (draft: CharacterPreset) => CharacterPreset): void {
-    this.characterEditor.update((editor) => (editor ? { ...editor, draft: change(editor.draft) } : editor));
-  }
-
-  patchCharacterDraft(changes: Partial<CharacterPreset>): void {
-    this.updateDraft((draft) => ({ ...draft, ...changes }));
-  }
-
-  /** El <select> de tipo devuelve texto: se valida antes de aceptarlo. */
-  setCharacterKind(value: string): void {
-    if (isCharacterKind(value)) {
-      this.patchCharacterDraft({ kind: value });
-    }
-  }
-
-  patchDraftRect(field: 'x' | 'y' | 'width' | 'height', value: number): void {
-    const min = field === 'width' || field === 'height' ? 1 : 0;
-    this.updateDraft((draft) => ({ ...draft, sourceRect: { ...draft.sourceRect, [field]: Math.max(min, value) } }));
-  }
-
-  setDraftFrames(value: number): void {
-    this.patchCharacterDraft({ frames: Math.max(1, Math.round(value) || 1) });
-  }
-
-  setDraftFrameDuration(value: number): void {
-    this.patchCharacterDraft({ frameDuration: value > 0 ? value : 0.15 });
-  }
-
-  setDraftScale(value: number): void {
-    this.patchCharacterDraft({ scale: value > 0 ? value : 1 });
-  }
-
-  patchDraftCollider(field: 'width' | 'height', value: number): void {
-    this.updateDraft((draft) => ({ ...draft, collider: { ...draft.collider, [field]: Math.max(1, value) } }));
-  }
-
-  setDraftSolid(solid: boolean): void {
-    // undefined y no false: es el default del schema, y asi no ensucia el JSON.
-    this.updateDraft((draft) => ({ ...draft, collider: { ...draft.collider, solid: solid || undefined } }));
-  }
-
-  patchDraftStats(field: keyof EntityStats, value: number): void {
-    this.updateDraft((draft) => ({ ...draft, stats: { ...draft.stats, [field]: Math.max(0, value) } }));
-  }
-
-  /** Colision del tamano con que se va a dibujar: el recorte por la escala. */
-  fitDraftCollider(): void {
-    this.updateDraft((draft) => ({
-      ...draft,
-      collider: {
-        ...draft.collider,
-        width: Math.max(1, Math.round(draft.sourceRect.width * draft.scale)),
-        height: Math.max(1, Math.round(draft.sourceRect.height * draft.scale)),
-      },
-    }));
-  }
-
-  /**
-   * Cambia el asset del borrador. El recorte arranca con la imagen entera
-   * partida en tantos cuadros como tenga el personaje, uno al lado del otro,
-   * que es como el motor los lee: una tira de 4 cuadros de 128 px de ancho da
-   * cuadros de 32.
-   */
-  async setDraftTexture(name: string): Promise<void> {
-    this.patchCharacterDraft({ texture: 'textures/' + name });
-    const image = await this.loadEditorTexture(name);
-    const draft = this.characterEditor()?.draft;
-    if (!image || !draft) {
-      return;
-    }
-    const frames = Math.max(1, draft.frames);
-    this.patchCharacterDraft({
-      sourceRect: { x: 0, y: 0, width: Math.max(1, Math.floor(image.width / frames)), height: image.height },
-    });
-  }
-
-  private async loadEditorTexture(name: string) {
-    const current = this.editorTexture();
-    if (current?.name === name) {
-      return current;
-    }
-    try {
-      const data = await this.project.readFileData('assets/textures/' + name);
-      if (data.kind !== 'image') {
-        return null;
-      }
-      const image = await decodeImage(data.dataUrl);
-      const loaded = { name, dataUrl: data.dataUrl, width: image.naturalWidth, height: image.naturalHeight };
-      this.editorTexture.set(loaded);
-      return loaded;
-    } catch {
-      // Sin proyecto abierto o sin esa textura en disco: la ventana sigue
-      // andando, solo que sin vista previa.
-      return null;
-    }
-  }
-
-  /** La carpeta del proyecto, deduciendola o preguntandola si nadie abrio una. */
-  private async ensureProject(): Promise<boolean> {
-    if (this.project.projectRoot()) {
-      return true;
-    }
-    if (!this.hasFileSystem) {
-      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
-      return false;
-    }
-    if (!(await this.project.ensureRoot())) {
-      return false;
-    }
-    await this.refreshProject();
-    return true;
-  }
-
-  /**
-   * Guarda el borrador en characters.json. El id se fija la primera vez, a
-   * partir del nombre, y ya no cambia aunque despues se lo renombre: es la
-   * referencia que guardan las entidades colocadas ("preset").
-   */
-  async saveCharacterDraft(): Promise<void> {
-    const editor = this.characterEditor();
-    if (!editor) {
-      return;
-    }
-    const name = editor.draft.name.trim();
-    if (!name) {
-      this.note('El personaje necesita un nombre.');
-      return;
-    }
-    if (!(await this.ensureProject())) {
-      return;
-    }
-
-    const current = this.presetsService.presets();
-    const id = editor.savedId ?? presetIdFromName(name, current.map((preset) => preset.id));
-    const saved = normalizePreset({ ...editor.draft, id, name });
-    const list = editor.savedId
-      ? current.map((preset) => (preset.id === id ? saved : preset))
-      : [...current, saved];
-
-    try {
-      await this.presetsService.save(list);
-      this.characterEditor.set({ draft: structuredClone(saved), savedId: id });
-      this.note('Personaje "' + name + '" guardado. Ya aparece en el panel Personajes para arrastrarlo.');
-    } catch (error) {
-      this.note('No se pudo guardar el personaje: ' + this.describe(error));
-    }
-  }
-
-  async deleteCharacterPreset(): Promise<void> {
-    const editor = this.characterEditor();
-    if (!editor?.savedId) {
-      return;
-    }
-    const confirmed = window.confirm(
-      '¿Eliminar el personaje "' + editor.draft.name + '"? Lo que ya está colocado en los niveles no cambia.',
-    );
-    if (!confirmed) {
-      return;
-    }
-    const list = this.presetsService.presets().filter((preset) => preset.id !== editor.savedId);
-    try {
-      await this.presetsService.save(list);
-    } catch (error) {
-      this.note('No se pudo eliminar el personaje: ' + this.describe(error));
-      return;
-    }
-    const next = list.find((preset) => preset.kind === editor.draft.kind) ?? list[0];
-    if (next) {
-      this.editCharacterPreset(next.id);
-    } else {
-      this.newCharacterDraft(editor.draft.kind);
-    }
-    this.note('Personaje "' + editor.draft.name + '" eliminado.');
-  }
-
-  /** Copia sin guardar: al guardarla recibe su propio id. */
-  duplicateCharacterPreset(): void {
-    const editor = this.characterEditor();
-    if (!editor) {
-      return;
-    }
-    this.characterEditor.set({
-      draft: { ...structuredClone(editor.draft), id: '', name: editor.draft.name + ' (copia)' },
-      savedId: null,
-    });
-  }
-
-  // --- Inspector: animacion, tamano y caracteristicas de una entidad ---------
-
-  /** Las caracteristicas se muestran para personajes, y para todo lo que ya tenga "stats". */
-  isCharacter(entity: LevelEntity): boolean {
-    return characterOf(entity) !== undefined || entity.stats !== undefined;
-  }
-
-  statsOf(entity: LevelEntity): EntityStats {
-    return entity.stats ?? defaultStatsFor(entity.type);
-  }
-
-  /** Cuadros que anima el motor, contando el "player_idle" de los niveles viejos. */
-  effectiveFrames(entity: LevelEntity): number {
-    return entity.frames ?? (entity.animation === 'player_idle' ? 2 : 1);
-  }
-
-  effectiveFrameDuration(entity: LevelEntity): number {
-    return entity.frameDuration ?? (entity.animation === 'player_idle' ? 0.4 : 0.15);
-  }
-
-  patchEntityStats(field: keyof EntityStats, value: number): void {
-    const entity = this.selected();
-    if (!entity) {
-      return;
-    }
-    this.patchEntity({ stats: { ...this.statsOf(entity), [field]: Math.max(0, value) } });
-  }
-
-  /**
-   * Cuadros de animacion de la entidad. Se quita "animation" en el mismo paso:
-   * el nombre de clip viejo solo cuenta mientras no haya "frames", y dejarlo
-   * suelto confundiria a quien lea el JSON.
-   */
-  patchEntityFrames(value: number): void {
-    const entity = this.selected();
-    if (!entity) {
-      return;
-    }
-    const frames = Math.max(1, Math.round(value) || 1);
-    this.patchEntity({
-      frames: frames > 1 ? frames : undefined,
-      frameDuration: frames > 1 ? this.effectiveFrameDuration(entity) : undefined,
-      animation: undefined,
-    });
-  }
-
-  patchEntityFrameDuration(value: number): void {
-    const entity = this.selected();
-    if (!entity) {
-      return;
-    }
-    const frames = this.effectiveFrames(entity);
-    this.patchEntity({
-      frames: frames > 1 ? frames : undefined,
-      frameDuration: value > 0 ? value : 0.15,
-      animation: undefined,
-    });
-  }
-
-  patchEntityScale(value: number): void {
-    const scale = value > 0 ? value : 1;
-    this.patchEntity({ scale: scale === 1 ? undefined : scale });
-  }
-
-  // --- Mapa: grillas y tuneles ----------------------------------------------
-  //
-  // Salas, tuneles, sus dos dialogos y sus herramientas viven en
-  // map/map.controller.ts. Aca quedan el atajo al panel y el cableado.
-
-  /**
-   * Salas y tuneles del mapa. Ver map/map.controller.ts. Las herramientas
-   * reciben la celda ya proyectada porque el controlador no sabe de canvas.
-   */
-  readonly map = new MapController(
-    (message) => this.note(message),
-    () => this.dirty.set(true),
-    () => this.frameAll(),
-    (tool) => this.tool.set(tool),
-    (cell) => this.hovered.set(cell),
-  );
-
-  /** Abre Propiedades en la pestaña de escena con el panel Mapa desplegado. */
-  showMapPanel(): void {
-    this.showGridProperties();
-    this.panels.expand('map');
-  }
-
-  constructor() {
-    // El canvas no tiene tamano propio: lo estira el layout de CSS. Para
-    // dibujar hay que saber cuantos pixeles ocupa realmente, y eso solo se
-    // sabe midiendo. Se observa el contenedor y no el canvas mismo para no
-    // entrar en un bucle (dibujar cambia el tamano del canvas -> reobservar).
-    effect(() => {
-      const ref = this.viewport();
-      // El effect se reevalua varias veces; el observer se instala una sola.
-      if (!ref || this.observer) {
-        return;
-      }
-      const host = ref.nativeElement.parentElement;
-      if (!host) {
-        return;
-      }
-      this.observer = new ResizeObserver((entries) => {
-        const rect = entries[0].contentRect;
-        this.canvasSize.set({ w: Math.floor(rect.width), h: Math.floor(rect.height) });
-      });
-      this.observer.observe(host);
-    });
-
-    // Redibuja cuando cambia algo que se ve: nivel, zoom, pan, seleccion.
-    // No hace falta enumerar de que depende: draw() lee los signals y Angular
-    // registra solo esas dependencias. Tampoco hay bucle de render corriendo
-    // al pedo -- se dibuja cuando algo cambio, y nada mas.
-    effect(() => this.draw());
-
-    // Decodifica el sheet de primitivas una sola vez. Al resolverse, el signal
-    // dispara el effect() de arriba y el viewport se redibuja ya con los
-    // sprites. La guarda de "typeof Image" es para los tests, que corren en
-    // jsdom sin decodificador de imagenes.
-    if (typeof Image !== 'undefined') {
-      const sheet = new Image();
-      sheet.onload = () => this.shapeSheet.set(sheet);
-      sheet.src = SHAPE_SHEET_DATA_URL;
-    }
-
-    // El ResizeObserver sobrevive al componente si no se lo desconecta.
-    this.destroyRef.onDestroy(() => this.observer?.disconnect());
-  }
-
-  // --- Proyecto -------------------------------------------------------------
-
-  async openProject(): Promise<void> {
-    if (!this.hasFileSystem) {
-      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
-      return;
-    }
-    const opened = await this.project.openProjectFolder();
-    if (!opened) {
-      return;
-    }
-    await this.refreshProject();
-  }
-
-  /**
-   * Relee del disco todo lo que depende del proyecto abierto: niveles,
-   * texturas y catalogo de eventos. Los dos try van separados a proposito:
-   * un proyecto sin event_catalog.json sigue siendo editable (solo queda sin
-   * panel de eventos), asi que ese fallo no debe tapar el listado de niveles.
-   */
-  private async refreshProject(): Promise<void> {
-    try {
-      this.levelFiles.set(await this.project.listLevels());
-      this.textures.set(await this.project.listTextures());
-      // Sin await: las miniaturas van apareciendo solas, y abrir el proyecto no
-      // tiene por que esperar a que se procese una carpeta de 150 imagenes.
-      void this.loadTextureThumbnails();
-      // El explorador arranca con la raiz y nada desplegado, como VS Code.
-      await this.explorer.loadRoot();
-      this.note('Proyecto abierto: ' + this.project.projectRoot());
-    } catch (error) {
-      this.note('No se pudo leer el proyecto: ' + this.describe(error));
-    }
-
-    try {
-      await this.catalog.load();
-      const total = this.triggers().length + this.conditions().length + this.actions().length;
-      this.note('Catalogo de eventos cargado (' + total + ' bloques).');
-    } catch {
-      this.note('No se encontro schema/event_catalog.json: el panel de eventos queda vacio.');
-    }
-
-    // Tercer try aparte por lo mismo: un characters.json roto deja la paleta
-    // solo con los tipos base, pero no impide editar el nivel.
-    try {
-      await this.presetsService.load();
-    } catch (error) {
-      this.note('No se pudieron leer los personajes configurados: ' + this.describe(error));
-    }
-
-    // Y la biblioteca de objetos, por lo mismo: sin ella se sigue editando, solo
-    // que la paleta Objetos queda vacia.
-    try {
-      await this.itemLibrary.load();
-    } catch (error) {
-      this.note('No se pudo leer items.json: ' + this.describe(error));
-    }
-  }
-
-  /**
-   * Abre un nivel eligiendo el archivo con el dialogo del sistema.
-   *
-   * A diferencia del desplegable de niveles, esto no exige tener un proyecto
-   * abierto ni que el archivo viva en levels/: se puede abrir un .json de
-   * donde sea y verlo dibujado.
-   */
-  async openLevelFile(): Promise<void> {
-    if (!this.hasFileSystem) {
-      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
-      return;
-    }
-    try {
-      const opened = await this.project.openLevelFile();
-      if (!opened) {
-        return; // el usuario cancelo el dialogo
-      }
-
-      // Si resulta estar dentro de levels/ del proyecto abierto, se adopta con
-      // su nombre: aparece en el desplegable y guardar no vuelve a preguntar.
-      const inLevels = this.levelsFolderFile(opened.path);
-      this.levels.adopt(opened.level, inLevels);
-      this.lastSavedPath.set(opened.path);
-      this.dirty.set(false);
-      this.frameAll();
-      this.note('Abierto ' + opened.path + ' (' + this.entities().length + ' entidades).');
-    } catch (error) {
-      this.note('No se pudo abrir: ' + this.describe(error));
-    }
-  }
-
-  /** Abre un nivel del proyecto y recentra la camara sobre el. */
-  async loadLevel(fileName: string): Promise<void> {
-    try {
-      await this.levels.load(fileName);
-      this.dirty.set(false);
-      // Sin recentrar, un nivel chico abierto despues de uno grande podria
-      // quedar fuera de la vista o entrar con un zoom que no le corresponde.
-      this.frameAll();
-      this.note('Nivel "' + fileName + '" cargado (' + this.entities().length + ' entidades).');
-    } catch (error) {
-      this.note('Error al cargar ' + fileName + ': ' + this.describe(error));
-    }
-  }
-
-  /** Abre el dialogo de nivel nuevo, con los valores siempre en su default. */
-  newLevel(): void {
-    this.newLevelName.set('nuevo_nivel');
-    this.newLevelWidth.set(10);
-    this.newLevelHeight.set(10);
-    this.newLevelTileWidth.set(64);
-    this.newLevelTileHeight.set(32);
-    this.newLevelTemplate.set('empty');
-    this.showNewLevelDialog.set(true);
-  }
-
-  cancelNewLevel(): void {
-    this.showNewLevelDialog.set(false);
-  }
-
-  /** El <select> del dialogo devuelve string; se valida antes de aceptarlo. */
-  setNewLevelTemplate(value: string): void {
-    if (value === 'empty' || value === 'player' || value === 'test-scene') {
-      this.newLevelTemplate.set(value);
-    }
-  }
-
-  /**
-   * Crea el nivel EN MEMORIA (no toca el disco hasta que se guarde) y le
-   * aplica la plantilla elegida.
-   */
-  confirmNewLevel(): void {
-    const name = this.newLevelName().trim() || 'nuevo_nivel';
-    // Todo entero y >= 1: el schema exige enteros positivos, y el usuario
-    // puede haber dejado el campo vacio o con decimales.
-    const grid: GridConfig = {
-      width: Math.max(1, Math.round(this.newLevelWidth())),
-      height: Math.max(1, Math.round(this.newLevelHeight())),
-      tileWidth: Math.max(1, Math.round(this.newLevelTileWidth())),
-      tileHeight: Math.max(1, Math.round(this.newLevelTileHeight())),
-    };
-
-    this.levels.createNew(name, grid);
-    this.addStarterEntities(this.newLevelTemplate(), grid);
-    this.showNewLevelDialog.set(false);
-    this.dirty.set(true);
-    this.frameAll();
-    this.note('Nivel nuevo en memoria. Revisa la escena y usa Guardar.');
-  }
-
-  /**
-   * Puebla un nivel recien creado segun la plantilla:
-   *   empty      - nada
-   *   player     - solo el jugador ("player_1", el id que busca main.cpp)
-   *   test-scene - jugador + un obstaculo, para probar colision al toque
-   *
-   * Las posiciones pasan por Math.min contra el tamano de la grilla: en un
-   * nivel de 1x1 todo tiene que caber igual.
-   */
-  private addStarterEntities(template: NewLevelTemplate, grid: GridConfig): void {
-    if (template === 'empty') {
-      return;
-    }
-
-    const texture = this.textures()[0] ?? DEFAULT_STARTER_TEXTURE;
-
-    const sourceRect = { x: 0, y: 0, width: 16, height: 16 };
-    this.levels.addEntity({
-      id: 'player_1',
-      type: 'player',
-      position: {
-        col: Math.min(1, grid.width - 1),
-        row: Math.min(2, grid.height - 1),
-      },
-      texture: 'textures/' + texture,
-      sourceRect,
-      collider: { width: 16, height: 16 },
-    });
-
-    if (template === 'test-scene') {
-      this.levels.addEntity({
-        id: 'target_1',
-        type: 'obstacle',
-        position: {
-          col: Math.min(3, grid.width - 1),
-          row: Math.min(2, grid.height - 1),
-        },
-        texture: 'textures/' + texture,
-        sourceRect: { ...sourceRect },
-        collider: { width: 16, height: 16 },
-      });
-    }
-  }
-
-  /** Guarda el nivel en levels/ y refresca el listado (puede ser uno nuevo). */
-  /**
-   * Guarda el nivel. Se comporta como el Guardar de cualquier programa: si ya
-   * se sabe donde va el archivo, lo escribe sin preguntar; si todavia no, abre
-   * el dialogo de Guardar como.
-   *
-   * Antes exigia tener una carpeta de proyecto abierta y, si no la habia, no
-   * hacia nada mas que avisar: no habia forma de guardar un nivel recien
-   * creado sin montar antes un proyecto entero.
-   */
-  async save(): Promise<void> {
-    if (!this.hasFileSystem) {
-      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
-      return;
-    }
-
-    // Sin proyecto abierto, o con un nivel que nunca se guardo, no hay ruta
-    // conocida: hay que preguntarla.
-    if (!this.project.projectRoot() || !this.levels.fileName()) {
-      await this.saveAs();
-      return;
-    }
-
-    try {
-      await this.levels.save();
-      this.dirty.set(false);
-      this.levelFiles.set(await this.project.listLevels());
-      await this.explorer.reloadDir('levels');
-      this.note('Guardado en levels/' + this.levels.fileName());
-    } catch (error) {
-      this.note('Error al guardar: ' + this.describe(error));
-    }
-  }
-
-  /**
-   * Guardar como: abre el dialogo del sistema para elegir carpeta y nombre.
-   *
-   * Se puede usar sin proyecto abierto, que es el punto: un nivel suelto se
-   * guarda donde uno quiera, igual que un documento.
-   */
-  async saveAs(): Promise<void> {
-    if (!this.hasFileSystem) {
-      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
-      return;
-    }
-
-    // Se propone la ultima ruta usada; si no hay, el nombre del nivel.
-    const suggested = this.lastSavedPath() ?? this.levels.level().name + '.json';
-
-    try {
-      const path = await this.project.saveLevelAs(suggested, this.levels.level());
-      if (!path) {
-        return; // el usuario cancelo el dialogo
-      }
-      await this.afterSavedTo(path);
-    } catch (error) {
-      this.note('Error al guardar: ' + this.describe(error));
-    }
-  }
-
-  /**
-   * Deja el editor al dia despues de guardar por dialogo.
-   *
-   * Si el archivo cayo dentro de levels/ del proyecto abierto, se adopta como
-   * el nivel actual: aparece en el desplegable y los guardados siguientes ya no
-   * vuelven a preguntar. Si cayo fuera, se recuerda la ruta para proponerla la
-   * proxima vez, pero se sigue preguntando -- escribir fuera del proyecto sin
-   * dialogo requeriria abrirle al editor todo el disco, y no vale la pena.
-   */
-  private async afterSavedTo(path: string): Promise<void> {
-    this.dirty.set(false);
-    this.lastSavedPath.set(path);
-
-    const inLevels = this.levelsFolderFile(path);
-    if (inLevels) {
-      this.levels.fileName.set(inLevels);
-      this.levelFiles.set(await this.project.listLevels());
-      await this.explorer.reloadDir('levels');
-    }
-    this.note('Guardado en ' + path);
-  }
-
-  /**
-   * Nombre del archivo si "path" esta justo dentro de levels/ del proyecto
-   * abierto; null en cualquier otro caso.
-   *
-   * Se compara en minusculas y con barras normales porque en Windows la misma
-   * carpeta llega escrita de varias formas (mayusculas distintas, / o \).
-   */
-  private levelsFolderFile(path: string): string | null {
-    const root = this.project.projectRoot();
-    if (!root) {
-      return null;
-    }
-    const normalize = (value: string) => value.replace(/\\/g, '/').toLowerCase();
-    const prefix = normalize(root).replace(/\/$/, '') + '/levels/';
-    const target = normalize(path);
-    if (!target.startsWith(prefix)) {
-      return null;
-    }
-    const rest = target.slice(prefix.length);
-    // Solo el nivel de arriba de levels/: una subcarpeta no la lista el editor.
-    return rest.includes('/') ? null : path.slice(path.length - rest.length);
-  }
-
-  // --- Paneles laterales: ocultar y redimensionar ---------------------------
-  //
-  // Como en VS Code: se arrastra el borde interior de cada panel para cambiar
-  // su ancho, y cada uno se esconde con su boton del topbar. Los anchos viven
-  // en signals y la plantilla los inyecta en el grid-template-columns del
-  // cuerpo, asi que no hace falta tocar el DOM a mano en ningun momento.
-
-  /**
-   * Abre un nivel elegido en el organizador. Es lo mismo que hace el
-   * desplegable de la topbar, pero para un archivo que puede estar en una
-   * subcarpeta de levels/.
-   */
-  private async openProjectLevel(node: ProjectNode): Promise<void> {
-    try {
-      const level = await this.project.readLevelAt(node.path);
-      // Solo un nivel que este JUSTO en levels/ se adopta con su nombre de
-      // archivo: es lo unico que le permite a Guardar volver a escribirlo sin
-      // preguntar (ver levels.save()).
-      const direct = /^levels\/[^/]+$/i.test(node.path) ? node.name : null;
-      this.levels.adopt(level, direct);
-
-      const root = this.project.projectRoot();
-      // Ruta absoluta para Ejecutar: el motor lee el nivel del disco.
-      this.lastSavedPath.set(root ? root.replace(/[\\/]$/, '') + '/' + node.path : null);
-      this.dirty.set(false);
-      this.frameAll();
-      this.note('Nivel "' + node.path + '" abierto (' + this.entities().length + ' entidades).');
-    } catch (error) {
-      this.note('No se pudo abrir ' + node.path + ': ' + this.describe(error));
-    }
-  }
-
-  // --- Interfaz: workspaces -------------------------------------------------
-
-  /** Cambia el editor del area de arriba a la izquierda, y la despliega si estaba plegada. */
-  setLeftEditor(editor: LeftEditor): void {
-    this.leftEditor.set(editor);
-    this.panels.expand('side-main');
-  }
-
-  // --- Ejecutar en el runtime -----------------------------------------------
-
-  /**
-   * Ruta absoluta del archivo del nivel abierto, o null si todavia no se
-   * guardo en ningun lado.
-   *
-   * Hay dos formas de saberla: si el nivel vive en el proyecto, se arma con la
-   * raiz mas levels/<archivo>; si se abrio o guardo con el dialogo del
-   * sistema, es la ruta que quedo de ahi.
-   */
-  private currentLevelPath(): string | null {
-    const root = this.project.projectRoot();
-    const fileName = this.levels.fileName();
-    if (root && fileName) {
-      return root.replace(/[\\/]$/, '') + '/levels/' + fileName;
-    }
-    return this.lastSavedPath();
-  }
-
-  /**
-   * Lanza el motor con el nivel abierto: el equivalente a correr a mano
-   * engine\build\engine.exe con la ruta del nivel.
-   *
-   * Guarda antes de lanzar. No es una comodidad: el motor lee el nivel del
-   * DISCO, asi que sin guardar correria la version anterior y uno estaria
-   * probando algo distinto de lo que tiene en pantalla.
-   */
-  async run(): Promise<void> {
-    if (!this.hasFileSystem) {
-      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
-      return;
-    }
-
-    if (this.dirty() || !this.currentLevelPath()) {
-      await this.save(); // puede abrir el dialogo si el nivel es nuevo
-    }
-
-    const levelPath = this.currentLevelPath();
-    // Si sigue sin ruta o con cambios, el guardado se cancelo.
-    if (!levelPath || this.dirty()) {
-      this.note('Guarda el nivel antes de ejecutarlo.');
-      return;
-    }
-
-    const result = await this.project.runLevel(levelPath);
-    this.note(
-      result.ok
-        ? 'Ejecutando ' + levelPath
-        : result.error ?? 'No se pudo ejecutar el motor.',
-    );
-  }
-
-  // --- Viewport -------------------------------------------------------------
-
-  /**
-   * Cambia la herramienta activa y dice en la barra de estado que hace.
-   *
-   * El mensaje es la parte importante: elegir "piso" o "pared" no cambia nada
-   * en pantalla hasta el primer click sobre la grilla, asi que sin el aviso el
-   * boton parece no responder aunque este encendido.
-   */
-  setTool(tool: Tool): void {
-    // Cambiar de herramienta abandona un tunel a medio trazar: si no, el
-    // camino quedaria dibujado en verde sin ninguna forma de terminarlo.
-    if (tool !== 'tunnel') {
-      this.map.tunnelTrace.set(null);
-    }
-    this.tool.set(tool);
-    this.note(TOOL_HINTS[tool]);
-  }
-
-  setZoom(step: number): void {
-    this.zoom.set(this.clampZoom(step));
-  }
-
-  private clampZoom(value: number): number {
-    return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
-  }
-
-  /**
-   * Zoom con la rueda, anclado al cursor: el punto de la escena que esta bajo
-   * el mouse se queda EXACTAMENTE donde esta, y todo lo demas se acerca o se
-   * aleja alrededor de el. Es lo que hace Blender con "Zoom to Mouse Position"
-   * y es la diferencia entre encuadrar de una o pelearse con el paneo despues
-   * de cada muesca.
-   *
-   * La cuenta: si un punto del mundo esta en worldX = (mouseX - originX) / zoom,
-   * para que no se mueva al pasar de "old" a "next" el origen tiene que
-   * correrse worldX * (old - next). Como origin() es pan mas una constante,
-   * ese mismo delta se le aplica al pan.
-   */
-  onWheel(event: WheelEvent): void {
-    // Sin esto Electron desplaza el contenedor y el zoom se pierde.
-    event.preventDefault();
-
-    const ref = this.viewport();
-    if (!ref) {
-      return;
-    }
-
-    const old = this.zoom();
-    const next = this.clampZoom(
-      event.deltaY < 0 ? old * ZOOM_WHEEL_FACTOR : old / ZOOM_WHEEL_FACTOR,
-    );
-    // Ya estamos en un extremo del rango: no hay nada que recalcular.
-    if (next === old) {
-      return;
-    }
-
-    const rect = ref.nativeElement.getBoundingClientRect();
-    const origin = this.origin();
-    const worldX = (event.clientX - rect.left - origin.x) / old;
-    const worldY = (event.clientY - rect.top - origin.y) / old;
-
-    const pan = this.pan();
-    this.pan.set({
-      x: pan.x + worldX * (old - next),
-      y: pan.y + worldY * (old - next),
-    });
-    this.zoom.set(next);
-  }
-
-  /**
-   * Encuadra la grilla entera en el viewport, como el Inicio de Blender. Se
-   * calcula el rectangulo que ocupa la grilla ya proyectada (incluyendo el alto
-   * del rombo de la ultima fila) y se elige el zoom que lo hace entrar con
-   * margen, dejandolo centrado.
-   */
-  frameAll(): void {
-    const size = this.canvasSize();
-    const grid = this.grid();
-    if (size.w === 0 || size.h === 0) {
-      return;
-    }
-
-    const halfW = grid.tileWidth / 2;
-    const halfH = grid.tileHeight / 2;
-    // Extremos de la proyeccion isometrica: la columna crece hacia la derecha y
-    // la fila hacia la izquierda, asi que el ancho lo dan las dos esquinas
-    // laterales y el alto va de la punta de (0,0) a la base de la ultima celda.
-    const minX = -grid.height * halfW;
-    const maxX = grid.width * halfW;
-    const minY = 0;
-    const maxY = (grid.width - 1 + grid.height - 1) * halfH + grid.tileHeight;
-
-    const zoom = this.clampZoom(
-      Math.min((size.w * FRAME_FILL) / (maxX - minX), (size.h * FRAME_FILL) / (maxY - minY)),
-    );
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-
-    // origin() = (w/2 + panX, VIEW_TOP_MARGIN + panY); se despeja el pan que
-    // deja el centro de la grilla en el centro del canvas.
-    this.zoom.set(zoom);
-    this.pan.set({
-      x: -centerX * zoom,
-      y: size.h / 2 - VIEW_TOP_MARGIN - centerY * zoom,
-    });
-  }
+  // Los globales viven aca y no en el viewport: Ctrl+S o Ctrl+N no son del
+  // canvas. Es la otra mitad de la superficie de comandos.
 
   /**
    * Atajos de teclado, con el mismo reparto que Blender:
@@ -1990,24 +687,24 @@ export class App {
       return;
     }
     // Un dialogo abierto se lleva todos los atajos: solo responde a Escape.
-    if (this.showNewLevelDialog()) {
+    if (this.proj.showNewLevelDialog()) {
       if (event.key === 'Escape') {
-        this.cancelNewLevel();
+        this.proj.cancelNewLevel();
       }
       return;
     }
-    if (this.pendingPlacement()) {
+    if (this.entityOps.pendingPlacement()) {
       if (event.key === 'Escape') {
-        this.cancelPending();
+        this.entityOps.cancelPending();
       }
       return;
     }
-    if (this.map.roomDraft() || this.map.tunnelDraft() || this.characterEditor() || this.transitionDraft()) {
+    if (this.map.roomDraft() || this.map.tunnelDraft() || this.chars.characterEditor() || this.transition.transitionDraft()) {
       if (event.key === 'Escape') {
         this.map.cancelRoomDialog();
         this.map.cancelTunnelDialog();
-        this.closeCharacterEditor();
-        this.cancelTransitionDialog();
+        this.chars.closeCharacterEditor();
+        this.transition.cancelTransitionDialog();
       }
       return;
     }
@@ -2030,9 +727,9 @@ export class App {
     // El menu del clic derecho es un dialogo mas: mientras esta abierto, las
     // teclas no le llegan a la escena (una X borraria la entidad que se esta
     // editando), y Escape lo cierra.
-    if (this.contextMenu()) {
+    if (this.view.contextMenu()) {
       if (event.key === 'Escape') {
-        this.closeContextMenu();
+        this.view.closeContextMenu();
       }
       return;
     }
@@ -2040,17 +737,17 @@ export class App {
     if (event.ctrlKey && event.key.toLowerCase() === 's') {
       event.preventDefault();
       // Ctrl+Shift+S fuerza el dialogo aunque ya se sepa donde va el archivo.
-      void (event.shiftKey ? this.saveAs() : this.save());
+      void (event.shiftKey ? this.proj.saveAs() : this.proj.save());
       return;
     }
     if (event.ctrlKey && event.key.toLowerCase() === 'o') {
       event.preventDefault();
-      void this.openLevelFile();
+      void this.proj.openLevelFile();
       return;
     }
     if (event.ctrlKey && event.key.toLowerCase() === 'n') {
       event.preventDefault();
-      this.newLevel();
+      this.proj.newLevel();
       return;
     }
     // Estos dos los daba el menu nativo de Electron, que se quito para que no
@@ -2073,18 +770,18 @@ export class App {
     }
     if (event.ctrlKey && event.key.toLowerCase() === 'a') {
       event.preventDefault();
-      this.selectAllEntities();
+      this.sel.selectAllEntities();
       return;
     }
     // F5: probar el nivel, como en cualquier entorno de desarrollo.
     if (event.key === 'F5') {
       event.preventDefault();
-      void this.run();
+      void this.proj.run();
       return;
     }
     if (event.key === 'Home') {
       event.preventDefault();
-      this.frameAll();
+      this.view.frameAll();
       return;
     }
     // Las flechas mueven la seleccion entera una celda. Es la unica forma de
@@ -2095,1658 +792,68 @@ export class App {
     const nudge = ARROW_NUDGES[event.key];
     if (nudge && this.selectionCount() > 0) {
       event.preventDefault();
-      this.nudgeSelection(nudge.col, nudge.row);
+      this.entityOps.nudgeSelection(nudge.col, nudge.row);
       return;
     }
     if (event.key === 'Delete' || event.key.toLowerCase() === 'x') {
-      this.deleteSelected();
+      this.entityOps.deleteSelected();
       return;
     }
     if (event.shiftKey && event.key.toLowerCase() === 'd') {
       event.preventDefault();
-      this.duplicateSelected();
+      this.entityOps.duplicateSelected();
     }
   }
 
-  toggleGrid(): void {
-    this.showGrid.update((value) => !value);
-  }
-
-  /** Elegir donde van las lineas es querer verlas: con la grilla oculta, se muestra. */
-  setGridOnTop(onTop: boolean): void {
-    this.gridOnTop.set(onTop);
-    this.showGrid.set(true);
-  }
-
-  toggleColliders(): void {
-    this.showColliders.update((value) => !value);
-  }
-
-  onPointerDown(event: PointerEvent): void {
-    // Dos formas de desplazar la vista: boton medio (el de Blender) y boton
-    // derecho (la mas comoda con mouse de dos botones o trackpad).
-    //
-    // Antes tambien paneaba el shift-arrastre. Se quito porque Shift pasa a ser
-    // el modificador de seleccion multiple, que es lo que espera cualquiera que
-    // venga de un editor grafico; los otros dos gestos siguen cubriendo el
-    // paneo de sobra.
-    if (event.button === 1 || event.button === 2) {
-      this.panning.set(true);
-      // Un click derecho puede terminar en dos cosas distintas segun si el
-      // cursor se movio o no: arrastrar la camara, o abrir el menu de la
-      // entidad. Se guarda el boton para decidirlo recien al soltar.
-      this.pressedButton = event.button;
-      this.contextMenu.set(null);
-      const pan = this.pan();
-      this.dragOrigin = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
-      // Con captura, el arrastre sigue funcionando aunque el cursor se vaya
-      // fuera del canvas; sin ella, el paneo se corta al pasar sobre un panel.
-      (event.target as HTMLElement).setPointerCapture(event.pointerId);
-      event.preventDefault();
-      return;
-    }
-
-    // Solo el boton izquierdo edita.
-    if (event.button !== 0) {
-      return;
-    }
-    // Cualquier click izquierdo cierra el menu abierto, como en cualquier
-    // programa: el menu no debe sobrevivir a la siguiente accion.
-    this.contextMenu.set(null);
-
-    // Ctrl+clic sobre una entidad la agarra para moverla, sea cual sea la
-    // herramienta activa: con "colocar" encendida, un clic normal crearia otra
-    // entidad, y justo lo que se quiere es reacomodar la que ya esta. Sobre el
-    // vacio no hace nada, para no colocar ni deseleccionar por accidente.
-    if (event.ctrlKey) {
-      const grabbed = this.entityAt(event);
-      if (grabbed) {
-        this.startMove(grabbed, event);
-      }
-      return;
-    }
-
-    const activeTool = this.tool();
-    if (activeTool === 'room') {
-      this.map.roomToolDown(event, this.coordAt(event));
-      return;
-    }
-    if (activeTool === 'tunnel') {
-      this.map.tunnelToolClick(event, this.coordAt(event));
-      return;
-    }
-    if (activeTool === 'place') {
-      const character = this.activeCharacter();
-      const item = this.activeItem();
-      const shape = this.activeShape();
-      if (shape && (this.paintShapes() || event.shiftKey)) {
-        this.startShapeStroke(event, shape);
-      } else if (character) {
-        this.placeCharacter(this.coordAt(event), character);
-      } else if (item) {
-        this.placeItem(this.coordAt(event), item);
-      } else {
-        this.placeEntity(this.coordAt(event));
-      }
-    } else if (activeTool === 'floor' || activeTool === 'wall') {
-      const cell = this.coordAt(event);
-      const grid = this.grid();
-      if (!new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(cell, grid.width, grid.height)) {
-        return;
-      }
-      this.levels.toggleTile(cell.col, cell.row, activeTool);
-      this.dirty.set(true);
-    } else {
-      // Shift suma a la seleccion en vez de reemplazarla; sin modificador,
-      // clickear elige una sola y el vacio deselecciona todo. (Ctrl ya no suma
-      // en el viewport: es el gesto de mover, ver arriba.)
-      this.selectEntity(this.entityAt(event), event.shiftKey);
-    }
-  }
-
-  onPointerMove(event: PointerEvent): void {
-    if (this.moveDrag) {
-      this.updateMove(event);
-      return;
-    }
-    if (this.shapeStroke) {
-      this.continueShapeStroke(event);
-      return;
-    }
-    if (this.map.roomDrag()) {
-      this.map.roomToolMove(event, this.coordAt(event));
-      return;
-    }
-    if (this.panning()) {
-      this.pan.set({
-        x: this.dragOrigin.panX + (event.clientX - this.dragOrigin.x),
-        y: this.dragOrigin.panY + (event.clientY - this.dragOrigin.y),
-      });
-      return;
-    }
-    this.hovered.set(this.coordAt(event));
-  }
-
-  onPointerUp(event: PointerEvent): void {
-    if (this.moveDrag) {
-      this.finishMove(event);
-      return;
-    }
-    if (this.shapeStroke) {
-      this.finishShapeStroke(event);
-      return;
-    }
-    if (this.map.roomDrag()) {
-      this.map.roomToolUp(event, this.coordAt(event));
-      return;
-    }
-    if (this.panning()) {
-      this.panning.set(false);
-      (event.target as HTMLElement).releasePointerCapture(event.pointerId);
-
-      // Boton derecho SIN arrastre = click derecho: abre el menu de la entidad
-      // que este debajo. El umbral es lo que separa las dos acciones; sin el,
-      // el menu aparecería al final de cada paneo, que es exactamente lo que
-      // arruina el gesto de arrastrar con el derecho.
-      const moved =
-        Math.abs(event.clientX - this.dragOrigin.x) +
-        Math.abs(event.clientY - this.dragOrigin.y);
-      if (this.pressedButton === 2 && moved <= CLICK_SLOP) {
-        this.openContextMenu(event);
-      }
-    }
-    this.pressedButton = null;
-  }
-
-  /**
-   * Abre el menu contextual sobre la entidad que este bajo el cursor. Sobre
-   * espacio vacio no abre nada: un menu sin destino solo estorba.
-   */
-  private openContextMenu(event: PointerEvent): void {
-    const id = this.entityAt(event);
-    if (!id) {
-      this.contextMenu.set(null);
-      // Sin entidad debajo, el clic derecho configura la parte del mapa que
-      // haya ahi: la grilla si cae adentro de una, o el tunel que pasa por esa
-      // celda. Es el "menu del tunel" que se abre donde se lo ve.
-      const cell = this.coordAt(event);
-      const room = roomAt(this.map.rooms(), cell);
-      if (room) {
-        this.map.editRoom(room.id);
-        return;
-      }
-      const tunnel = tunnelAt(this.map.rooms(), this.map.tunnels(), cell);
-      if (tunnel) {
-        this.map.editTunnel(tunnel.id);
-      }
-      return;
-    }
-    this.selectEntity(id);
-    this.contextMenu.set(id);
-  }
-
-  closeContextMenu(): void {
-    this.contextMenu.set(null);
-  }
-
-  // --- Tamano de las figuras ------------------------------------------------
+  // --- Navegacion del shell -------------------------------------------------
   //
-  // Una figura puede ocupar un bloque de NxN celdas ("span" en el contrato),
-  // y se cambia desde el menu del clic derecho. Solo las figuras: son volumenes
-  // pensados para llenar casillas, mientras que agrandar cuatro veces un
-  // personaje de 16 px solo lo dejaria pixelado.
+  // Llevar al usuario a un panel o a un archivo: lo que mueve el foco entre
+  // areas del editor, y por eso no es de ninguna de ellas.
 
-  /** Tamanos que el menu ofrece de un clic; uno mas grande se escribe a mano. */
-  readonly spanChoices = [1, 2, 3, 4];
-
-  isShape(entity: LevelEntity): boolean {
-    return shapeOf(entity) !== undefined;
+  /** Abre el panel de propiedades en la pestaña de escena, donde estan las medidas de la grilla. */
+  showGridProperties(): void {
+    this.panels.inspectorVisible.set(true);
+    this.inspectorTab.set('escena');
   }
 
-  spanOf(entity: LevelEntity): number {
-    return entitySpan(entity);
+  /** Abre Propiedades en la pestaña de escena con el panel Mapa desplegado. */
+  showMapPanel(): void {
+    this.showGridProperties();
+    this.panels.expand('map');
   }
 
-  /** El bloque mas grande que entra en la grilla del nivel. */
-  maxSpan(): number {
-    const grid = this.grid();
-    return Math.max(1, Math.min(grid.width, grid.height));
-  }
-
-  /** Ids de las entidades que comparten alguna celda con el bloque de esta. */
-  overlapIds(entity: LevelEntity): string[] {
-    return this.entities()
-      .filter((other) => other.id !== entity.id && blocksOverlap(other, entity))
-      .map((other) => other.id);
+  /** Cambia el editor del area de arriba a la izquierda, y la despliega si estaba plegada. */
+  setLeftEditor(editor: LeftEditor): void {
+    this.leftEditor.set(editor);
+    this.panels.expand('side-main');
   }
 
   /**
-   * Cambia cuantas celdas por lado ocupa una figura.
-   *
-   * El collider crece con ella, porque el motor agranda el sprite entero y una
-   * figura grande con la huella de una chica se dejaria atravesar casi toda. Si
-   * el bloque no entra desde su celda, la figura se corre hacia adentro lo
-   * justo, en vez de quedar con celdas fuera del mapa.
+   * Abre un nivel elegido en el organizador. Es lo mismo que hace el
+   * desplegable de la topbar, pero para un archivo que puede estar en una
+   * subcarpeta de levels/.
    */
-  setSpan(id: string, requested: number): void {
-    const entity = this.entities().find((candidate) => candidate.id === id);
-    const shape = entity ? shapeOf(entity) : undefined;
-    if (!entity || !shape) {
-      return;
-    }
-
-    const grid = this.grid();
-    const span = Math.min(this.maxSpan(), Math.max(1, Math.round(requested) || 1));
-    const position = clampBlockPosition(entity.position, span, grid);
-    const shifted = position.col !== entity.position.col || position.row !== entity.position.row;
-
-    this.levels.updateEntity(id, {
-      // 1 se omite: es el default del schema, y asi el JSON de lo que no se
-      // agrando queda exactamente igual que antes de que existiera el campo.
-      span: span === 1 ? undefined : span,
-      position,
-      // Solo se agranda el collider que ya tenia (con Colision o sensor): una
-      // figura sin Colision sigue sin collider, y se sigue atravesando.
-      collider: entity.collider
-        ? { ...shapeCollider(shape, grid, span), solid: entity.collider.solid }
-        : undefined,
-    });
-    this.dirty.set(true);
-    this.note(
-      '"' + id + '" ocupa ' + span + '×' + span + ' celdas' +
-        (shifted ? ', corrida a ' + position.col + ',' + position.row + ' para entrar en la grilla.' : '.'),
-    );
-  }
-
-  // --- Mover con Ctrl+arrastrar ---------------------------------------------
-  //
-  // Ctrl+clic sobre una entidad la agarra y arrastrando se la lleva de celda
-  // en celda. Si la agarrada ya estaba seleccionada junto con otras, se mueve
-  // la seleccion entera, que es la operacion de grupo que uno espera. Al
-  // soltar sobre celdas ocupadas se pregunta, igual que al colocar.
-
-  private startMove(id: string, event: PointerEvent): void {
-    if (!this.isEntitySelected(id)) {
-      this.selection.selectEntity(id);
-    }
-    this.inspectorTab.set('objeto');
-
-    const originals = new Map<string, GridPosition>();
-    for (const entity of this.entities()) {
-      if (this.isEntitySelected(entity.id)) {
-        originals.set(entity.id, { ...entity.position });
-      }
-    }
-
-    this.moveDrag = { startCell: this.coordAt(event), originals, delta: { col: 0, row: 0 } };
-    this.moving.set(true);
-    // Con captura, el arrastre sigue aunque el cursor pase sobre un panel.
-    (event.target as HTMLElement).setPointerCapture(event.pointerId);
-    event.preventDefault();
-  }
-
-  private updateMove(event: PointerEvent): void {
-    const drag = this.moveDrag;
-    if (!drag) {
-      return;
-    }
-    const cell = this.coordAt(event);
-    this.hovered.set(cell);
-
-    // El desplazamiento se limita para que NINGUN bloque del grupo se salga de
-    // la grilla. Aplastar contra el borde solo a los que se salen deformaria el
-    // grupo: dejaria de tener la forma con la que se lo agarro.
-    const grid = this.grid();
-    let col = cell.col - drag.startCell.col;
-    let row = cell.row - drag.startCell.row;
-    for (const [id, origin] of drag.originals) {
-      const span = entitySpan(this.entities().find((entity) => entity.id === id) ?? {});
-      col = Math.min(Math.max(col, -origin.col), grid.width - span - origin.col);
-      row = Math.min(Math.max(row, -origin.row), grid.height - span - origin.row);
-    }
-
-    if (col === drag.delta.col && row === drag.delta.row) {
-      return; // sigue en la misma celda: no hay nada que redibujar
-    }
-    drag.delta = { col, row };
-    for (const [id, origin] of drag.originals) {
-      this.levels.updateEntity(id, { position: { col: origin.col + col, row: origin.row + row } });
-    }
-  }
-
-  private finishMove(event: PointerEvent): void {
-    const drag = this.moveDrag;
-    if (!drag) {
-      return;
-    }
-    this.moveDrag = null;
-    this.moving.set(false);
-    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
-
-    // Se solto donde se agarro: no hubo movimiento, y no hay nada que guardar.
-    if (drag.delta.col === 0 && drag.delta.row === 0) {
-      return;
-    }
-
-    const moved = new Set(drag.originals.keys());
-    const movedEntities = this.entities().filter((entity) => moved.has(entity.id));
-    const occupants = this.entities().filter(
-      (other) => !moved.has(other.id) && movedEntities.some((entity) => blocksOverlap(entity, other)),
-    );
-    if (occupants.length > 0) {
-      this.pendingPlacement.set({
-        kind: 'move',
-        movedIds: [...moved],
-        originals: drag.originals,
-        occupants,
-      });
-      return;
-    }
-
-    this.dirty.set(true);
-    if (movedEntities.length === 1) {
-      const { col, row } = movedEntities[0].position;
-      this.note('"' + movedEntities[0].id + '" movida a ' + col + ',' + row + '.');
-    } else {
-      this.note(movedEntities.length + ' entidades movidas.');
-    }
-  }
-
-  // --- Colision y Pared -----------------------------------------------------
-  //
-  // Dos propiedades del contrato (ver schema/level.schema.json), excluyentes:
-  // activar una apaga la otra.
-  //
-  //   ninguna  -> se atraviesa
-  //   Colision -> collider.solid = true  bloquea solo el area de su collider,
-  //                                      con la forma y el tamano de la figura
-  //   Pared    -> wall = true            muro invisible en todo su tile (el
-  //                                      bloque entero), sin importar la forma
-
-  /** true si la entidad choca con su propia forma (casilla "Colision"). */
-  hasCollision(entity: LevelEntity): boolean {
-    return entity.collider?.solid === true;
-  }
-
-  /** true si la entidad bloquea el tile entero (casilla "Pared"). */
-  isWall(entity: LevelEntity): boolean {
-    return entity.wall === true;
-  }
-
-  /**
-   * Activa o desactiva la Colision de una entidad.
-   *
-   * Al activarla, una figura recibe el collider de su forma (ver
-   * shapeCollider); el resto conserva su caja, o la del tamano de su sprite.
-   *
-   * Al desactivarla, una figura se queda sin collider; el resto conserva la
-   * caja como sensor, para que los eventos de contacto sigan andando.
-   *
-   * Activarla le quita la Pared: son excluyentes.
-   */
-  setCollision(id: string, enabled: boolean): void {
-    const entity = this.entities().find((candidate) => candidate.id === id);
-    if (!entity) {
-      return;
-    }
-
-    const shape = shapeOf(entity);
-    if (enabled) {
-      const collider = shape
-        ? shapeCollider(shape, this.grid(), entitySpan(entity))
-        : {
-            ...(entity.collider ?? { width: entity.sourceRect.width, height: entity.sourceRect.height }),
-            solid: true,
-          };
-      this.levels.updateEntity(id, { collider, wall: undefined });
-    } else {
-      this.levels.updateEntity(id, { collider: this.colliderWithoutCollision(entity) });
-    }
-    this.dirty.set(true);
-    this.note(
-      '"' + id + '" ' +
-        (enabled
-          ? 'ahora tiene colisión con su forma' + (entity.wall ? ' (se quitó la pared).' : '.')
-          : 'ya no tiene colisión.'),
-    );
-  }
-
-  /**
-   * El collider de una entidad sin Colision: una figura se queda sin collider;
-   * el resto conserva la caja como sensor (solid se omite: es el default).
-   */
-  private colliderWithoutCollision(entity: LevelEntity): LevelEntity['collider'] {
-    return !shapeOf(entity) && entity.collider ? { ...entity.collider, solid: undefined } : undefined;
-  }
-
-  /** Lo mismo que setCollision, sobre toda la seleccion (la casilla del inspector). */
-  setCollisionOnSelection(enabled: boolean): void {
-    const ids = this.selectedIds();
-    for (const id of ids) {
-      this.setCollision(id, enabled);
-    }
-    if (ids.length > 1) {
-      this.note(ids.length + ' entidades: ' + (enabled ? 'ahora tienen colisión.' : 'ya no tienen colisión.'));
-    }
-  }
-
-  /**
-   * Marca o desmarca una entidad como Pared: un muro invisible en todas las
-   * celdas de su bloque. Activarla le quita la Colision: son excluyentes.
-   */
-  setWall(id: string, wall: boolean): void {
-    const entity = this.entities().find((candidate) => candidate.id === id);
-    if (!entity) {
-      return;
-    }
-    const hadCollision = this.hasCollision(entity);
-    this.levels.updateEntity(id, {
-      // Se omite cuando es false: es el default del schema.
-      wall: wall ? true : undefined,
-      ...(wall && hadCollision ? { collider: this.colliderWithoutCollision(entity) } : {}),
-    });
-    this.dirty.set(true);
-    this.note(
-      '"' + id + '" ' +
-        (wall
-          ? 'ahora es pared: bloquea todo el tile' + (hadCollision ? ' (se quitó la colisión).' : '.')
-          : 'ya no es pared.'),
-    );
-  }
-
-  /**
-   * Lo mismo, pero sobre TODA la seleccion: es la casilla del inspector, que
-   * con varias entidades elegidas tiene que aplicarles el cambio a todas.
-   */
-  setWallOnSelection(wall: boolean): void {
-    const ids = this.selectedIds();
-    for (const id of ids) {
-      this.setWall(id, wall);
-    }
-    if (ids.length > 1) {
-      this.note(ids.length + ' entidades: ' + (wall ? 'ahora son pared.' : 'ya no son pared.'));
-    }
-  }
-
-  /**
-   * El menu contextual del navegador se cancela SIEMPRE sobre el canvas: el
-   * boton derecho ahi es desplazar la vista, y si el menu apareciera al soltar
-   * cortaria el gesto justo al terminarlo.
-   */
-  onContextMenu(event: MouseEvent): void {
-    event.preventDefault();
-  }
-
-  onPointerLeave(): void {
-    this.hovered.set(null);
-  }
-
-  // --- Entidades ------------------------------------------------------------
-
-  // Las tres paletas -- Recursos, Figuras y Personajes -- alimentan la MISMA
-  // herramienta de colocar, y por eso elegir en una apaga las otras dos: si no,
-  // "place" no sabria cual de las tres cosas esta a punto de crear.
-
-  /**
-   * Importa una carpeta de imagenes como texturas: las copia a assets/textures/
-   * del proyecto AJUSTADAS a lo que el motor puede dibujar dentro de una celda
-   * (ver core/texture-fit.ts) y las deja listas en Recursos.
-   *
-   * Se copian y no se referencian donde estaban porque el nivel guarda rutas
-   * relativas a assets/: una textura de afuera saldria en negro al ejecutar.
-   *
-   * Ya no exige abrir un proyecto antes. Si falta, el proceso principal lo
-   * deduce -- o lo pregunta en el mismo gesto -- y aca solo hay que ponerse al
-   * dia con la raiz que devuelve.
-   */
-  async importTextures(): Promise<void> {
-    if (!this.hasFileSystem) {
-      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
-      return;
-    }
-    if (this.importing()) {
-      return;
-    }
-
-    let session: ImportSession | null = null;
+  private async openProjectLevel(node: ProjectNode): Promise<void> {
     try {
-      session = await this.project.beginImport();
+      const level = await this.project.readLevelAt(node.path);
+      // Solo un nivel que este JUSTO en levels/ se adopta con su nombre de
+      // archivo: es lo unico que le permite a Guardar volver a escribirlo sin
+      // preguntar (ver levels.save()).
+      const direct = /^levels\/[^/]+$/i.test(node.path) ? node.name : null;
+      this.levels.adopt(level, direct);
+
+      const root = this.project.projectRoot();
+      // Ruta absoluta para Ejecutar: el motor lee el nivel del disco.
+      this.proj.lastSavedPath.set(root ? root.replace(/[\\/]$/, '') + '/' + node.path : null);
+      this.dirty.set(false);
+      this.view.frameAll();
+      this.note('Nivel "' + node.path + '" abierto (' + this.entities().length + ' entidades).');
     } catch (error) {
-      this.note('No se pudo empezar a importar: ' + this.describe(error));
-      return;
+      this.note('No se pudo abrir ' + node.path + ': ' + this.describe(error));
     }
-    if (!session) {
-      return; // se cancelo la eleccion de la carpeta del proyecto
-    }
-    if (session.projectRoot !== this.project.projectRoot()) {
-      this.project.projectRoot.set(session.projectRoot);
-      await this.refreshProject();
-    }
-    if (session.canceled) {
-      return;
-    }
-
-    // El limite es el ancho de tile del nivel abierto: es la casilla dentro de
-    // la cual tiene que verse el sprite.
-    const maxSide = this.grid().tileWidth;
-    const report = { copied: 0, converted: 0, kept: 0, failed: [] as string[] };
-    this.importing.set(true);
-
-    try {
-      for (const [index, item] of session.items.entries()) {
-        this.note('Importando ' + (index + 1) + '/' + session.items.length + ': ' + item.source);
-        // El sheet de figuras no se toca nunca, aunque venga en la carpeta: es
-        // un spritesheet de 262 px a proposito, y "ajustarlo" a un tile
-        // romperia el recorte de cada figura en el juego.
-        if (item.status === 'exists' || 'textures/' + item.target === SHAPE_TEXTURE) {
-          report.kept += 1;
-          continue;
-        }
-        try {
-          const image = await decodeImage(await this.project.readImportImage(index));
-          const fitted = fitTextureSize(image.naturalWidth, image.naturalHeight, maxSide);
-          const needsConversion = fitted.scaled || !/\.png$/i.test(item.source);
-
-          // Una copia vieja que ya cumplia los requisitos no gana nada
-          // reescribiendose: queda como esta.
-          if (item.status === 'stale' && !needsConversion) {
-            report.kept += 1;
-            continue;
-          }
-
-          const pngBase64 = needsConversion
-            ? renderPngBase64(image, fitted, usesNearestNeighbor(image.naturalWidth, fitted))
-            : null;
-          const { written } = await this.project.writeImportedTexture(index, pngBase64);
-          if (!written) {
-            report.kept += 1;
-          } else if (needsConversion) {
-            report.converted += 1;
-          } else {
-            report.copied += 1;
-          }
-        } catch {
-          // Una imagen rota no corta la importacion del resto; queda en el
-          // informe final con su nombre.
-          report.failed.push(item.source);
-        }
-      }
-    } finally {
-      this.importing.set(false);
-    }
-
-    try {
-      this.textures.set(await this.project.listTextures());
-      void this.loadTextureThumbnails();
-      await this.explorer.reloadDir('assets/textures');
-      // Si Recursos estaba plegado, se despliega: es donde esta el resultado.
-      this.panels.expand('side-assets');
-      this.note(this.describeImport(report, session.items.length, maxSide));
-    } catch (error) {
-      this.note('Se importo, pero no se pudo releer assets/textures: ' + this.describe(error));
-    }
-  }
-
-  /** Resumen de una importacion para la barra de estado. */
-  private describeImport(
-    report: { copied: number; converted: number; kept: number; failed: string[] },
-    total: number,
-    maxSide: number,
-  ): string {
-    if (total === 0) {
-      return 'Esa carpeta no tiene imagenes.';
-    }
-    const parts: string[] = [];
-    if (report.converted > 0) {
-      parts.push(report.converted + ' ajustadas a ' + maxSide + ' px y guardadas como PNG');
-    }
-    if (report.copied > 0) {
-      parts.push(report.copied + ' copiadas tal cual (ya cumplian)');
-    }
-    if (report.kept > 0) {
-      parts.push(report.kept + ' ya estaban y no se tocaron');
-    }
-    if (report.failed.length > 0) {
-      const names = report.failed.slice(0, 3).join(', ') + (report.failed.length > 3 ? '…' : '');
-      parts.push(report.failed.length + ' no se pudieron leer (' + names + ')');
-    }
-    return 'Importacion: ' + parts.join('; ') + '.';
-  }
-
-  /**
-   * Arma las miniaturas del panel Recursos y guarda el tamano real de cada
-   * textura, que es el que se usa al soltarla sobre una entidad.
-   *
-   * Tres cosas hacian que el panel se quedara en cuadros vacios con una
-   * carpeta de capturas, y las tres cambiaron:
-   *   - como "miniatura" se guardaba el data URL COMPLETO de cada imagen;
-   *     ahora se guarda una version reducida de verdad;
-   *   - el panel se actualizaba recien al terminar TODAS; ahora cada miniatura
-   *     aparece apenas esta lista;
-   *   - solo se procesaban las primeras 80.
-   *
-   * "run" corta una pasada vieja si arranca otra (por ejemplo, al terminar una
-   * importacion mientras todavia cargaban las del proyecto): sin eso, las dos
-   * escribirian el mismo signal intercaladas.
-   */
-  private async loadTextureThumbnails(): Promise<void> {
-    const run = ++this.thumbnailRun;
-
-    for (const name of this.textures().slice(0, TEXTURE_THUMBNAIL_LIMIT)) {
-      try {
-        const data = await this.project.readFileData('assets/textures/' + name);
-        if (run !== this.thumbnailRun) {
-          return;
-        }
-        if (data.kind !== 'image') {
-          continue;
-        }
-        const image = await decodeImage(data.dataUrl);
-        const thumb = fitTextureSize(image.naturalWidth, image.naturalHeight, THUMBNAIL_SIDE);
-        const entry = {
-          dataUrl: thumb.scaled
-            ? renderPng(image, thumb, usesNearestNeighbor(image.naturalWidth, thumb))
-            : data.dataUrl,
-          width: image.naturalWidth,
-          height: image.naturalHeight,
-        };
-        if (run !== this.thumbnailRun) {
-          return;
-        }
-        this.textureAssets.update((state) => ({ ...state, [name]: entry }));
-      } catch {
-        // Una imagen rota o bloqueada se queda sin miniatura y nada mas: el
-        // panel tiene que listar igual el resto de la carpeta.
-      }
-    }
-
-    // Se olvidan las de texturas que ya no estan en la carpeta.
-    const present = new Set(this.textures());
-    this.textureAssets.update((state) =>
-      Object.fromEntries(Object.entries(state).filter(([name]) => present.has(name))),
-    );
-  }
-
-  onTextureDragStart(event: DragEvent, name: string): void {
-    event.dataTransfer?.setData('text/honeycomb-texture', name);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'copy';
-    }
-  }
-
-  /**
-   * Suelta una textura en el viewport. Sobre una entidad le cambia el arte;
-   * sobre una celda vacia crea una entidad nueva con esa textura, igual que
-   * arrastrar una figura.
-   *
-   * El recorte se rehace con el tamano real de la imagen: conservar el anterior
-   * (16x16 por defecto) mostraria apenas la esquina de un sprite mas grande.
-   */
-  private dropTexture(event: DragEvent, name: string): void {
-    const asset = this.textureAssets()[name];
-    const sourceRect =
-      asset && asset.width > 0
-        ? { x: 0, y: 0, width: asset.width, height: asset.height }
-        : { ...FALLBACK_SOURCE_RECT };
-
-    const targetId = this.entityAt(event);
-    if (targetId) {
-      this.levels.updateEntity(targetId, { texture: 'textures/' + name, sourceRect });
-      this.selectEntity(targetId);
-      this.dirty.set(true);
-      this.note('"' + targetId + '" ahora usa ' + name + '.');
-      return;
-    }
-
-    const coord = this.coordAt(event);
-    const grid = this.grid();
-    if (!new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(coord, grid.width, grid.height)) {
-      return;
-    }
-    this.commitPlacement({
-      id: this.nextEntityId('entidad'),
-      type: 'prop',
-      position: { col: coord.col, row: coord.row },
-      // Prefijo "textures/": las rutas del nivel son relativas a assets/.
-      texture: 'textures/' + name,
-      sourceRect,
-    });
-  }
-
-  /** Elegir una textura pasa sola a la herramienta de colocar: es lo que se va a hacer. */
-  selectTexture(name: string): void {
-    this.activeTexture.set(name);
-    this.activeShape.set(null);
-    this.activeCharacter.set(null);
-    this.activeItem.set(null);
-    this.tool.set('place');
-  }
-
-  /** Idem con una primitiva del panel Figuras. */
-  selectShape(id: ShapeId): void {
-    this.activeShape.set(id);
-    this.activeTexture.set(null);
-    this.activeCharacter.set(null);
-    this.activeItem.set(null);
-    this.tool.set('place');
-  }
-
-  /** Idem con un personaje del panel Personajes: un tipo base o uno configurado. */
-  selectCharacter(presetId: string): void {
-    const preset = this.allPresets().find((candidate) => candidate.id === presetId);
-    if (!preset) {
-      return;
-    }
-    this.activeCharacter.set(presetId);
-    this.activeItem.set(null);
-    this.activeShape.set(null);
-    this.activeTexture.set(null);
-    this.tool.set('place');
-    this.note(preset.name + ': clic en la grilla para colocarlo. ' + this.kindHint(preset.kind));
-  }
-
-  /** Nombre del personaje elegido, para el chip del viewport. */
-  activeCharacterLabel(): string | null {
-    const id = this.activeCharacter();
-    return id ? this.allPresets().find((preset) => preset.id === id)?.name ?? id : null;
-  }
-
-  /**
-   * Coloca un personaje en la celda indicada. Todos los valores salen del
-   * personaje -- asset, recorte, cuadros, escala, colision, caracteristicas --
-   * y se COPIAN a la entidad (ver entityFromPreset).
-   *
-   * El jugador es el unico caso especial, y no por capricho del editor: el
-   * motor mueve con las flechas a la entidad con id "player_1" y a ninguna
-   * otra, asi que el primer jugador que se coloque se queda con ese id.
-   */
-  private placeCharacter(coord: GridCoord, presetId: string): void {
-    const preset = this.allPresets().find((candidate) => candidate.id === presetId);
-    const grid = this.grid();
-    if (!preset || !new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(coord, grid.width, grid.height)) {
-      return;
-    }
-
-    const entity = entityFromPreset(preset, coord, new Set(this.entityIds()));
-    const placed = this.commitPlacement(entity);
-
-    // El aviso del jugador se da igual aunque la colocacion quede esperando:
-    // habla del id, no de la celda, y es lo que hay que saber antes de decidir.
-    if (preset.kind === 'player' && entity.id !== ENGINE_PLAYER_ID) {
-      this.note(
-        'Ya hay un "' + ENGINE_PLAYER_ID + '": el motor solo mueve a ese. "' +
-          entity.id + '" queda como decorado hasta que le cambies el id.',
-      );
-    } else if (placed) {
-      this.note(preset.name + ' "' + entity.id + '" colocado.');
-    }
-  }
-
-  /**
-   * Crea una entidad nueva en la celda indicada. Si "shape" viene, la entidad
-   * es una primitiva de bloqueo; si no, se usa la textura activa.
-   *
-   * Las dos ramas producen una entidad IGUAL DE VALIDA para el motor: la figura
-   * viaja en el "type" (texto libre, uso del editor) y la textura sigue siendo
-   * obligatoria en las dos, porque el schema la exige. La diferencia es solo
-   * como la dibuja el canvas del editor.
-   */
-  private placeEntity(coord: GridCoord, shape: ShapeId | null = this.activeShape()): void {
-    const grid = this.grid();
-    const iso = new IsoProjection(grid.tileWidth, grid.tileHeight);
-    if (!iso.isValidCoord(coord, grid.width, grid.height)) {
-      this.note('Esa celda queda fuera de la grilla.');
-      return;
-    }
-
-    const texture = this.activeTexture();
-    if (!shape && !texture) {
-      this.note('Elige una textura en Recursos o una primitiva en Figuras antes de colocar.');
-      return;
-    }
-
-    // Una primitiva NO es un caso especial del nivel: es una entidad como
-    // cualquier otra, apuntando a un recorte del spritesheet de figuras. Por
-    // eso el runtime la dibuja sin saber nada de "figuras", y por eso el JSON
-    // que sale de aca no tiene ni un campo inventado.
-    const def = shape ? shapeDef(shape) : undefined;
-
-    const entity: LevelEntity = def
-      ? this.shapeEntity(coord, def)
-      : {
-          id: this.nextEntityId('entidad'),
-          type: 'prop',
-          position: { col: coord.col, row: coord.row },
-          // Prefijo "textures/": las rutas del nivel son relativas a assets/,
-          // que es donde AssetResolver las busca del lado del motor.
-          texture: 'textures/' + (texture ?? DEFAULT_STARTER_TEXTURE),
-          sourceRect: { x: 0, y: 0, width: 16, height: 16 },
-        };
-
-    this.commitPlacement(entity);
-  }
-
-  private shapeEntity(coord: GridCoord, def: ShapeDef): LevelEntity {
-    return {
-      id: this.nextEntityId(def.id),
-      type: def.id,
-      position: { col: coord.col, row: coord.row },
-      texture: SHAPE_TEXTURE,
-      sourceRect: { ...def.sourceRect },
-      // Sin esto el solido flota medio tile sobre su casilla: el motor
-      // apoya el borde inferior del sprite en el punto de la celda, y un
-      // solido tiene que apoyar ahi el centro del rombo de su base.
-      groundOffset: def.groundOffset,
-      // Sin collider ni pared: por defecto una figura se atraviesa. Las
-      // casillas Colision y Pared del inspector se lo agregan.
-    };
-  }
-
-  // --- Pintar figuras arrastrando --------------------------------------------
-  //
-  // Con "Pintar figuras arrastrando" (panel Figuras) o con Shift, mantener el
-  // clic y pasar por las casillas deja la figura elegida en cada una. Las
-  // casillas ocupadas se SALTAN sin preguntar: el dialogo de celda ocupada en
-  // medio de un trazo lo cortaria en cada casilla.
-
-  private startShapeStroke(event: PointerEvent, shape: ShapeId): void {
-    const cell = this.coordAt(event);
-    this.shapeStroke = { shape, start: cell, last: cell, placed: 0 };
-    // Con captura el trazo sigue aunque el cursor pase sobre un panel.
-    (event.target as HTMLElement).setPointerCapture(event.pointerId);
-    event.preventDefault();
-    this.paintShapeAt(cell);
-  }
-
-  private continueShapeStroke(event: PointerEvent): void {
-    const stroke = this.shapeStroke;
-    const cell = this.coordAt(event);
-    this.hovered.set(cell);
-    if (!stroke || (cell.col === stroke.last.col && cell.row === stroke.last.row)) {
-      return;
-    }
-    // Un movimiento rapido salta casillas entre dos eventos: se recorre la
-    // linea entera desde la ultima para no dejar huecos en el trazo.
-    const from = stroke.last;
-    const steps = Math.max(Math.abs(cell.col - from.col), Math.abs(cell.row - from.row));
-    for (let step = 1; step <= steps; step++) {
-      this.paintShapeAt({
-        col: Math.round(from.col + ((cell.col - from.col) * step) / steps),
-        row: Math.round(from.row + ((cell.row - from.row) * step) / steps),
-      });
-    }
-    stroke.last = cell;
-  }
-
-  private finishShapeStroke(event: PointerEvent): void {
-    const stroke = this.shapeStroke;
-    this.shapeStroke = null;
-    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
-    if (!stroke) {
-      return;
-    }
-    const stayed = stroke.last.col === stroke.start.col && stroke.last.row === stroke.start.row;
-    if (stayed && stroke.placed === 0) {
-      // Un clic suelto sobre una casilla ocupada (o fuera de la grilla) no es
-      // un trazo: se resuelve como siempre, con el dialogo o el aviso.
-      this.placeEntity(stroke.start, stroke.shape);
-    } else if (stroke.placed > 1) {
-      this.note(stroke.placed + ' figuras colocadas.');
-    }
-  }
-
-  /** Coloca la figura del trazo si la casilla esta en la grilla y libre. */
-  private paintShapeAt(cell: GridCoord): void {
-    const def = this.shapeStroke ? shapeDef(this.shapeStroke.shape) : undefined;
-    const grid = this.grid();
-    if (!this.shapeStroke || !def || !new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(cell, grid.width, grid.height)) {
-      return;
-    }
-    const entity = this.shapeEntity(cell, def);
-    if (this.entities().some((other) => blocksOverlap(other, entity))) {
-      return;
-    }
-    this.addPlaced(entity);
-    this.shapeStroke.placed++;
-  }
-
-  // --- Celda ocupada --------------------------------------------------------
-  //
-  // Colocar algo donde ya hay otra cosa no se resuelve solo: antes se apilaba
-  // sin avisar y las dos entidades quedaban en la misma casilla tapandose entre
-  // si -- se veia una sola, y la de abajo aparecia unicamente en el outliner,
-  // asi que lo normal era no enterarse hasta ejecutar el nivel. Ahora se
-  // pregunta, y la respuesta esperable (reemplazar) es la que esta primera.
-
-  /**
-   * Agrega la entidad, salvo que su celda ya este ocupada: en ese caso no toca
-   * nada todavia y deja la colocacion esperando respuesta.
-   *
-   * Devuelve true si quedo colocada en el acto.
-   */
-  private commitPlacement(entity: LevelEntity): boolean {
-    // Por bloque y no por celda exacta: una figura de 3x3 ocupa nueve casillas,
-    // y colocar algo en cualquiera de ellas es ponerlo encima.
-    const occupants = this.entities().filter((other) => blocksOverlap(other, entity));
-    if (occupants.length > 0) {
-      this.pendingPlacement.set({ kind: 'place', entity, occupants });
-      return false;
-    }
-    this.addPlaced(entity);
-    return true;
-  }
-
-  private addPlaced(entity: LevelEntity): void {
-    this.levels.addEntity(entity);
-    // Queda seleccionada para poder ajustarla en el inspector sin buscarla.
-    this.selectEntity(entity.id);
-    this.dirty.set(true);
-  }
-
-  /** Saca lo que habia en esas celdas y deja lo nuevo, o lo que se movio. */
-  replacePending(): void {
-    const pending = this.pendingPlacement();
-    if (!pending) {
-      return;
-    }
-    this.pendingPlacement.set(null);
-    this.levels.removeEntities(pending.occupants.map((entity) => entity.id));
-    const replaced =
-      pending.occupants.length === 1
-        ? '"' + pending.occupants[0].id + '" reemplazada'
-        : pending.occupants.length + ' entidades reemplazadas';
-
-    if (pending.kind === 'place') {
-      this.addPlaced(pending.entity);
-      this.note(replaced + ' por "' + pending.entity.id + '".');
-    } else {
-      this.dirty.set(true);
-      this.note(replaced + ' por lo que moviste.');
-    }
-  }
-
-  /** Deja todo en las mismas celdas, una cosa encima de la otra. */
-  stackPending(): void {
-    const pending = this.pendingPlacement();
-    if (!pending) {
-      return;
-    }
-    this.pendingPlacement.set(null);
-    if (pending.kind === 'place') {
-      this.addPlaced(pending.entity);
-      this.note('"' + pending.entity.id + '" queda encima de lo que ya habia en esa celda.');
-    } else {
-      this.dirty.set(true);
-      this.note('Queda encima de lo que ya habia en esas celdas.');
-    }
-  }
-
-  /** Descarta: una colocacion no se hace, y un movimiento vuelve a donde estaba. */
-  cancelPending(): void {
-    const pending = this.pendingPlacement();
-    this.pendingPlacement.set(null);
-    if (pending?.kind === 'move') {
-      for (const [id, position] of pending.originals) {
-        this.levels.updateEntity(id, { position });
-      }
-    }
-  }
-
-  /** Texto del dialogo de celdas ocupadas, segun de donde venga la espera. */
-  pendingSummary(): string {
-    const pending = this.pendingPlacement();
-    if (!pending) {
-      return '';
-    }
-    const there =
-      pending.occupants.length === 1
-        ? 'ya esta "' + pending.occupants[0].id + '"'
-        : 'ya hay ' + pending.occupants.length + ' entidades';
-
-    if (pending.kind === 'place') {
-      const { col, row } = pending.entity.position;
-      return (
-        'En la celda ' + col + ',' + row + ' ' + there +
-        '. Vas a colocar "' + pending.entity.id + '".'
-      );
-    }
-    const what =
-      pending.movedIds.length === 1
-        ? '"' + pending.movedIds[0] + '"'
-        : pending.movedIds.length + ' entidades';
-    return 'Donde soltaste ' + what + ' ' + there + '. Cancelar lo devuelve a donde estaba.';
-  }
-
-  // --- Arrastrar una primitiva al viewport ----------------------------------
-  //
-  // Se usa el drag & drop nativo del navegador y no un arrastre a mano con
-  // pointer events: el nativo ya trae el fantasma del elemento pegado al
-  // cursor, el cursor de "copiar" y la cancelacion con Escape, que es
-  // exactamente lo que se espera de este gesto.
-
-  onShapeDragStart(event: DragEvent, id: ShapeId): void {
-    event.dataTransfer?.setData('text/honeycomb-shape', id);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'copy';
-    }
-  }
-
-  /** Idem para los personajes (el id de un tipo base o de uno configurado), con su propio tipo de dato. */
-  onCharacterDragStart(event: DragEvent, id: string): void {
-    event.dataTransfer?.setData('text/honeycomb-character', id);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'copy';
-    }
-  }
-
-  /**
-   * Sin preventDefault() el canvas NO es un destino valido y el drop nunca
-   * llega. De paso se resalta la celda de destino, para poder apuntar.
-   */
-  onCanvasDragOver(event: DragEvent): void {
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'copy';
-    }
-    this.hovered.set(this.coordAt(event));
-  }
-
-  onCanvasDrop(event: DragEvent): void {
-    event.preventDefault();
-
-    const textureName = event.dataTransfer?.getData('text/honeycomb-texture');
-    if (textureName) {
-      this.dropTexture(event, textureName);
-      return;
-    }
-
-    const characterId = event.dataTransfer?.getData('text/honeycomb-character');
-    if (characterId && this.allPresets().some((preset) => preset.id === characterId)) {
-      this.placeCharacter(this.coordAt(event), characterId);
-      return;
-    }
-
-    const itemId = event.dataTransfer?.getData('text/honeycomb-item');
-    if (itemId && this.itemLibrary.find(itemId)) {
-      this.placeItem(this.coordAt(event), itemId);
-      return;
-    }
-
-    const id = event.dataTransfer?.getData('text/honeycomb-shape');
-    // Puede caer aca cualquier cosa arrastrada desde fuera del editor.
-    if (!id || !shapeDef(id)) {
-      return;
-    }
-    this.placeEntity(this.coordAt(event), id as ShapeId);
-  }
-
-  onCanvasDragLeave(): void {
-    this.hovered.set(null);
-  }
-
-  // --- Seleccion ------------------------------------------------------------
-  //
-  // La seleccion es una LISTA, no una sola entidad, con el mismo reparto que
-  // hace Blender: todas las seleccionadas reciben las operaciones de grupo
-  // (borrar, duplicar, mover, marcar como pared), pero solo la ultima -- el
-  // "objeto activo" -- es la que muestra el inspector, porque un formulario no
-  // puede mostrar dos valores distintos en el mismo campo.
-
-  /**
-   * Selecciona una entidad y trae al frente la pestana de propiedades del
-   * objeto: seleccionar algo y que el inspector siga mostrando la escena seria
-   * un click perdido.
-   *
-   * Con "additive" (Shift o Ctrl) la suma o la quita de la seleccion en vez de
-   * reemplazarla.
-   */
-  selectEntity(id: string | null, additive = false): void {
-    if (!id) {
-      // Clickear el vacio con Shift no deberia tirar abajo lo que ya estaba
-      // seleccionado: el gesto es "agregar", y ahi no hay nada que agregar.
-      if (!additive) {
-        this.selection.selectEntity(null);
-      }
-      return;
-    }
-    if (additive) {
-      this.selection.toggleEntitySelection(id);
-    } else {
-      this.selection.selectEntity(id);
-    }
-    this.inspectorTab.set('objeto');
-  }
-
-  isEntitySelected(id: string): boolean {
-    return this.selectedSet().has(id);
-  }
-
-  /**
-   * Clic en una fila del outliner. Se comporta como cualquier lista de
-   * escritorio: Ctrl suma o quita una, Shift selecciona el rango desde la
-   * activa hasta la clickeada.
-   */
-  onOutlinerClick(id: string, event: MouseEvent): void {
-    if (event.shiftKey) {
-      this.selectRangeTo(id);
-      return;
-    }
-    this.selectEntity(id, event.ctrlKey);
-  }
-
-  /** Selecciona de la entidad activa a la clickeada, en el orden del outliner. */
-  private selectRangeTo(id: string): void {
-    const ids = this.entityIds();
-    const anchor = this.selection.selectedEntityId();
-    const from = anchor ? ids.indexOf(anchor) : -1;
-    const to = ids.indexOf(id);
-    if (to < 0) {
-      return;
-    }
-    // Sin ancla previa no hay rango que trazar: vale como un clic normal.
-    if (from < 0) {
-      this.selectEntity(id);
-      return;
-    }
-    const range = ids.slice(Math.min(from, to), Math.max(from, to) + 1);
-    // La clickeada queda al final para que sea la activa, sin importar hacia
-    // que lado se trazo el rango.
-    this.selection.selectEntities([...range.filter((other) => other !== id), id]);
-    this.inspectorTab.set('objeto');
-  }
-
-  selectAllEntities(): void {
-    this.selection.selectEntities(this.entityIds());
-    this.inspectorTab.set('objeto');
-  }
-
-  /** Borra TODA la seleccion, no solo la entidad activa. */
-  deleteSelected(): void {
-    const ids = this.selectedIds();
-    if (ids.length === 0) {
-      return;
-    }
-    this.levels.removeEntities(ids);
-    this.dirty.set(true);
-    this.note(
-      ids.length === 1 ? 'Entidad "' + ids[0] + '" eliminada.' : ids.length + ' entidades eliminadas.',
-    );
-  }
-
-  /**
-   * Duplica toda la seleccion una celda a la derecha y deja seleccionadas las
-   * copias, que es lo que uno quiere seguir moviendo.
-   *
-   * Los objetos anidados se copian a mano: el spread es superficial, y sin esto
-   * la copia compartiria sourceRect y collider con el original (editar uno
-   * moveria los dos).
-   */
-  duplicateSelected(): void {
-    const sources = this.entities().filter((entity) => this.isEntitySelected(entity.id));
-    if (sources.length === 0) {
-      return;
-    }
-
-    const copies: string[] = [];
-    for (const source of sources) {
-      const copy: LevelEntity = {
-        ...source,
-        id: this.nextEntityId(source.type || 'entidad'),
-        position: { col: source.position.col + 1, row: source.position.row },
-        sourceRect: { ...source.sourceRect },
-        collider: source.collider ? { ...source.collider } : undefined,
-      };
-      this.levels.addEntity(copy);
-      copies.push(copy.id);
-    }
-
-    this.selection.selectEntities(copies);
-    this.dirty.set(true);
-    this.note(copies.length === 1 ? 'Copia creada.' : copies.length + ' copias creadas.');
-  }
-
-  /**
-   * Mueve la seleccion entera por celdas (las flechas del teclado). Es la
-   * unica forma de mover VARIAS a la vez: los campos de columna y fila del
-   * inspector escriben un valor absoluto, y aplicarlo a todas las amontonaria
-   * en la misma casilla.
-   */
-  nudgeSelection(deltaCol: number, deltaRow: number): void {
-    const ids = this.selectedIds();
-    if (ids.length === 0) {
-      return;
-    }
-    const grid = this.grid();
-    for (const entity of this.entities()) {
-      if (!this.isEntitySelected(entity.id)) {
-        continue;
-      }
-      this.levels.updateEntity(entity.id, {
-        position: {
-          col: Math.min(grid.width - 1, Math.max(0, entity.position.col + deltaCol)),
-          row: Math.min(grid.height - 1, Math.max(0, entity.position.row + deltaRow)),
-        },
-      });
-    }
-    this.dirty.set(true);
-  }
-
-  /**
-   * Aplica un cambio parcial a la entidad seleccionada. Es el paso obligado de
-   * todo el inspector: un solo lugar que marca "dirty" y que reengancha la
-   * seleccion si lo que cambio fue el propio id (si no, se perderia).
-   */
-  patchEntity(changes: Partial<LevelEntity>): void {
-    const id = this.selection.selectedEntityId();
-    if (!id) {
-      return;
-    }
-    this.levels.updateEntity(id, changes);
-    this.dirty.set(true);
-    if (changes.id && changes.id !== id) {
-      this.selection.selectEntity(changes.id);
-    }
-  }
-
-  // Los patch* de abajo existen porque estos campos son objetos anidados: hay
-  // que reconstruir el objeto entero, no se puede tocar una sola clave.
-
-  patchPosition(axis: 'col' | 'row', value: number): void {
-    const entity = this.selected();
-    if (!entity) {
-      return;
-    }
-    this.patchEntity({ position: { ...entity.position, [axis]: value } });
-  }
-
-  patchSourceRect(field: 'x' | 'y' | 'width' | 'height', value: number): void {
-    const entity = this.selected();
-    if (!entity) {
-      return;
-    }
-    this.patchEntity({ sourceRect: { ...entity.sourceRect, [field]: value } });
-  }
-
-  patchCollider(field: 'width' | 'height', value: number): void {
-    const entity = this.selected();
-    if (!entity || !entity.collider) {
-      return;
-    }
-    this.patchEntity({ collider: { ...entity.collider, [field]: value } });
-  }
-
-  patchGrid(changes: Partial<GridConfig>): void {
-    this.levels.updateGrid(changes);
-    this.dirty.set(true);
-  }
-
-  renameLevel(name: string): void {
-    this.levels.level.update((level) => ({ ...level, name }));
-    this.dirty.set(true);
-  }
-
-  /** Fondo del runtime. Sin "backgroundColor" el motor usa RAYWHITE, asi que se muestra ese. */
-  backgroundColor(): RgbColor {
-    return this.levels.level().backgroundColor ?? { r: 245, g: 245, b: 245 };
-  }
-
-  backgroundHex(): string {
-    return rgbToHex(this.backgroundColor());
-  }
-
-  /**
-   * Ultimo HSV elegido en el selector. El RGB no alcanza para reconstruirlo:
-   * un gris no tiene tono y el negro tampoco saturacion, y sin guardarlo el
-   * cursor saltaria a una esquina al arrastrar por ahi.
-   */
-  private readonly backgroundPick = signal<Hsv | null>(null);
-
-  /**
-   * El color como lo dibuja el selector. Si el RGB cambio por otro lado (los
-   * campos, el hex, otro nivel), el HSV guardado ya no corresponde y se
-   * recalcula, conservando solo su tono para los grises.
-   */
-  backgroundHsv(): Hsv {
-    const rgb = this.backgroundColor();
-    const kept = this.backgroundPick();
-    if (kept && rgbToHex(hsvToRgb(kept)) === rgbToHex(rgb)) {
-      return kept;
-    }
-    return rgbToHsv(rgb, kept?.h ?? 0);
-  }
-
-  /** Color puro del tono actual: el fondo del cuadro de saturacion/brillo. */
-  backgroundHueCss(): string {
-    return `hsl(${this.backgroundHsv().h}, 100%, 50%)`;
-  }
-
-  /** Cuadro grande: X es la saturacion y Y el brillo (arriba = claro). */
-  onBackgroundSquare(event: PointerEvent): void {
-    const point = this.pickerPoint(event);
-    if (point) {
-      this.pickBackground({ ...this.backgroundHsv(), s: point.x, v: 1 - point.y });
-    }
-  }
-
-  /** Barra de tono: arriba 0°, abajo 360°. */
-  onBackgroundHue(event: PointerEvent): void {
-    const point = this.pickerPoint(event);
-    if (point) {
-      this.pickBackground({ ...this.backgroundHsv(), h: point.y * 360 });
-    }
-  }
-
-  setBackgroundHex(text: string): void {
-    const rgb = hexToRgb(text);
-    if (rgb) {
-      this.storeBackground(rgb);
-    }
-  }
-
-  patchBackground(changes: Partial<RgbColor>): void {
-    // El schema exige enteros de 0 a 255; el campo numerico deja escribir cualquier cosa.
-    const merged = { ...this.backgroundColor(), ...changes };
-    this.storeBackground({ r: clampChannel(merged.r), g: clampChannel(merged.g), b: clampChannel(merged.b) });
-  }
-
-  private pickBackground(hsv: Hsv): void {
-    this.backgroundPick.set(hsv);
-    this.storeBackground(hsvToRgb(hsv));
-  }
-
-  private storeBackground(backgroundColor: RgbColor): void {
-    this.levels.level.update((level) => ({ ...level, backgroundColor }));
-    this.dirty.set(true);
-  }
-
-  /**
-   * Posicion del puntero dentro del control, de 0 a 1 por eje; null si se
-   * mueve sin el boton apretado. Al apretar captura el puntero, asi el
-   * arrastre sigue aunque el mouse se salga del cuadro.
-   */
-  private pickerPoint(event: PointerEvent): { x: number; y: number } | null {
-    const target = event.currentTarget as HTMLElement;
-    if (event.type === 'pointerdown') {
-      target.setPointerCapture(event.pointerId);
-      event.preventDefault();
-    } else if ((event.buttons & 1) === 0) {
-      return null;
-    }
-    const box = target.getBoundingClientRect();
-    const unit = (value: number) => Math.min(1, Math.max(0, value));
-    return {
-      x: unit((event.clientX - box.left) / box.width),
-      y: unit((event.clientY - box.top) / box.height),
-    };
-  }
-
-  /**
-   * Primer id libre de la forma "base_N". Los ids tienen que ser unicos porque
-   * los eventos referencian entidades por id (params de tipo entity_ref), y un
-   * duplicado haria que el motor resuelva siempre la misma de las dos.
-   */
-  private nextEntityId(base: string): string {
-    const taken = new Set(this.entityIds());
-    let index = 1;
-    while (taken.has(base + '_' + index)) {
-      index += 1;
-    }
-    return base + '_' + index;
-  }
-
-  // --- Eventos --------------------------------------------------------------
-  //
-  // Todo este bloque trabaja contra el CATALOGO, nunca contra una lista fija de
-  // triggers y acciones. Un bloque nuevo en schema/event_catalog.json aparece
-  // solo en la UI, con su formulario generado a partir de sus params. Es el
-  // mismo trato que del lado de C++, donde EventSystem despacha por "type".
-  //
-  // Los eventos se identifican por su indice en el array del nivel; por eso
-  // casi todos los metodos reciben "index" (y "actionIndex" para las acciones).
-
-  /** Agrega un evento con el primer trigger del catalogo y sin acciones todavia. */
-  addEvent(): void {
-    const trigger = this.triggers()[0];
-    if (!trigger) {
-      this.note('Carga el catalogo de eventos antes de crear un evento.');
-      return;
-    }
-    this.levels.addEvent({
-      trigger: { type: trigger.type, params: this.defaultParams(trigger) },
-      actions: [],
-    });
-    this.dirty.set(true);
-  }
-
-  removeEvent(index: number): void {
-    this.levels.removeEvent(index);
-    this.dirty.set(true);
-  }
-
-  /**
-   * Cambia el trigger de un evento. Los params se reinician a los del bloque
-   * nuevo: cada trigger declara los suyos, y conservar los del anterior
-   * dejaria claves que el motor no espera.
-   */
-  changeTrigger(index: number, type: string): void {
-    const entry = this.entryFor('triggers', type);
-    this.levels.updateEvent(index, {
-      trigger: { type, params: entry ? this.defaultParams(entry) : {} },
-    });
-    this.dirty.set(true);
-  }
-
-  addAction(index: number): void {
-    const entry = this.actions()[0];
-    if (!entry) {
-      this.note('El catalogo no declara ninguna accion.');
-      return;
-    }
-    const event = this.events()[index];
-    this.levels.updateEvent(index, {
-      actions: [...event.actions, { type: entry.type, params: this.defaultParams(entry) }],
-    });
-    this.dirty.set(true);
-  }
-
-  removeAction(index: number, actionIndex: number): void {
-    const event = this.events()[index];
-    this.levels.updateEvent(index, {
-      actions: event.actions.filter((_, i) => i !== actionIndex),
-    });
-    this.dirty.set(true);
-  }
-
-  changeAction(index: number, actionIndex: number, type: string): void {
-    const entry = this.entryFor('actions', type);
-    const event = this.events()[index];
-    this.levels.updateEvent(index, {
-      actions: event.actions.map((action, i) =>
-        i === actionIndex ? { type, params: entry ? this.defaultParams(entry) : {} } : action,
-      ),
-    });
-    this.dirty.set(true);
-  }
-
-  /** Condiciones: el "si" del evento. Todas tienen que cumplirse (AND). */
-  addCondition(index: number): void {
-    const entry = this.conditions()[0];
-    if (!entry) {
-      this.note('El catalogo no declara ninguna condicion.');
-      return;
-    }
-    const event = this.events()[index];
-    this.levels.updateEvent(index, {
-      conditions: [...(event.conditions ?? []), { type: entry.type, params: this.defaultParams(entry) }],
-    });
-    this.dirty.set(true);
-  }
-
-  removeCondition(index: number, conditionIndex: number): void {
-    const conditions = (this.events()[index].conditions ?? []).filter((_, i) => i !== conditionIndex);
-    // Sin condiciones la clave desaparece del JSON, como en los eventos que nunca las tuvieron.
-    this.levels.updateEvent(index, { conditions: conditions.length ? conditions : undefined });
-    this.dirty.set(true);
-  }
-
-  changeCondition(index: number, conditionIndex: number, type: string): void {
-    const entry = this.entryFor('conditions', type);
-    const event = this.events()[index];
-    this.levels.updateEvent(index, {
-      conditions: (event.conditions ?? []).map((condition, i) =>
-        i === conditionIndex ? { type, params: entry ? this.defaultParams(entry) : {} } : condition,
-      ),
-    });
-    this.dirty.set(true);
-  }
-
-  catalogKindOf(kind: StepKind): CatalogKind {
-    return CATALOG_KIND[kind];
   }
-
-  /**
-   * Cambia un parametro de cualquier paso de un evento. El formulario entrega
-   * texto, y se guarda con el tipo que declara el catalogo: un number como
-   * numero (antes quedaba como texto y el motor lo tenia que adivinar), y un
-   * item_ref ademas copia la definicion del objeto al nivel.
-   */
-  updateStepParam(kind: StepKind, index: number, stepIndex: number, key: string, raw: string | boolean): void {
-    const event = this.events()[index];
-    const steps = kind === 'trigger' ? [event.trigger] : kind === 'condition' ? (event.conditions ?? []) : event.actions;
-    const step = steps[stepIndex];
-    if (!step) {
-      return;
-    }
-    const def = this.entryFor(CATALOG_KIND[kind], step.type)?.params[key];
-    let value: unknown = raw;
-    if (def?.type === 'number') {
-      const number = Number(raw);
-      value = Number.isFinite(number) ? number : 0;
-    } else if (def?.type === 'item_ref' && typeof raw === 'string' && raw) {
-      this.combat.use(raw);
-    }
-    const updated: EventStep = { ...step, params: { ...step.params, [key]: value } };
-    const replace = (list: EventStep[]) => list.map((current, i) => (i === stepIndex ? updated : current));
-    if (kind === 'trigger') {
-      this.levels.updateEvent(index, { trigger: updated });
-    } else if (kind === 'condition') {
-      this.levels.updateEvent(index, { conditions: replace(event.conditions ?? []) });
-    } else {
-      this.levels.updateEvent(index, { actions: replace(event.actions) });
-    }
-    this.dirty.set(true);
-  }
-
-  /** Filas de parametros de un bloque del catalogo, para el formulario dinamico. */
-  paramRows(kind: CatalogKind, type: string): ParamRow[] {
-    const entry = this.entryFor(kind, type);
-    if (!entry) {
-      return [];
-    }
-    return Object.keys(entry.params).map((key) => ({ key, def: entry.params[key] }));
-  }
-
-  entryFor(kind: CatalogKind, type: string): CatalogEntry | undefined {
-    const catalog = this.catalog.catalog();
-    return catalog ? catalog[kind].find((entry) => entry.type === type) : undefined;
-  }
-
-  labelFor(kind: CatalogKind, type: string): string {
-    const entry = this.entryFor(kind, type);
-    return entry ? entry.label : type;
-  }
-
-  paramValue(step: EventStep, key: string): string {
-    const value = step.params[key];
-    return value === undefined || value === null ? '' : String(value);
-  }
-
-  /**
-   * Valor inicial de cada parametro de un bloque, segun su tipo declarado.
-   * Se rellenan todos aunque esten vacios para que el JSON guardado tenga
-   * siempre la forma completa que el motor espera, y para que el formulario
-   * dinamico tenga algo a que enlazarse desde el primer render.
-   * entity_ref y string comparten default (''): un id vacio es "sin elegir".
-   */
-  private defaultParams(entry: CatalogEntry): Record<string, unknown> {
-    const params: Record<string, unknown> = {};
-    for (const key of Object.keys(entry.params)) {
-      const type = entry.params[key].type;
-      params[key] = type === 'number' ? 0 : type === 'boolean' ? false : '';
-    }
-    return params;
-  }
-
-  // --- Canvas ---------------------------------------------------------------
-  //
-  // El dibujo y las conversiones pantalla<->celda viven en
-  // core/iso-canvas-renderer.ts: no tienen nada de Angular. Aca quedan solo los
-  // puentes, que es lo unico que necesita el componente: sacar el <canvas> del
-  // viewChild y su rectangulo en pantalla, que el renderer no puede conocer.
-
-  private readonly renderer = new IsoCanvasRenderer();
-
-  /**
-   * Lo que el renderer mira para dibujar. Se le pasan los signals TAL CUAL, sin
-   * copiar valores: se leen en el momento del dibujo, asi que esto no hay que
-   * rearmarlo en cada frame. Va declarado aca abajo, y no arriba con el resto
-   * del estado, porque los campos de clase se inicializan en orden y todos los
-   * signals que nombra tienen que existir ya.
-   */
-  private readonly scene: CanvasScene = {
-    size: this.canvasSize,
-    pan: this.pan,
-    zoom: this.zoom,
-    level: () => this.levels.level(),
-    selectedId: () => this.selection.selectedEntityId(),
-    selectedIds: this.selectedSet,
-    hovered: this.hovered,
-    showGrid: this.showGrid,
-    gridOnTop: this.gridOnTop,
-    showColliders: this.showColliders,
-    roomDraft: this.map.roomDraft,
-    roomDrag: this.map.roomDrag,
-    tunnelTrace: this.map.tunnelTrace,
-    shapeSheet: this.shapeSheet,
-  };
-
-  /** Punto del canvas donde cae la celda (0,0). */
-  private origin(): CanvasPoint {
-    return this.renderer.origin(this.canvasSize(), this.pan());
-  }
-
-  /** Celda de la grilla bajo el cursor. Puede quedar fuera de rango: quien llama valida. */
-  private coordAt(event: MouseEvent): GridCoord {
-    const ref = this.viewport();
-    if (!ref) {
-      return { col: 0, row: 0 };
-    }
-    return this.renderer.coordAt(event, ref.nativeElement.getBoundingClientRect(), this.scene);
-  }
-
-  /** Id de la entidad clickeada, o null si no hay ninguna. */
-  private entityAt(event: MouseEvent): string | null {
-    const ref = this.viewport();
-    if (!ref) {
-      return null;
-    }
-    return this.renderer.entityAt(event, ref.nativeElement.getBoundingClientRect(), this.scene);
-  }
-
-  /**
-   * Redibuja el viewport entero. Lo dispara el effect() del constructor cada
-   * vez que cambia algo que se ve; no hay bucle de animacion.
-   */
-  private draw(): void {
-    const ref = this.viewport();
-    if (!ref) {
-      return;
-    }
-    this.renderer.draw(ref.nativeElement, this.scene);
-  }
-
 
-  // --- Utilidades de plantilla ---------------------------------------------
+  // --- Utilidades de plantilla ----------------------------------------------
   //
   // Las plantillas de Angular no pueden hacer casts, asi que sacar el valor de
   // un evento de input necesita un helper por tipo. Nombres cortos porque
@@ -3770,11 +877,13 @@ export class App {
     return (event.target as HTMLInputElement).checked;
   }
 
-  /**
-   * Deja un mensaje en la barra de estado y en la consola del panel inferior.
-   * El log se corta en 40 lineas: es para ver que acaba de pasar, no un
-   * historial, y sin tope crece sin limite durante una sesion larga.
-   */
+  /** Vuelve un <select> de "+ Agregar…" a su opcion vacia despues de usarlo. */
+  resetSelect(event: Event): void {
+    (event.target as HTMLSelectElement).value = '';
+  }
+
+  // --- Avisos ---------------------------------------------------------------
+
   private note(message: string): void {
     this.status.set(message);
     this.log.update((entries) => [...entries.slice(-40), message]);

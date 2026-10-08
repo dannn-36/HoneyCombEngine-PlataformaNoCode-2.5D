@@ -1,10 +1,9 @@
 // Pruebas del componente raiz.
 //
-// OJO: el segundo test viene del andamiaje que genero Angular CLI y quedo
-// desactualizado -- busca un <h1> con "Hello, editor", texto que la plantilla
-// real del editor ya no tiene. Falla si se corre. Hay que reescribirlo contra
-// la UI de verdad (por ejemplo, que la barra superior muestre "HoneyComb") o
-// borrarlo.
+// Son pruebas de humo: que el editor entero se construya -- todos sus
+// controladores, en el orden en que App los declara -- y que pinte su barra
+// superior. No reemplazan a las pruebas de core/, que son las que miran la
+// logica; lo que atrapan es un editor que ya no arranca.
 
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
@@ -23,10 +22,10 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', async () => {
+  it('should render the brand in the top bar', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, editor');
+    expect(compiled.querySelector('.brand__name')?.textContent).toContain('HoneyComb');
   });
 });

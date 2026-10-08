@@ -1,5 +1,6 @@
 import { computed, inject, signal } from '@angular/core';
 
+import { zoneIdsOf } from '../core/dungeon-layout';
 import { PUZZLE_KINDS, PuzzleDraft, PuzzleKind, buildPuzzle, validatePuzzle } from '../core/puzzles';
 import { ItemLibraryService } from '../services/item-library.service';
 import { LevelService } from '../services/level.service';
@@ -21,10 +22,7 @@ export class PuzzleController {
   readonly kinds = PUZZLE_KINDS;
 
   /** Salas del mapa y zonas sueltas: el motor usa las dos como zonas. */
-  readonly zoneIds = computed(() => [
-    ...(this.levels.level().rooms ?? []).map((room) => room.id),
-    ...(this.levels.level().zones ?? []).map((zone) => zone.id),
-  ]);
+  readonly zoneIds = computed(() => zoneIdsOf(this.levels.level()));
 
   readonly enemies = computed(() => this.levels.level().entities.filter((entity) => entity.type === 'enemy'));
 

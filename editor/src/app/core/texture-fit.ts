@@ -88,3 +88,10 @@ export function renderPngBase64(
 ): string {
   return renderPng(image, size, nearest).slice('data:image/png;base64,'.length);
 }
+
+/** Una textura ya decodificada: su imagen como data URL y sus medidas reales. */
+export interface TextureAsset {
+  dataUrl: string;
+  width: number;
+  height: number;
+}

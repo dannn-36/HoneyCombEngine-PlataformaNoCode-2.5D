@@ -35,7 +35,7 @@
 
     <!-- Guarda y lanza el motor con el nivel abierto. Destacado porque es la
          accion que cierra el ciclo de trabajo: editar, probar, corregir. -->
-    <button class="menu menu--run" (click)="run()" title="Guardar y ejecutar en el motor (F5)">
+    <button class="menu menu--run" (click)="proj.run()" title="Guardar y ejecutar en el motor (F5)">
       ▶ Ejecutar
     </button>
 
@@ -76,9 +76,9 @@
          asigna el valor ANTES de crear las opciones del @for, y el navegador
          se queda con la primera. Pasa en todos los desplegables con opciones
          generadas, por eso se repite en cada uno. -->
-    <select class="select-lone" [value]="levels.fileName() ?? ''" (change)="loadLevel(str($event))">
+    <select class="select-lone" [value]="levels.fileName() ?? ''" (change)="proj.loadLevel(str($event))">
       <option value="" disabled [selected]="!levels.fileName()">— nivel —</option>
-      @for (file of levelFiles(); track file) {
+      @for (file of proj.levelFiles(); track file) {
         <option [value]="file" [selected]="levels.fileName() === file">{{ file }}</option>
       }
     </select>
@@ -86,66 +86,66 @@
 
   <!-- Dialogo de nivel nuevo. Click en el fondo cierra; el stopPropagation del
        <section> evita que un click dentro del dialogo llegue al fondo y lo cierre. -->
-  @if (showNewLevelDialog()) {
-    <div class="modal-backdrop" (click)="cancelNewLevel()">
+  @if (proj.showNewLevelDialog()) {
+    <div class="modal-backdrop" (click)="proj.cancelNewLevel()">
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="new-level-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="new-level-title">Crear nivel</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="cancelNewLevel()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" (click)="proj.cancelNewLevel()">×</button>
         </div>
 
         <div class="modal__body">
           <label class="field">
             <span>Nombre</span>
-            <input class="input" [value]="newLevelName()" (input)="newLevelName.set(str($event))" autofocus />
+            <input class="input" [value]="proj.newLevelName()" (input)="proj.newLevelName.set(str($event))" autofocus />
           </label>
 
           <div class="field-row">
             <label class="field">
               <span>Ancho</span>
-              <input class="input" type="number" min="1" step="1" [value]="newLevelWidth()"
-                     (input)="newLevelWidth.set(int($event))" />
+              <input class="input" type="number" min="1" step="1" [value]="proj.newLevelWidth()"
+                     (input)="proj.newLevelWidth.set(int($event))" />
             </label>
             <label class="field">
               <span>Alto</span>
-              <input class="input" type="number" min="1" step="1" [value]="newLevelHeight()"
-                     (input)="newLevelHeight.set(int($event))" />
+              <input class="input" type="number" min="1" step="1" [value]="proj.newLevelHeight()"
+                     (input)="proj.newLevelHeight.set(int($event))" />
             </label>
           </div>
 
           <div class="field-row">
             <label class="field">
               <span>Tile W</span>
-              <input class="input" type="number" min="1" step="1" [value]="newLevelTileWidth()"
-                     (input)="newLevelTileWidth.set(int($event))" />
+              <input class="input" type="number" min="1" step="1" [value]="proj.newLevelTileWidth()"
+                     (input)="proj.newLevelTileWidth.set(int($event))" />
             </label>
             <label class="field">
               <span>Tile H</span>
-              <input class="input" type="number" min="1" step="1" [value]="newLevelTileHeight()"
-                     (input)="newLevelTileHeight.set(int($event))" />
+              <input class="input" type="number" min="1" step="1" [value]="proj.newLevelTileHeight()"
+                     (input)="proj.newLevelTileHeight.set(int($event))" />
             </label>
           </div>
 
           <label class="field">
             <span>Plantilla</span>
-            <select class="input" [value]="newLevelTemplate()" (change)="setNewLevelTemplate(str($event))">
+            <select class="input" [value]="proj.newLevelTemplate()" (change)="proj.setNewLevelTemplate(str($event))">
               <option value="empty">Grilla vacia</option>
               <option value="player">Jugador</option>
               <option value="test-scene">Escena de prueba</option>
             </select>
           </label>
 
-          @if (textures().length === 0) {
+          @if (tex.textures().length === 0) {
             <p class="hint">Las plantillas usan textures/player.png. Abre un proyecto antes de guardar el nivel.</p>
           } @else {
-            <p class="hint">Usa {{ textures()[0] }} como textura inicial. Puedes cambiarla desde Recursos.</p>
+            <p class="hint">Usa {{ tex.textures()[0] }} como textura inicial. Puedes cambiarla desde Recursos.</p>
           }
         </div>
 
         <div class="modal__actions">
-          <button class="btn" type="button" (click)="cancelNewLevel()">Cancelar</button>
-          <button class="btn btn--primary" type="button" (click)="confirmNewLevel()">Crear nivel</button>
+          <button class="btn" type="button" (click)="proj.cancelNewLevel()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="proj.confirmNewLevel()">Crear nivel</button>
         </div>
       </section>
     </div>
@@ -155,24 +155,24 @@
        una encima de la otra tapandose: se veia una sola, y la de abajo aparecia
        solo en el outliner. "Reemplazar" va primero porque es lo que uno suele
        querer al volver a colocar algo en la misma casilla. -->
-  @if (pendingPlacement()) {
-    <div class="modal-backdrop" (click)="cancelPending()">
+  @if (entityOps.pendingPlacement()) {
+    <div class="modal-backdrop" (click)="entityOps.cancelPending()">
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="occupied-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="occupied-title">Esa celda ya esta ocupada</h2>
-          <button class="icon-button" type="button" title="Cancelar" (click)="cancelPending()">×</button>
+          <button class="icon-button" type="button" title="Cancelar" (click)="entityOps.cancelPending()">×</button>
         </div>
 
         <div class="modal__body">
-          <p class="hint">{{ pendingSummary() }}</p>
+          <p class="hint">{{ entityOps.pendingSummary() }}</p>
         </div>
 
         <div class="modal__actions">
-          <button class="btn" type="button" (click)="cancelPending()">Cancelar</button>
-          <button class="btn" type="button" (click)="stackPending()"
+          <button class="btn" type="button" (click)="entityOps.cancelPending()">Cancelar</button>
+          <button class="btn" type="button" (click)="entityOps.stackPending()"
                   title="Deja las dos en la misma celda, una encima de la otra">Superponer</button>
-          <button class="btn btn--primary" type="button" (click)="replacePending()">Reemplazar</button>
+          <button class="btn btn--primary" type="button" (click)="entityOps.replacePending()">Reemplazar</button>
         </div>
       </section>
     </div>
@@ -182,23 +182,23 @@
        cursor: ahora tiene controles de verdad (el tamano de una figura), y el
        menu chico junto al puntero se cerraba con cualquier roce del mouse.
        Colision (collider.solid) y Pared (wall) son independientes. -->
-  @if (contextMenuEntity(); as entity) {
-    <div class="modal-backdrop" (click)="closeContextMenu()">
+  @if (view.contextMenuEntity(); as entity) {
+    <div class="modal-backdrop" (click)="view.closeContextMenu()">
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="entity-menu-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="entity-menu-title">{{ entity.id }}</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="closeContextMenu()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" (click)="view.closeContextMenu()">×</button>
         </div>
 
         <div class="modal__body">
-          @if (isShape(entity)) {
+          @if (entityOps.isShape(entity)) {
             <div class="field">
               <span>Tamaño en celdas</span>
               <div class="seg">
-                @for (size of spanChoices; track size) {
-                  <button class="tool" type="button" [class.is-active]="spanOf(entity) === size"
-                          (click)="setSpan(entity.id, size)">
+                @for (size of entityOps.spanChoices; track size) {
+                  <button class="tool" type="button" [class.is-active]="entityOps.spanOf(entity) === size"
+                          (click)="entityOps.setSpan(entity.id, size)">
                     {{ size }}×{{ size }}
                   </button>
                 }
@@ -206,33 +206,33 @@
             </div>
             <label class="field">
               <span>Otro tamaño</span>
-              <input class="input" type="number" min="1" step="1" [max]="maxSpan()"
-                     [value]="spanOf(entity)" (change)="setSpan(entity.id, int($event))" />
+              <input class="input" type="number" min="1" step="1" [max]="entityOps.maxSpan()"
+                     [value]="entityOps.spanOf(entity)" (change)="entityOps.setSpan(entity.id, int($event))" />
             </label>
             <p class="hint">
               Ocupa de {{ entity.position.col }},{{ entity.position.row }} a
-              {{ entity.position.col + spanOf(entity) - 1 }},{{ entity.position.row + spanOf(entity) - 1 }}.
+              {{ entity.position.col + entityOps.spanOf(entity) - 1 }},{{ entity.position.row + entityOps.spanOf(entity) - 1 }}.
               Su colision crece con ella.
             </p>
-            @if (overlapIds(entity).length > 0) {
-              <p class="hint hint--warn">Se superpone con: {{ overlapIds(entity).join(', ') }}.</p>
+            @if (entityOps.overlapIds(entity).length > 0) {
+              <p class="hint hint--warn">Se superpone con: {{ entityOps.overlapIds(entity).join(', ') }}.</p>
             }
           }
 
           <label class="check">
-            <input type="checkbox" [checked]="hasCollision(entity)"
-                   (change)="setCollision(entity.id, checked($event))" />
-            <span>Colisión — {{ hasCollision(entity) ? 'choca solo con su forma' : 'sin colisión' }}</span>
+            <input type="checkbox" [checked]="entityOps.hasCollision(entity)"
+                   (change)="entityOps.setCollision(entity.id, checked($event))" />
+            <span>Colisión — {{ entityOps.hasCollision(entity) ? 'choca solo con su forma' : 'sin colisión' }}</span>
           </label>
           <label class="check">
-            <input type="checkbox" [checked]="isWall(entity)"
-                   (change)="setWall(entity.id, checked($event))" />
-            <span>Pared — {{ isWall(entity) ? 'bloquea todo el tile' : 'no es pared' }}</span>
+            <input type="checkbox" [checked]="entityOps.isWall(entity)"
+                   (change)="entityOps.setWall(entity.id, checked($event))" />
+            <span>Pared — {{ entityOps.isWall(entity) ? 'bloquea todo el tile' : 'no es pared' }}</span>
           </label>
         </div>
 
         <div class="modal__actions">
-          <button class="btn btn--primary" type="button" (click)="closeContextMenu()">Listo</button>
+          <button class="btn btn--primary" type="button" (click)="view.closeContextMenu()">Listo</button>
         </div>
       </section>
     </div>
@@ -441,27 +441,27 @@
   <!-- Configurar personajes. A la izquierda, los guardados en el proyecto por
        tipo; a la derecha, el que se esta editando. Lo que se guarda aca
        aparece en el panel Personajes para arrastrarlo a cualquier nivel. -->
-  @if (characterEditor(); as editor) {
-    <div class="modal-backdrop" (click)="closeCharacterEditor()">
+  @if (chars.characterEditor(); as editor) {
+    <div class="modal-backdrop" (click)="chars.closeCharacterEditor()">
       <section class="modal modal--xl" role="dialog" aria-modal="true" aria-labelledby="chars-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="chars-title">Configurar personajes</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="closeCharacterEditor()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" (click)="chars.closeCharacterEditor()">×</button>
         </div>
 
         <div class="chareditor">
           <nav class="chareditor__list">
-            @for (kind of characterKinds; track kind.id) {
+            @for (kind of chars.characterKinds; track kind.id) {
               <div class="chareditor__group">
                 <div class="chareditor__grouphead">
                   <span>{{ kind.glyph }} {{ kind.label }}</span>
                   <button class="btn btn--small" type="button" [title]="'Nuevo ' + kind.label.toLowerCase()"
-                          (click)="newCharacterDraft(kind.id)">+</button>
+                          (click)="chars.newCharacterDraft(kind.id)">+</button>
                 </div>
-                @for (preset of savedPresetsOfKind(kind.id); track preset.id) {
+                @for (preset of chars.savedPresetsOfKind(kind.id); track preset.id) {
                   <button class="tree__item" type="button" [class.is-active]="editor.savedId === preset.id"
-                          (click)="editCharacterPreset(preset.id)">
+                          (click)="chars.editCharacterPreset(preset.id)">
                     <span class="tree__label">{{ preset.name }}</span>
                   </button>
                 } @empty {
@@ -479,34 +479,34 @@
             <div class="field-row">
               <label class="field">
                 <span>Nombre</span>
-                <input class="input" [value]="editor.draft.name" (input)="patchCharacterDraft({ name: str($event) })" />
+                <input class="input" [value]="editor.draft.name" (input)="chars.patchCharacterDraft({ name: str($event) })" />
               </label>
               <label class="field">
                 <span>Tipo</span>
-                <select class="input" [value]="editor.draft.kind" (change)="setCharacterKind(str($event))">
-                  @for (kind of characterKinds; track kind.id) {
+                <select class="input" [value]="editor.draft.kind" (change)="chars.setCharacterKind(str($event))">
+                  @for (kind of chars.characterKinds; track kind.id) {
                     <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.label }}</option>
                   }
                 </select>
               </label>
             </div>
-            <p class="hint">{{ kindHint(editor.draft.kind) }}</p>
+            <p class="hint">{{ chars.kindHint(editor.draft.kind) }}</p>
 
             <div class="chareditor__section">Asset</div>
             <div class="chareditor__asset">
               <div class="chareditor__preview" title="Primer cuadro del recorte">
-                @if (draftPreviewStyle(); as style) {
+                @if (chars.draftPreviewStyle(); as style) {
                   <span class="chareditor__sprite" [style]="style"></span>
                 } @else {
                   <span class="chareditor__nopreview">Sin vista previa</span>
                 }
               </div>
               <div class="texpicker">
-                @for (texture of textures(); track texture) {
+                @for (texture of tex.textures(); track texture) {
                   <button class="texpicker__item" type="button" [title]="texture"
                           [class.is-active]="editor.draft.texture === 'textures/' + texture"
-                          (click)="setDraftTexture(texture)">
-                    @if (textureAssets()[texture]; as asset) {
+                          (click)="chars.setDraftTexture(texture)">
+                    @if (tex.textureAssets()[texture]; as asset) {
                       <img [src]="asset.dataUrl" [alt]="texture" />
                     }
                   </button>
@@ -520,22 +520,22 @@
               <label class="field">
                 <span>Recorte X</span>
                 <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.x"
-                       (change)="patchDraftRect('x', int($event))" />
+                       (change)="chars.patchDraftRect('x', int($event))" />
               </label>
               <label class="field">
                 <span>Y</span>
                 <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.y"
-                       (change)="patchDraftRect('y', int($event))" />
+                       (change)="chars.patchDraftRect('y', int($event))" />
               </label>
               <label class="field">
                 <span>Ancho</span>
                 <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.width"
-                       (change)="patchDraftRect('width', int($event))" />
+                       (change)="chars.patchDraftRect('width', int($event))" />
               </label>
               <label class="field">
                 <span>Alto</span>
                 <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.height"
-                       (change)="patchDraftRect('height', int($event))" />
+                       (change)="chars.patchDraftRect('height', int($event))" />
               </label>
             </div>
 
@@ -543,17 +543,17 @@
               <label class="field">
                 <span>Cuadros</span>
                 <input class="input" type="number" min="1" step="1" [value]="editor.draft.frames"
-                       (change)="setDraftFrames(int($event))" />
+                       (change)="chars.setDraftFrames(int($event))" />
               </label>
               <label class="field">
                 <span>Seg. por cuadro</span>
                 <input class="input" type="number" min="0.05" step="0.05" [value]="editor.draft.frameDuration"
-                       (change)="setDraftFrameDuration(num($event))" />
+                       (change)="chars.setDraftFrameDuration(num($event))" />
               </label>
               <label class="field">
                 <span>Tamaño (escala)</span>
                 <input class="input" type="number" min="0.25" step="0.25" [value]="editor.draft.scale"
-                       (change)="setDraftScale(num($event))" />
+                       (change)="chars.setDraftScale(num($event))" />
               </label>
             </div>
             <p class="hint">
@@ -566,19 +566,19 @@
               <label class="field">
                 <span>Ancho</span>
                 <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.width"
-                       (change)="patchDraftCollider('width', int($event))" />
+                       (change)="chars.patchDraftCollider('width', int($event))" />
               </label>
               <label class="field">
                 <span>Alto</span>
                 <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.height"
-                       (change)="patchDraftCollider('height', int($event))" />
+                       (change)="chars.patchDraftCollider('height', int($event))" />
               </label>
               <label class="check">
                 <input type="checkbox" [checked]="editor.draft.collider.solid === true"
-                       (change)="setDraftSolid(checked($event))" />
+                       (change)="chars.setDraftSolid(checked($event))" />
                 <span>Sólido</span>
               </label>
-              <button class="btn btn--small" type="button" (click)="fitDraftCollider()"
+              <button class="btn btn--small" type="button" (click)="chars.fitDraftCollider()"
                       title="Del tamaño con que se dibuja: el recorte por la escala">Ajustar al sprite</button>
             </div>
 
@@ -587,17 +587,17 @@
               <label class="field">
                 <span>Vida</span>
                 <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.health"
-                       (change)="patchDraftStats('health', num($event))" />
+                       (change)="chars.patchDraftStats('health', num($event))" />
               </label>
               <label class="field">
                 <span>Daño</span>
                 <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.damage"
-                       (change)="patchDraftStats('damage', num($event))" />
+                       (change)="chars.patchDraftStats('damage', num($event))" />
               </label>
               <label class="field">
                 <span title="Celdas de grilla por segundo">Velocidad</span>
                 <input class="input" type="number" min="0" step="0.5" [value]="editor.draft.stats.speed"
-                       (change)="patchDraftStats('speed', num($event))" />
+                       (change)="chars.patchDraftStats('speed', num($event))" />
               </label>
             </div>
           </div>
@@ -605,11 +605,11 @@
 
         <div class="modal__actions">
           @if (editor.savedId) {
-            <button class="btn btn--danger" type="button" (click)="deleteCharacterPreset()">Eliminar</button>
-            <button class="btn" type="button" (click)="duplicateCharacterPreset()">Duplicar</button>
+            <button class="btn btn--danger" type="button" (click)="chars.deleteCharacterPreset()">Eliminar</button>
+            <button class="btn" type="button" (click)="chars.duplicateCharacterPreset()">Duplicar</button>
           }
-          <button class="btn" type="button" (click)="closeCharacterEditor()">Cerrar</button>
-          <button class="btn btn--primary" type="button" (click)="saveCharacterDraft()">Guardar</button>
+          <button class="btn" type="button" (click)="chars.closeCharacterEditor()">Cerrar</button>
+          <button class="btn btn--primary" type="button" (click)="chars.saveCharacterDraft()">Guardar</button>
         </div>
       </section>
     </div>
@@ -639,7 +639,7 @@
                 @for (item of group.items; track item.id) {
                   <button class="tree__item" type="button" [class.is-active]="editor.savedId === item.id"
                           (click)="itemEditor.edit(item.id)">
-                    <span class="tree__label">{{ itemGlyph(item) }} {{ item.name }}</span>
+                    <span class="tree__label">{{ items.itemGlyph(item) }} {{ item.name }}</span>
                   </button>
                 } @empty {
                   <p class="chareditor__empty">Ninguno guardado</p>
@@ -661,7 +661,7 @@
               <label class="field">
                 <span>Tipo</span>
                 <select class="input" (change)="itemEditor.setKind(str($event))">
-                  @for (kind of itemKinds; track kind.id) {
+                  @for (kind of items.itemKinds; track kind.id) {
                     <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.glyph }} {{ kind.label }}</option>
                   }
                 </select>
@@ -676,23 +676,23 @@
                 </label>
               }
             </div>
-            <p class="hint">{{ itemKindHint(editor.draft.kind) }}</p>
+            <p class="hint">{{ items.itemKindHint(editor.draft.kind) }}</p>
 
             <div class="chareditor__section">Sprite</div>
             <div class="chareditor__asset">
               <div class="chareditor__preview" title="Así se ve en el piso y en el inventario">
-                @if (itemSpriteStyle(editor.draft, 96); as style) {
+                @if (items.itemSpriteStyle(editor.draft, 96); as style) {
                   <span class="chareditor__sprite" [style]="style"></span>
                 } @else {
                   <span class="chareditor__nopreview">Sin vista previa</span>
                 }
               </div>
               <div class="texpicker">
-                @for (texture of textures(); track texture) {
+                @for (texture of tex.textures(); track texture) {
                   <button class="texpicker__item" type="button" [title]="texture"
                           [class.is-active]="editor.draft.texture === 'textures/' + texture"
-                          (click)="setItemTexture(texture)">
-                    @if (textureAssets()[texture]; as asset) {
+                          (click)="items.setItemTexture(texture)">
+                    @if (tex.textureAssets()[texture]; as asset) {
                       <img [src]="asset.dataUrl" [alt]="texture" />
                     }
                   </button>
@@ -864,20 +864,20 @@
   <!-- Pasar a otro nivel: arma el evento con su trigger y la accion
        load_level, que en el juego muestra la pantalla con el mensaje y carga
        el nivel elegido. Queda en el panel Eventos para ajustarlo. -->
-  @if (transitionDraft(); as draft) {
-    <div class="modal-backdrop" (click)="cancelTransitionDialog()">
+  @if (transition.transitionDraft(); as draft) {
+    <div class="modal-backdrop" (click)="transition.cancelTransitionDialog()">
       <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="transition-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="transition-title">Pasar a otro nivel</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="cancelTransitionDialog()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" (click)="transition.cancelTransitionDialog()">×</button>
         </div>
 
         <div class="modal__body">
           <div class="field-row">
             <label class="field">
               <span>Cuándo</span>
-              <select class="input" [value]="draft.when" (change)="setTransitionWhen(str($event))">
+              <select class="input" [value]="draft.when" (change)="transition.setTransitionWhen(str($event))">
                 <option value="entity_destroyed" [selected]="draft.when === 'entity_destroyed'">
                   Al eliminar una entidad
                 </option>
@@ -890,7 +890,7 @@
             @if (draft.when !== 'all_enemies') {
               <label class="field">
                 <span>Entidad</span>
-                <select class="input" [value]="draft.entity" (change)="patchTransitionDraft({ entity: str($event) })">
+                <select class="input" [value]="draft.entity" (change)="transition.patchTransitionDraft({ entity: str($event) })">
                   <option value="" disabled [selected]="draft.entity === ''">— entidad —</option>
                   @for (id of entityIds(); track id) {
                     <option [value]="id" [selected]="draft.entity === id">{{ id }}</option>
@@ -903,21 +903,21 @@
           <div class="field-row">
             <label class="field">
               <span>Ir al nivel</span>
-              @if (levelFiles().length > 0) {
-                <select class="input" [value]="draft.level" (change)="patchTransitionDraft({ level: str($event) })">
+              @if (proj.levelFiles().length > 0) {
+                <select class="input" [value]="draft.level" (change)="transition.patchTransitionDraft({ level: str($event) })">
                   <option value="" disabled [selected]="draft.level === ''">— nivel —</option>
-                  @for (file of levelFiles(); track file) {
+                  @for (file of proj.levelFiles(); track file) {
                     <option [value]="file" [selected]="draft.level === file">{{ file }}</option>
                   }
                 </select>
               } @else {
                 <input class="input" [value]="draft.level" placeholder="test_level_1.json"
-                       (input)="patchTransitionDraft({ level: str($event) })" />
+                       (input)="transition.patchTransitionDraft({ level: str($event) })" />
               }
             </label>
             <label class="field">
               <span>Mensaje</span>
-              <input class="input" [value]="draft.message" (input)="patchTransitionDraft({ message: str($event) })" />
+              <input class="input" [value]="draft.message" (input)="transition.patchTransitionDraft({ message: str($event) })" />
             </label>
           </div>
 
@@ -931,8 +931,8 @@
         </div>
 
         <div class="modal__actions">
-          <button class="btn" type="button" (click)="cancelTransitionDialog()">Cancelar</button>
-          <button class="btn btn--primary" type="button" (click)="confirmTransitionDialog()">Crear evento</button>
+          <button class="btn" type="button" (click)="transition.cancelTransitionDialog()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="transition.confirmTransitionDialog()">Crear evento</button>
         </div>
       </section>
     </div>
@@ -991,7 +991,7 @@
                 <select class="input" (change)="puzzle.patch({ item: str($event) })">
                   <option value="" [selected]="draft.item === ''">— cualquiera —</option>
                   @for (item of combat.options(); track item.id) {
-                    <option [value]="item.id" [selected]="draft.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                    <option [value]="item.id" [selected]="draft.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
                   }
                 </select>
               </label>
@@ -1105,7 +1105,7 @@
             <!-- Raiz del arbol: deseleccionar todo. Las entidades cuelgan de ella
                  con sangria, como los objetos bajo una coleccion en Blender. -->
             <button class="tree__item tree__item--root" [class.is-active]="!selected()"
-                    (click)="selectEntity(null)">
+                    (click)="sel.selectEntity(null)">
               <span class="tree__icon">▾</span>{{ levels.level().name }}
             </button>
 
@@ -1115,9 +1115,9 @@
                  solo la que esta mostrando el inspector. -->
             @for (entity of entities(); track entity.id) {
               <button class="tree__item tree__item--child"
-                      [class.is-active]="isEntitySelected(entity.id)"
+                      [class.is-active]="sel.isEntitySelected(entity.id)"
                       [class.is-current]="selected()?.id === entity.id"
-                      (click)="onOutlinerClick(entity.id, $event)">
+                      (click)="sel.onOutlinerClick(entity.id, $event)">
                 <span class="tree__icon tree__icon--{{ entity.type }}">▣</span>
                 <span class="tree__label">{{ entity.id }}</span>
                 <span class="tree__meta">{{ entity.position.col }},{{ entity.position.row }}</span>
@@ -1132,9 +1132,9 @@
                  existente con el dialogo del sistema (sirva o no la carpeta
                  abierta), y cambiar cual es la carpeta del proyecto. -->
             <div class="filetools">
-              <button class="btn btn--small" (click)="openLevelFile()"
+              <button class="btn btn--small" (click)="proj.openLevelFile()"
                       title="Elegir un archivo .json de nivel (Ctrl+O)">Abrir escena…</button>
-              <button class="btn btn--small" (click)="openProject()"
+              <button class="btn btn--small" (click)="proj.openProject()"
                       title="Elegir la carpeta raiz del proyecto">Carpeta…</button>
             </div>
 
@@ -1175,23 +1175,23 @@
           </button>
           <span class="area__title">Recursos</span>
           <div class="head__spacer"></div>
-          <span class="area__title">{{ textures().length }}</span>
-          <button class="tool" [disabled]="importing()" (click)="importTextures()"
+          <span class="area__title">{{ tex.textures().length }}</span>
+          <button class="tool" [disabled]="tex.importing()" (click)="tex.importTextures()"
                   title="Copiar a assets/textures/ las imagenes de una carpeta, ajustadas al tamano de un tile">
-            {{ importing() ? 'Importando…' : 'Importar…' }}
+            {{ tex.importing() ? 'Importando…' : 'Importar…' }}
           </button>
         </div>
 
         @if (!panels.isCollapsed('side-assets')) {
         <div class="area__body assets" [class.assets--fill]="panels.isCollapsed('side-main')">
-          @for (texture of textures(); track texture) {
-            <button class="asset" [class.is-active]="activeTexture() === texture"
+          @for (texture of tex.textures(); track texture) {
+            <button class="asset" [class.is-active]="palette.activeTexture() === texture"
                     draggable="true"
-                    (dragstart)="onTextureDragStart($event, texture)"
-                    (click)="selectTexture(texture)"
+                    (dragstart)="tex.onTextureDragStart($event, texture)"
+                    (click)="palette.selectTexture(texture)"
                     [title]="texture + ' — arrastra sobre una entidad para cambiarle la textura'">
               <span class="asset__thumb">
-                @if (textureAssets()[texture]; as asset) {
+                @if (tex.textureAssets()[texture]; as asset) {
                   <img class="asset__img" [src]="asset.dataUrl" [alt]="texture" />
                 }
               </span>
@@ -1228,11 +1228,11 @@
           @for (shape of shapes; track shape.id) {
             <button
               class="shape"
-              [class.is-active]="activeShape() === shape.id"
+              [class.is-active]="palette.activeShape() === shape.id"
               draggable="true"
               [title]="shape.label + ' — arrastra al viewport, o haz clic para colocar'"
-              (dragstart)="onShapeDragStart($event, shape.id)"
-              (click)="selectShape(shape.id)"
+              (dragstart)="view.onShapeDragStart($event, shape.id)"
+              (click)="palette.selectShape(shape.id)"
             >
               <!-- La miniatura es un recorte del MISMO sheet que va al juego,
                    escalado a la mitad: no hay un icono aparte que pueda quedar
@@ -1259,7 +1259,7 @@
           </button>
           <span class="area__title">Personajes</span>
           <div class="head__spacer"></div>
-          <button class="tool" type="button" (click)="openCharacterEditor()"
+          <button class="tool" type="button" (click)="chars.openCharacterEditor()"
                   title="Configurar personajes: asset, tamaño y características">Configurar…</button>
         </div>
 
@@ -1272,30 +1272,30 @@
             @for (character of characters; track character.id) {
               <button
                 class="shape"
-                [class.is-active]="expandedKind() === character.id"
+                [class.is-active]="chars.expandedKind() === character.id"
                 draggable="true"
                 [title]="character.label + ': clic para ver los configurados, o arrastrá el básico a la grilla'"
-                (dragstart)="onCharacterDragStart($event, basePresetId(character.id))"
-                (click)="toggleKind(character.id)"
+                (dragstart)="view.onCharacterDragStart($event, chars.basePresetId(character.id))"
+                (click)="chars.toggleKind(character.id)"
               >
                 <span class="shape__icon character__icon" [style.background]="character.color">
                   {{ character.glyph }}
                 </span>
-                <span class="shape__name">{{ character.label }} {{ expandedKind() === character.id ? '▴' : '▾' }}</span>
+                <span class="shape__name">{{ character.label }} {{ chars.expandedKind() === character.id ? '▴' : '▾' }}</span>
               </button>
             }
           </div>
 
-          @if (expandedKind(); as kind) {
+          @if (chars.expandedKind(); as kind) {
             <div class="presetlist">
-              @for (preset of presetsOfKind(kind); track preset.id) {
+              @for (preset of chars.presetsOfKind(kind); track preset.id) {
                 <button class="presetlist__item" type="button" draggable="true"
-                        [class.is-active]="activeCharacter() === preset.id"
+                        [class.is-active]="palette.activeCharacter() === preset.id"
                         [title]="preset.name + ' — arrastrá a la grilla, o clic para colocarlo'"
-                        (dragstart)="onCharacterDragStart($event, preset.id)"
-                        (click)="selectCharacter(preset.id)">
-                  <span class="presetlist__thumb" [style.background]="kindColor(kind)">
-                    @if (presetSpriteStyle(preset); as style) {
+                        (dragstart)="view.onCharacterDragStart($event, preset.id)"
+                        (click)="palette.selectCharacter(preset.id)">
+                  <span class="presetlist__thumb" [style.background]="chars.kindColor(kind)">
+                    @if (chars.presetSpriteStyle(preset); as style) {
                       <span class="presetlist__sprite" [style]="style"></span>
                     }
                   </span>
@@ -1303,8 +1303,8 @@
                   <span class="presetlist__stats">♥{{ preset.stats.health }} ⚔{{ preset.stats.damage }}</span>
                 </button>
               }
-              <button class="btn btn--small presetlist__new" type="button" (click)="openCharacterEditor(kind)">
-                + Nuevo {{ kindLabel(kind).toLowerCase() }}…
+              <button class="btn btn--small presetlist__new" type="button" (click)="chars.openCharacterEditor(kind)">
+                + Nuevo {{ chars.kindLabel(kind).toLowerCase() }}…
               </button>
             </div>
           }
@@ -1332,19 +1332,19 @@
           <div class="presetlist">
             @for (item of itemLibrary.items(); track item.id) {
               <button class="presetlist__item" type="button" draggable="true"
-                      [class.is-active]="activeItem() === item.id"
+                      [class.is-active]="palette.activeItem() === item.id"
                       [title]="item.name + ' — arrastrá a la grilla, o clic para colocarlo'"
-                      (dragstart)="onItemDragStart($event, item.id)"
-                      (click)="selectItem(item.id)">
-                <span class="presetlist__thumb" [style.background]="itemColor(item)">
-                  @if (itemSpriteStyle(item); as style) {
+                      (dragstart)="items.onItemDragStart($event, item.id)"
+                      (click)="palette.selectItem(item.id)">
+                <span class="presetlist__thumb" [style.background]="items.itemColor(item)">
+                  @if (items.itemSpriteStyle(item); as style) {
                     <span class="presetlist__sprite" [style]="style"></span>
                   } @else {
-                    {{ itemGlyph(item) }}
+                    {{ items.itemGlyph(item) }}
                   }
                 </span>
                 <span class="presetlist__name">{{ item.name }}</span>
-                <span class="presetlist__stats">{{ itemStat(item) }}</span>
+                <span class="presetlist__stats">{{ items.itemStat(item) }}</span>
               </button>
             } @empty {
               <p class="empty">Sin objetos. “Configurar…” crea armas, curaciones y monedas.</p>
@@ -1362,17 +1362,17 @@
         <span class="area__kind" title="Viewport isometrico">⊞</span>
 
         <div class="seg">
-          <button class="tool" [class.is-active]="tool() === 'select'" (click)="setTool('select')"
+          <button class="tool" [class.is-active]="palette.tool() === 'select'" (click)="palette.setTool('select')"
                   title="Seleccionar: clic sobre una entidad">▶</button>
-          <button class="tool" [class.is-active]="tool() === 'place'" (click)="setTool('place')"
+          <button class="tool" [class.is-active]="palette.tool() === 'place'" (click)="palette.setTool('place')"
                   title="Colocar entidad: textura o figura elegida">✚</button>
-          <button class="tool" [class.is-active]="tool() === 'floor'" (click)="setTool('floor')"
+          <button class="tool" [class.is-active]="palette.tool() === 'floor'" (click)="palette.setTool('floor')"
                   title="Alternar piso: una celda sin suelo no se puede pisar">▱</button>
-          <button class="tool" [class.is-active]="tool() === 'wall'" (click)="setTool('wall')"
+          <button class="tool" [class.is-active]="palette.tool() === 'wall'" (click)="palette.setTool('wall')"
                   title="Alternar pared: bloquea el paso en esa celda">▥</button>
-          <button class="tool" [class.is-active]="tool() === 'room'" (click)="setTool('room')"
+          <button class="tool" [class.is-active]="palette.tool() === 'room'" (click)="palette.setTool('room')"
                   title="Grilla: arrastrá sobre el vacío para dibujar una nueva, o dentro de una para moverla">▢</button>
-          <button class="tool" [class.is-active]="tool() === 'tunnel'" (click)="setTool('tunnel')"
+          <button class="tool" [class.is-active]="palette.tool() === 'tunnel'" (click)="palette.setTool('tunnel')"
                   title="Túnel: trazalo a mano, de una grilla a otra">⤳</button>
         </div>
 
@@ -1381,9 +1381,9 @@
         <!-- Toggles de overlay: en Blender viven juntos y encendidos se ponen
              azules, que es exactamente lo que hace .tool.is-active. -->
         <div class="seg">
-          <button class="tool" [class.is-active]="showGrid()" (click)="toggleGrid()"
+          <button class="tool" [class.is-active]="view.showGrid()" (click)="view.toggleGrid()"
                   title="Mostrar grilla">Grilla</button>
-          <button class="tool" [class.is-active]="showColliders()" (click)="toggleColliders()"
+          <button class="tool" [class.is-active]="view.showColliders()" (click)="view.toggleColliders()"
                   title="Mostrar colisiones">Colisiones</button>
         </div>
 
@@ -1391,16 +1391,16 @@
 
         <span class="head__label">Zoom</span>
         <div class="seg">
-          @for (step of zoomSteps; track step) {
-            <button class="tool tool--zoom" [class.is-active]="zoom() === step" (click)="setZoom(step)">
+          @for (step of view.zoomSteps; track step) {
+            <button class="tool tool--zoom" [class.is-active]="view.zoom() === step" (click)="view.setZoom(step)">
               {{ step }}x
             </button>
           }
         </div>
-        <button class="tool" (click)="frameAll()" title="Encuadrar todo (Inicio)">Encuadrar</button>
+        <button class="tool" (click)="view.frameAll()" title="Encuadrar todo (Inicio)">Encuadrar</button>
 
         <div class="head__spacer"></div>
-        <span class="head__label">{{ zoomLabel() }}</span>
+        <span class="head__label">{{ view.zoomLabel() }}</span>
       </div>
 
       <!-- El canvas no tiene width/height en el HTML: se los fija draw() con
@@ -1411,18 +1411,18 @@
         <canvas
           #viewport
           class="canvas"
-          [class.canvas--place]="tool() !== 'select'"
-          [class.canvas--panning]="panning()"
-          [class.canvas--moving]="moving()"
-          (pointerdown)="onPointerDown($event)"
-          (pointermove)="onPointerMove($event)"
-          (pointerup)="onPointerUp($event)"
-          (pointerleave)="onPointerLeave()"
-          (wheel)="onWheel($event)"
-          (contextmenu)="onContextMenu($event)"
-          (dragover)="onCanvasDragOver($event)"
-          (dragleave)="onCanvasDragLeave()"
-          (drop)="onCanvasDrop($event)"
+          [class.canvas--place]="palette.tool() !== 'select'"
+          [class.canvas--panning]="view.panning()"
+          [class.canvas--moving]="view.moving()"
+          (pointerdown)="view.onPointerDown($event)"
+          (pointermove)="view.onPointerMove($event)"
+          (pointerup)="view.onPointerUp($event)"
+          (pointerleave)="view.onPointerLeave()"
+          (wheel)="view.onWheel($event)"
+          (contextmenu)="view.onContextMenu($event)"
+          (dragover)="view.onCanvasDragOver($event)"
+          (dragleave)="view.onCanvasDragLeave()"
+          (drop)="view.onCanvasDrop($event)"
         ></canvas>
 
         <!-- Nivel y objeto activo arriba a la izquierda, como el texto de
@@ -1437,7 +1437,7 @@
           <div class="vp-gridpos" role="group" aria-label="Líneas de la grilla">
             <!-- Tres capas = lineas encima de todo; las mismas capas tachadas =
                  lineas debajo, sin tapar las entidades. -->
-            <button type="button" [class.is-active]="gridOnTop()" (click)="setGridOnTop(true)"
+            <button type="button" [class.is-active]="view.gridOnTop()" (click)="view.setGridOnTop(true)"
                     title="Líneas de la grilla encima de las entidades" aria-label="Líneas encima">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M8 2 14 5 8 8 2 5Z" />
@@ -1445,7 +1445,7 @@
                 <path d="M2 11 8 14 14 11" />
               </svg>
             </button>
-            <button type="button" [class.is-active]="!gridOnTop()" (click)="setGridOnTop(false)"
+            <button type="button" [class.is-active]="!view.gridOnTop()" (click)="view.setGridOnTop(false)"
                     title="Líneas de la grilla debajo de las entidades" aria-label="Líneas debajo">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M8 2 14 5 8 8 2 5Z" />
@@ -1459,11 +1459,11 @@
 
 
         <div class="vp-chips">
-          @if (hovered(); as cell) {
+          @if (view.hovered(); as cell) {
             <span>{{ cell.col }}, {{ cell.row }}</span>
           }
-          @if (tool() === 'place') {
-            <span>colocar · {{ activeCharacterLabel() ?? activeItemLabel() ?? activeShape() ?? activeTexture() ?? 'nada elegido' }}</span>
+          @if (palette.tool() === 'place') {
+            <span>colocar · {{ palette.activeCharacterLabel() ?? palette.activeItemLabel() ?? palette.activeShape() ?? palette.activeTexture() ?? 'nada elegido' }}</span>
           }
           @if (selectionCount() > 1) {
             <span>{{ selectionCount() }} seleccionadas</span>
@@ -1527,16 +1527,16 @@
                   <div class="panel__body">
                     <label class="field">
                       <span>ID</span>
-                      <input class="input" [value]="entity.id" (change)="patchEntity({ id: str($event) })" />
+                      <input class="input" [value]="entity.id" (change)="inspector.patchEntity({ id: str($event) })" />
                     </label>
                     <label class="field">
                       <span>Tipo</span>
-                      <input class="input" [value]="entity.type" (change)="patchEntity({ type: str($event) })" />
+                      <input class="input" [value]="entity.type" (change)="inspector.patchEntity({ type: str($event) })" />
                     </label>
                     <label class="field">
                       <span>Textura</span>
                       <input class="input" [value]="entity.texture"
-                             (change)="patchEntity({ texture: str($event) })" />
+                             (change)="inspector.patchEntity({ texture: str($event) })" />
                     </label>
                   </div>
                 }
@@ -1552,12 +1552,12 @@
                     <label class="field">
                       <span>Columna</span>
                       <input class="input" type="number" step="1" [value]="entity.position.col"
-                             (input)="patchPosition('col', int($event))" />
+                             (input)="inspector.patchPosition('col', int($event))" />
                     </label>
                     <label class="field">
                       <span>Fila</span>
                       <input class="input" type="number" step="1" [value]="entity.position.row"
-                             (input)="patchPosition('row', int($event))" />
+                             (input)="inspector.patchPosition('row', int($event))" />
                     </label>
                   </div>
                 }
@@ -1574,24 +1574,24 @@
                       <label class="field">
                         <span>X</span>
                         <input class="input" type="number" step="1" [value]="entity.sourceRect.x"
-                               (input)="patchSourceRect('x', int($event))" />
+                               (input)="inspector.patchSourceRect('x', int($event))" />
                       </label>
                       <label class="field">
                         <span>Y</span>
                         <input class="input" type="number" step="1" [value]="entity.sourceRect.y"
-                               (input)="patchSourceRect('y', int($event))" />
+                               (input)="inspector.patchSourceRect('y', int($event))" />
                       </label>
                     </div>
                     <div class="field-row">
                       <label class="field">
                         <span>W</span>
                         <input class="input" type="number" step="1" [value]="entity.sourceRect.width"
-                               (input)="patchSourceRect('width', int($event))" />
+                               (input)="inspector.patchSourceRect('width', int($event))" />
                       </label>
                       <label class="field">
                         <span>H</span>
                         <input class="input" type="number" step="1" [value]="entity.sourceRect.height"
-                               (input)="patchSourceRect('height', int($event))" />
+                               (input)="inspector.patchSourceRect('height', int($event))" />
                       </label>
                     </div>
                   </div>
@@ -1609,13 +1609,13 @@
                          tambien aca porque es una propiedad del objeto, y el
                          inspector es donde uno la busca. -->
                     <label class="check">
-                      <input type="checkbox" [checked]="hasCollision(entity)"
-                             (change)="setCollisionOnSelection(checked($event))" />
+                      <input type="checkbox" [checked]="entityOps.hasCollision(entity)"
+                             (change)="entityOps.setCollisionOnSelection(checked($event))" />
                       <span>Colisión (solo con su forma)</span>
                     </label>
                     <label class="check" style="margin-top: 6px">
-                      <input type="checkbox" [checked]="isWall(entity)"
-                             (change)="setWallOnSelection(checked($event))" />
+                      <input type="checkbox" [checked]="entityOps.isWall(entity)"
+                             (change)="entityOps.setWallOnSelection(checked($event))" />
                       <span>Pared (bloquea todo el tile)</span>
                     </label>
                     @if (entity.collider; as collider) {
@@ -1623,12 +1623,12 @@
                         <label class="field">
                           <span>W</span>
                           <input class="input" type="number" step="1" [value]="collider.width"
-                                 (input)="patchCollider('width', int($event))" />
+                                 (input)="inspector.patchCollider('width', int($event))" />
                         </label>
                         <label class="field">
                           <span>H</span>
                           <input class="input" type="number" step="1" [value]="collider.height"
-                                 (input)="patchCollider('height', int($event))" />
+                                 (input)="inspector.patchCollider('height', int($event))" />
                         </label>
                       </div>
                     }
@@ -1646,19 +1646,19 @@
                     <div class="field-row">
                       <label class="field">
                         <span>Cuadros</span>
-                        <input class="input" type="number" min="1" step="1" [value]="effectiveFrames(entity)"
-                               (change)="patchEntityFrames(int($event))" />
+                        <input class="input" type="number" min="1" step="1" [value]="inspector.effectiveFrames(entity)"
+                               (change)="inspector.patchEntityFrames(int($event))" />
                       </label>
                       <label class="field">
                         <span>Seg/cuadro</span>
                         <input class="input" type="number" min="0.05" step="0.05"
-                               [value]="effectiveFrameDuration(entity)"
-                               (change)="patchEntityFrameDuration(num($event))" />
+                               [value]="inspector.effectiveFrameDuration(entity)"
+                               (change)="inspector.patchEntityFrameDuration(num($event))" />
                       </label>
                       <label class="field">
                         <span>Escala</span>
                         <input class="input" type="number" min="0.25" step="0.25" [value]="entity.scale ?? 1"
-                               (change)="patchEntityScale(num($event))" />
+                               (change)="inspector.patchEntityScale(num($event))" />
                       </label>
                     </div>
                     <p class="hint">
@@ -1669,7 +1669,7 @@
                 }
               </section>
 
-              @if (isCharacter(entity)) {
+              @if (inspector.isCharacter(entity)) {
                 <section class="panel">
                   <button class="panel__head" (click)="panels.togglePanel('stats')">
                     <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('stats')">▶</span>
@@ -1680,18 +1680,18 @@
                       <div class="field-row">
                         <label class="field">
                           <span>Vida</span>
-                          <input class="input" type="number" min="0" step="1" [value]="statsOf(entity).health"
-                                 (change)="patchEntityStats('health', num($event))" />
+                          <input class="input" type="number" min="0" step="1" [value]="inspector.statsOf(entity).health"
+                                 (change)="inspector.patchEntityStats('health', num($event))" />
                         </label>
                         <label class="field">
                           <span>Daño</span>
-                          <input class="input" type="number" min="0" step="1" [value]="statsOf(entity).damage"
-                                 (change)="patchEntityStats('damage', num($event))" />
+                          <input class="input" type="number" min="0" step="1" [value]="inspector.statsOf(entity).damage"
+                                 (change)="inspector.patchEntityStats('damage', num($event))" />
                         </label>
                         <label class="field">
                           <span>Velocidad</span>
-                          <input class="input" type="number" min="0" step="0.5" [value]="statsOf(entity).speed"
-                                 (change)="patchEntityStats('speed', num($event))" />
+                          <input class="input" type="number" min="0" step="0.5" [value]="inspector.statsOf(entity).speed"
+                                 (change)="inspector.patchEntityStats('speed', num($event))" />
                         </label>
                       </div>
                       @if (entity.preset) {
@@ -1739,7 +1739,7 @@
                         </label>
                         <label class="field" style="margin-top: 6px">
                           <span>Con el inventario lleno</span>
-                          <select class="input" (change)="combat.patchInventory(entity, { onFull: onFullOf(str($event)) })">
+                          <select class="input" (change)="combat.patchInventory(entity, { onFull: items.onFullOf(str($event)) })">
                             @for (option of combat.onFullOptions; track option.value) {
                               <option [value]="option.value" [selected]="inventory.onFull === option.value">{{ option.label }}</option>
                             }
@@ -1840,7 +1840,7 @@
                           </select>
                         </label>
                         @if (entity.weapon) {
-                          <p class="hint">{{ weaponSummary(entity.weapon) }}</p>
+                          <p class="hint">{{ items.weaponSummary(entity.weapon) }}</p>
                         }
 
                         <div class="subhead">Puede soltar al caer</div>
@@ -1848,7 +1848,7 @@
                           <div class="maprow maprow--inline">
                             <select class="input maprow__select" (change)="combat.setDropItem(entity, index, str($event))">
                               @for (item of combat.options(); track item.id) {
-                                <option [value]="item.id" [selected]="drop.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                                <option [value]="item.id" [selected]="drop.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
                               }
                             </select>
                             <input class="input maprow__num" type="number" min="0" max="100" step="5"
@@ -1871,7 +1871,7 @@
                             <select class="input maprow__select"
                                     (change)="combat.setShopItem(entity, index, { item: str($event) })">
                               @for (item of combat.options(); track item.id) {
-                                <option [value]="item.id" [selected]="entry.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                                <option [value]="item.id" [selected]="entry.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
                               }
                             </select>
                             <input class="input maprow__num" type="number" min="0" step="1" [value]="entry.price"
@@ -1891,7 +1891,7 @@
                           <select class="input" (change)="combat.setPickupItem(entity, str($event))">
                             <option value="" disabled [selected]="!entity.item">— elegir —</option>
                             @for (item of combat.options(); track item.id) {
-                              <option [value]="item.id" [selected]="entity.item === item.id">{{ itemGlyph(item) }} {{ item.name }}</option>
+                              <option [value]="item.id" [selected]="entity.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
                             }
                           </select>
                         </label>
@@ -1921,8 +1921,8 @@
               <section class="panel panel--flat">
                 <div class="panel__body">
                   <div class="field-row">
-                    <button class="btn" style="flex: 1" (click)="duplicateSelected()">Duplicar</button>
-                    <button class="btn btn--danger" style="flex: 1" (click)="deleteSelected()">Eliminar</button>
+                    <button class="btn" style="flex: 1" (click)="entityOps.duplicateSelected()">Duplicar</button>
+                    <button class="btn btn--danger" style="flex: 1" (click)="entityOps.deleteSelected()">Eliminar</button>
                   </div>
                 </div>
               </section>
@@ -1940,7 +1940,7 @@
               @if (!panels.isCollapsed('shapes')) {
                 <div class="panel__body">
                   <label class="check">
-                    <input type="checkbox" [checked]="paintShapes()" (change)="paintShapes.set(checked($event))" />
+                    <input type="checkbox" [checked]="palette.paintShapes()" (change)="palette.paintShapes.set(checked($event))" />
                     <span>Pintar figuras arrastrando</span>
                   </label>
                   <p class="hint">Shift + arrastrar pinta siempre.</p>
@@ -1957,7 +1957,7 @@
                 <div class="panel__body">
                   <label class="field">
                     <span>Nombre</span>
-                    <input class="input" [value]="levels.level().name" (change)="renameLevel(str($event))" />
+                    <input class="input" [value]="levels.level().name" (change)="inspector.renameLevel(str($event))" />
                   </label>
                 </div>
               }
@@ -1973,41 +1973,41 @@
                   <!-- Selector a lo Photoshop, sin ventana aparte: el cuadro
                        elige saturacion (X) y brillo (Y), la barra el tono. -->
                   <div class="picker">
-                    <div class="picker__square" [style.background-color]="backgroundHueCss()"
-                         (pointerdown)="onBackgroundSquare($event)" (pointermove)="onBackgroundSquare($event)">
+                    <div class="picker__square" [style.background-color]="bg.backgroundHueCss()"
+                         (pointerdown)="bg.onBackgroundSquare($event)" (pointermove)="bg.onBackgroundSquare($event)">
                       <span class="picker__cursor"
-                            [style.left.%]="backgroundHsv().s * 100"
-                            [style.top.%]="(1 - backgroundHsv().v) * 100"
-                            [style.background-color]="backgroundHex()"></span>
+                            [style.left.%]="bg.backgroundHsv().s * 100"
+                            [style.top.%]="(1 - bg.backgroundHsv().v) * 100"
+                            [style.background-color]="bg.backgroundHex()"></span>
                     </div>
                     <div class="picker__hue"
-                         (pointerdown)="onBackgroundHue($event)" (pointermove)="onBackgroundHue($event)">
-                      <span class="picker__hue-cursor" [style.top.%]="backgroundHsv().h / 360 * 100"></span>
+                         (pointerdown)="bg.onBackgroundHue($event)" (pointermove)="bg.onBackgroundHue($event)">
+                      <span class="picker__hue-cursor" [style.top.%]="bg.backgroundHsv().h / 360 * 100"></span>
                     </div>
                   </div>
                   <div class="picker__row">
-                    <span class="picker__swatch" [style.background-color]="backgroundHex()"></span>
+                    <span class="picker__swatch" [style.background-color]="bg.backgroundHex()"></span>
                     <label class="field">
                       <span>Hex</span>
-                      <input class="input" maxlength="7" spellcheck="false" [value]="backgroundHex()"
-                             (change)="setBackgroundHex(str($event))" />
+                      <input class="input" maxlength="7" spellcheck="false" [value]="bg.backgroundHex()"
+                             (change)="bg.setBackgroundHex(str($event))" />
                     </label>
                   </div>
                   <div class="field-row">
                     <label class="field">
                       <span>R</span>
-                      <input class="input" type="number" step="1" min="0" max="255" [value]="backgroundColor().r"
-                             (change)="patchBackground({ r: int($event) })" />
+                      <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().r"
+                             (change)="bg.patchBackground({ r: int($event) })" />
                     </label>
                     <label class="field">
                       <span>G</span>
-                      <input class="input" type="number" step="1" min="0" max="255" [value]="backgroundColor().g"
-                             (change)="patchBackground({ g: int($event) })" />
+                      <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().g"
+                             (change)="bg.patchBackground({ g: int($event) })" />
                     </label>
                     <label class="field">
                       <span>B</span>
-                      <input class="input" type="number" step="1" min="0" max="255" [value]="backgroundColor().b"
-                             (change)="patchBackground({ b: int($event) })" />
+                      <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().b"
+                             (change)="bg.patchBackground({ b: int($event) })" />
                     </label>
                   </div>
                   <p class="hint">Color RGB del fondo de la escena al ejecutar el runtime.</p>
@@ -2026,24 +2026,24 @@
                     <label class="field">
                       <span>Ancho</span>
                       <input class="input" type="number" step="1" min="1" [value]="grid().width"
-                             (input)="patchGrid({ width: int($event) })" />
+                             (input)="inspector.patchGrid({ width: int($event) })" />
                     </label>
                     <label class="field">
                       <span>Alto</span>
                       <input class="input" type="number" step="1" min="1" [value]="grid().height"
-                             (input)="patchGrid({ height: int($event) })" />
+                             (input)="inspector.patchGrid({ height: int($event) })" />
                     </label>
                   </div>
                   <div class="field-row">
                     <label class="field">
                       <span>Tile W</span>
                       <input class="input" type="number" step="1" min="1" [value]="grid().tileWidth"
-                             (input)="patchGrid({ tileWidth: int($event) })" />
+                             (input)="inspector.patchGrid({ tileWidth: int($event) })" />
                     </label>
                     <label class="field">
                       <span>Tile H</span>
                       <input class="input" type="number" step="1" min="1" [value]="grid().tileHeight"
-                             (input)="patchGrid({ tileHeight: int($event) })" />
+                             (input)="inspector.patchGrid({ tileHeight: int($event) })" />
                     </label>
                   </div>
                   <p class="hint">Proporcion 2:1 (64×32) es el estandar de pixel art isometrico.</p>
@@ -2152,41 +2152,41 @@
               @if (!panels.isCollapsed('zones')) {
                 <div class="panel__body">
                   <p class="hint">Las salas del mapa ya sirven como zonas. Agregá una para una parte de una sala o un pasillo.</p>
-                  @for (zone of zones(); track zone.id) {
+                  @for (zone of map.zones(); track zone.id) {
                     <div class="maprow">
                       <div class="maprow__head">
                         <span class="maprow__name">◇ {{ zone.id }}</span>
                         <span class="maprow__actions">
                           <button class="btn btn--small btn--danger" type="button" title="Quitar la zona"
-                                  (click)="removeZone(zone.id)">×</button>
+                                  (click)="map.removeZone(zone.id)">×</button>
                         </span>
                       </div>
                       <div class="field-row">
                         <label class="field">
                           <span>Col</span>
                           <input class="input" type="number" min="0" step="1" [value]="zone.col"
-                                 (change)="updateZone(zone.id, { col: int($event) })" />
+                                 (change)="map.updateZone(zone.id, { col: int($event) })" />
                         </label>
                         <label class="field">
                           <span>Fila</span>
                           <input class="input" type="number" min="0" step="1" [value]="zone.row"
-                                 (change)="updateZone(zone.id, { row: int($event) })" />
+                                 (change)="map.updateZone(zone.id, { row: int($event) })" />
                         </label>
                         <label class="field">
                           <span>Ancho</span>
                           <input class="input" type="number" min="1" step="1" [value]="zone.width"
-                                 (change)="updateZone(zone.id, { width: int($event) })" />
+                                 (change)="map.updateZone(zone.id, { width: int($event) })" />
                         </label>
                         <label class="field">
                           <span>Alto</span>
                           <input class="input" type="number" min="1" step="1" [value]="zone.height"
-                                 (change)="updateZone(zone.id, { height: int($event) })" />
+                                 (change)="map.updateZone(zone.id, { height: int($event) })" />
                         </label>
                       </div>
                     </div>
                   }
                   <div class="field-row" style="margin-top: 8px">
-                    <button class="btn" style="flex: 1" type="button" (click)="addZone()">+ Zona</button>
+                    <button class="btn" style="flex: 1" type="button" (click)="map.addZone()">+ Zona</button>
                     <button class="btn" style="flex: 1" type="button" (click)="puzzle.open()">Puzzle de sala…</button>
                   </div>
                 </div>
@@ -2223,7 +2223,7 @@
 
        Los eventos son el corazon NoCode. Nada de esto esta escrito a mano: los
        <select> se llenan con lo que declara schema/event_catalog.json y los
-       campos de parametros salen de paramRows(), que lee los params del bloque
+       campos de parametros salen de ev.paramRows(), que lee los params del bloque
        elegido. Un bloque nuevo en el catalogo aparece aca sin tocar el HTML.
 
        Los params de tipo entity_ref se muestran como desplegable de entidades
@@ -2236,11 +2236,11 @@
           <span class="area__kind" title="Editor de eventos">⚡</span>
           <span class="area__title">Eventos</span>
           <span class="head__sep"></span>
-          <button class="tool" (click)="addEvent()">+ Evento</button>
+          <button class="tool" (click)="ev.addEvent()">+ Evento</button>
           <button class="tool" (click)="puzzle.open()"
                   title="Armar los eventos de una sala que bloquea el paso hasta resolverla">Puzzle de sala…</button>
           <div class="head__spacer"></div>
-          <span class="head__label">{{ events().length }} eventos</span>
+          <span class="head__label">{{ ev.events().length }} eventos</span>
         } @else if (workspace() === 'archivo') {
           <span class="area__kind" title="Visor de archivos">◈</span>
           <span class="area__title">{{ explorer.openFile()?.path ?? 'Archivo' }}</span>
@@ -2266,69 +2266,69 @@
                para no escribir a mano algo que no existe. -->
           <ng-template #stepParams let-step let-stepKind="stepKind" let-eventIndex="eventIndex"
                        let-stepIndex="stepIndex">
-            @for (row of paramRows(catalogKindOf(stepKind), step.type); track row.key) {
+            @for (row of ev.paramRows(ev.catalogKindOf(stepKind), step.type); track row.key) {
               <label class="field field--inline" [title]="row.def.description ?? ''">
                 <span>{{ row.key }}</span>
                 @switch (row.def.type) {
                   @case ('entity_ref') {
                     <select class="select-lone"
-                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" disabled [selected]="paramValue(step, row.key) === ''">— entidad —</option>
+                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— entidad —</option>
                       @for (id of entityIds(); track id) {
-                        <option [value]="id" [selected]="paramValue(step, row.key) === id">{{ id }}</option>
+                        <option [value]="id" [selected]="ev.paramValue(step, row.key) === id">{{ id }}</option>
                       }
                     </select>
                   }
                   @case ('level_ref') {
                     <select class="select-lone"
-                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" disabled [selected]="paramValue(step, row.key) === ''">— nivel —</option>
-                      @for (file of levelFiles(); track file) {
-                        <option [value]="file" [selected]="paramValue(step, row.key) === file">{{ file }}</option>
+                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— nivel —</option>
+                      @for (file of proj.levelFiles(); track file) {
+                        <option [value]="file" [selected]="ev.paramValue(step, row.key) === file">{{ file }}</option>
                       }
                     </select>
                   }
                   @case ('zone_ref') {
                     <select class="select-lone"
-                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" disabled [selected]="paramValue(step, row.key) === ''">— sala o zona —</option>
-                      @for (id of zoneIds(); track id) {
-                        <option [value]="id" [selected]="paramValue(step, row.key) === id">{{ id }}</option>
+                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— sala o zona —</option>
+                      @for (id of map.zoneIds(); track id) {
+                        <option [value]="id" [selected]="ev.paramValue(step, row.key) === id">{{ id }}</option>
                       }
                     </select>
                   }
                   @case ('item_ref') {
                     <select class="select-lone"
-                            (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" [selected]="paramValue(step, row.key) === ''">— cualquiera —</option>
+                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                      <option value="" [selected]="ev.paramValue(step, row.key) === ''">— cualquiera —</option>
                       @for (item of combat.options(); track item.id) {
-                        <option [value]="item.id" [selected]="paramValue(step, row.key) === item.id">
-                          {{ itemGlyph(item) }} {{ item.name }}
+                        <option [value]="item.id" [selected]="ev.paramValue(step, row.key) === item.id">
+                          {{ items.itemGlyph(item) }} {{ item.name }}
                         </option>
                       }
                     </select>
                   }
                   @case ('boolean') {
                     <input type="checkbox" [checked]="step.params[row.key] === true"
-                           (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, checked($event))" />
+                           (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, checked($event))" />
                   }
                   @default {
                     <input class="select-lone" [type]="row.def.type === 'number' ? 'number' : 'text'"
-                           [value]="paramValue(step, row.key)"
-                           (change)="updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))" />
+                           [value]="ev.paramValue(step, row.key)"
+                           (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))" />
                   }
                 }
               </label>
             }
           </ng-template>
 
-          @for (event of events(); track $index; let eventIndex = $index) {
+          @for (event of ev.events(); track $index; let eventIndex = $index) {
             <article class="event">
               <div class="event__row">
                 <span class="badge badge--trigger">Cuando</span>
                 <select class="select-lone" [value]="event.trigger.type"
-                        (change)="changeTrigger(eventIndex, str($event))">
-                  @for (entry of triggers(); track entry.type) {
+                        (change)="ev.changeTrigger(eventIndex, str($event))">
+                  @for (entry of ev.triggers(); track entry.type) {
                     <option [value]="entry.type" [selected]="event.trigger.type === entry.type">{{ entry.label }}</option>
                   }
                 </select>
@@ -2336,15 +2336,15 @@
                   *ngTemplateOutlet="stepParams; context: { $implicit: event.trigger, stepKind: 'trigger', eventIndex: eventIndex, stepIndex: 0 }" />
 
                 <div class="event__spacer"></div>
-                <button class="btn btn--small btn--danger" (click)="removeEvent(eventIndex)">Quitar</button>
+                <button class="btn btn--small btn--danger" (click)="ev.removeEvent(eventIndex)">Quitar</button>
               </div>
 
               @for (condition of event.conditions ?? []; track $index; let conditionIndex = $index) {
                 <div class="event__row event__row--child">
                   <span class="badge badge--condition">Si</span>
                   <select class="select-lone" [value]="condition.type"
-                          (change)="changeCondition(eventIndex, conditionIndex, str($event))">
-                    @for (entry of conditions(); track entry.type) {
+                          (change)="ev.changeCondition(eventIndex, conditionIndex, str($event))">
+                    @for (entry of ev.conditions(); track entry.type) {
                       <option [value]="entry.type" [selected]="condition.type === entry.type">{{ entry.label }}</option>
                     }
                   </select>
@@ -2352,7 +2352,7 @@
                     *ngTemplateOutlet="stepParams; context: { $implicit: condition, stepKind: 'condition', eventIndex: eventIndex, stepIndex: conditionIndex }" />
 
                   <div class="event__spacer"></div>
-                  <button class="btn btn--small" (click)="removeCondition(eventIndex, conditionIndex)">×</button>
+                  <button class="btn btn--small" (click)="ev.removeCondition(eventIndex, conditionIndex)">×</button>
                 </div>
               }
 
@@ -2360,8 +2360,8 @@
                 <div class="event__row event__row--child">
                   <span class="badge badge--action">Entonces</span>
                   <select class="select-lone" [value]="action.type"
-                          (change)="changeAction(eventIndex, actionIndex, str($event))">
-                    @for (entry of actions(); track entry.type) {
+                          (change)="ev.changeAction(eventIndex, actionIndex, str($event))">
+                    @for (entry of ev.actions(); track entry.type) {
                       <option [value]="entry.type" [selected]="action.type === entry.type">{{ entry.label }}</option>
                     }
                   </select>
@@ -2369,19 +2369,19 @@
                     *ngTemplateOutlet="stepParams; context: { $implicit: action, stepKind: 'action', eventIndex: eventIndex, stepIndex: actionIndex }" />
 
                   <div class="event__spacer"></div>
-                  <button class="btn btn--small" (click)="removeAction(eventIndex, actionIndex)">×</button>
+                  <button class="btn btn--small" (click)="ev.removeAction(eventIndex, actionIndex)">×</button>
                 </div>
               }
 
               <div class="event__row event__row--child">
-                <button class="btn btn--small" (click)="addCondition(eventIndex)">+ Condición</button>
-                <button class="btn btn--small" (click)="addAction(eventIndex)">+ Accion</button>
+                <button class="btn btn--small" (click)="ev.addCondition(eventIndex)">+ Condición</button>
+                <button class="btn btn--small" (click)="ev.addAction(eventIndex)">+ Accion</button>
               </div>
             </article>
           } @empty {
             <p class="empty">
-              Sin eventos. El catalogo declara {{ triggers().length }} triggers,
-              {{ conditions().length }} condiciones y {{ actions().length }} acciones.
+              Sin eventos. El catalogo declara {{ ev.triggers().length }} triggers,
+              {{ ev.conditions().length }} condiciones y {{ ev.actions().length }} acciones.
             </p>
           }
         } @else if (workspace() === 'archivo') {
@@ -2458,7 +2458,7 @@
     <span class="statusbar__stat" [class.statusbar__stat--warn]="overBudget()">
       Entidades {{ entities().length }}
     </span>
-    <span class="statusbar__stat">Eventos {{ events().length }}</span>
-    <span class="statusbar__stat">{{ zoomLabel() }}</span>
+    <span class="statusbar__stat">Eventos {{ ev.events().length }}</span>
+    <span class="statusbar__stat">{{ view.zoomLabel() }}</span>
   </footer>
 </div>

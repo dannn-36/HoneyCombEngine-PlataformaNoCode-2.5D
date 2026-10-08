@@ -463,3 +463,14 @@ export function shiftLevel(level: Level, deltaCol: number, deltaRow: number): Le
     entities: level.entities.map((entity) => ({ ...entity, position: move(entity.position) })),
   };
 }
+
+/**
+ * Ids de todo lo que el motor trata como ZONA: las salas del mapa y las zonas
+ * sueltas, en ese orden. Es el espejo de engine/loader/LevelLoader.cpp, que
+ * arma la lista de zonas recorriendo {"rooms", "zones"}; los eventos "Al
+ * limpiar una zona" o "Si el jugador esta en la zona" aceptan cualquiera de
+ * los dos. Si el motor cambia esa regla, se cambia aca y en ningun otro lado.
+ */
+export function zoneIdsOf(level: Pick<Level, 'rooms' | 'zones'>): string[] {
+  return [...(level.rooms ?? []).map((room) => room.id), ...(level.zones ?? []).map((zone) => zone.id)];
+}

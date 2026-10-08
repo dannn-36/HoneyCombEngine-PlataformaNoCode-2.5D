@@ -9,9 +9,15 @@ import {
   roomAt,
   roomCenter,
   sideFacing,
+  zoneIdsOf,
 } from '../core/dungeon-layout';
 import { GridCoord } from '../core/iso-projection';
-import { GridPosition, MapRoom, RoomSide } from '../models/level.model';
+import {
+  GridPosition,
+  MapRoom,
+  RoomSide,
+  Zone,
+} from '../models/level.model';
 import { LevelService } from '../services/level.service';
 
 /** Herramienta activa del viewport, en lo que le importa al mapa. */
@@ -89,6 +95,8 @@ export class MapController {
   readonly rooms = computed(() => this.levels.level().rooms ?? []);
   readonly tunnels = computed(() => this.levels.level().tunnels ?? []);
   private readonly grid = computed(() => this.levels.level().grid);
+  /** La entidad activa: una zona nueva se ubica junto a ella. */
+  private readonly selected = this.levels.selectedEntity;
 
   constructor(
     private readonly note: (message: string) => void,
@@ -96,6 +104,8 @@ export class MapController {
     private readonly frameAll: () => void,
     private readonly setTool: (tool: MapTool) => void,
     private readonly setHovered: (cell: GridCoord) => void,
+    /** Abre Propiedades en la pestana de escena, donde se ajustan las zonas. */
+    private readonly showGridProperties: () => void,
   ) {}
 
   readonly roomDraft = signal<RoomDraft | null>(null);
@@ -537,5 +547,47 @@ export class MapController {
     this.levels.clearTileEdits();
     this.markDirty();
     this.note('Retoques descartados: el mapa queda como lo generan las grillas y los túneles.');
+  }
+
+  // --- Zonas de puzzle -----------------------------------------------------
+  //
+  // Rectangulos con nombre que no generan piso ni pared: solo los leen los
+  // eventos. Viven aca, con las salas, porque el motor trata a las dos como
+  // zonas (ver zoneIdsOf).
+
+  readonly zones = computed(() => this.levels.level().zones ?? []);
+
+  /** Salas y zonas: lo que acepta un parametro zone_ref (el motor usa las dos). */
+  /** Todo lo que el motor trata como zona: salas y zonas sueltas. Ver zoneIdsOf. */
+  readonly zoneIds = computed(() => zoneIdsOf(this.levels.level()));
+
+  /** Zona nueva de 4x4 donde esta la entidad activa, o en el centro de la grilla. */
+  addZone(): void {
+    const grid = this.grid();
+    const anchor = this.selected()?.position ?? {
+      col: Math.floor(grid.width / 2) - 2,
+      row: Math.floor(grid.height / 2) - 2,
+    };
+    const zone: Zone = {
+      id: nextFreeId('zona', this.zoneIds()),
+      col: Math.max(0, anchor.col),
+      row: Math.max(0, anchor.row),
+      width: 4,
+      height: 4,
+    };
+    this.levels.addZone(zone);
+    this.markDirty();
+    this.showGridProperties();
+    this.note('Zona "' + zone.id + '" agregada. Ajustá su rectángulo en Escena > Zonas de puzzle.');
+  }
+
+  updateZone(id: string, changes: Partial<Omit<Zone, 'id'>>): void {
+    this.levels.updateZone(id, changes);
+    this.markDirty();
+  }
+
+  removeZone(id: string): void {
+    this.levels.removeZone(id);
+    this.markDirty();
   }
 }

@@ -31,3 +31,10 @@ export function spriteCropStyle(
     height: `${rect.height * zoom}px`,
   };
 }
+
+/**
+ * El nombre suelto de una textura a partir de su ruta de nivel. Los niveles
+ * guardan "textures/foo.png" (relativo a assets/), y las texturas cargadas se
+ * indexan por su nombre de archivo.
+ */
+export const textureName = (path: string) => path.replace(/^textures\//, '');

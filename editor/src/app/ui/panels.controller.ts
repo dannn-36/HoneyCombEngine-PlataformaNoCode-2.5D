@@ -1,5 +1,8 @@
 import { signal } from '@angular/core';
 
+// Limites del ancho de los dos paneles laterales al arrastrar su borde. El
+// minimo es lo que necesita una fila para no cortar todos los nombres; el
+// maximo, dejarle al viewport la mitad de una pantalla chica.
 const SIDEBAR_MIN_WIDTH = 170;
 const SIDEBAR_MAX_WIDTH = 560;
 const SIDEBAR_DEFAULT_WIDTH = 230;
