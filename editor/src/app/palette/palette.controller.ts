@@ -15,7 +15,7 @@ export const TOOL_HINTS: Record<Tool, string> = {
   place: 'Colocar: elige una textura en Recursos o una figura, y clic en la grilla.',
   floor: 'Piso: clic en una celda para quitarle o devolverle el suelo.',
   wall: 'Pared: clic en una celda para levantar o quitar la pared.',
-  room: 'Grilla: arrastrá sobre el vacío para dibujar una nueva, o dentro de una para moverla. Clic derecho la configura.',
+  room: 'Grilla: arrastra sobre el vacío para dibujar una nueva, o dentro de una para moverla. Clic derecho la configura.',
   tunnel:
     'Túnel: clic en una grilla, clics para marcar el camino y clic en otra grilla para terminar. Retroceso borra el último punto; Escape cancela.',
 };

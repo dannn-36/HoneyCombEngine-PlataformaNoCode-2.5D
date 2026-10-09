@@ -341,7 +341,7 @@ function Get-Requirements {
 
 function Install-ViaWinget([string]$packageId) {
     if (-not (Test-Tool 'winget')) {
-        throw "No hay winget en esta maquina, asi que no puedo instalar $packageId automaticamente. Instalalo a mano siguiendo la seccion 1 del README."
+        throw "No hay winget en esta maquina, asi que no puedo instalar $packageId automaticamente. Instala el paquete a mano siguiendo la seccion 1 del README."
     }
     $arguments = "winget install --id $packageId --exact --source winget " +
                  '--accept-source-agreements --accept-package-agreements --disable-interactivity'
@@ -412,7 +412,7 @@ function Install-Requirement($requirement) {
 function Install-Project {
     $script:VcpkgRoot = Find-VcpkgRoot
     if (-not $script:VcpkgRoot) {
-        throw 'No encuentro vcpkg. Vuelve al paso de requisitos e instalalo.'
+        throw 'No encuentro vcpkg. Vuelve al paso de requisitos e instala vcpkg.'
     }
     $env:VCPKG_ROOT = $script:VcpkgRoot
 

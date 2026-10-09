@@ -287,7 +287,7 @@ Se necesita un `main.js` (proceso principal de Electron) que cargue el build de 
 Antes de construir canvas/paneles, el editor tiene una capa de lógica sin UI, espejo del mismo contrato de datos que usa el runtime C++:
 
 - **`main.js` / `preload.js`** — API de proyecto vía `contextBridge`: `openFolder()` (elige la carpeta raíz del proyecto), `readFile`/`writeFile`/`listDir` (rutas siempre relativas a esa raíz; el proceso principal valida que no escapen de la carpeta del proyecto antes de tocar el disco).
-- **`src/app/models/`** — interfaces TypeScript espejo de `level.schema.json` y `event_catalog.json` (`level.model.ts`, `event-catalog.model.ts`). Cualquier campo nuevo se agrega primero al schema, y acá y en `LevelLoader.cpp` en simultáneo.
+- **`src/app/models/`** — interfaces TypeScript espejo de `level.schema.json` y `event_catalog.json` (`level.model.ts`, `event-catalog.model.ts`). Cualquier campo nuevo se agrega primero al schema, y aquí y en `LevelLoader.cpp` en simultáneo.
 - **`src/app/core/iso-projection.ts`** — espejo exacto en TypeScript de `IsoGridSystem::GridToScreen`/`ScreenToGrid` (C++), para que el canvas ubique las entidades en pantalla de la misma forma que el runtime.
 - **`src/app/services/`**:
   - `ProjectService` — único punto de contacto con la API de Electron; el resto del editor nunca llama `window.honeycombProject` directamente.

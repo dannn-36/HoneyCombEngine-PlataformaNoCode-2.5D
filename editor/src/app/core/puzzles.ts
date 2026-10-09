@@ -63,16 +63,16 @@ export interface PuzzlePlan {
 /** Lo que falta para poder crear el puzzle, o null si esta completo. */
 export function validatePuzzle(draft: PuzzleDraft): string | null {
   if (draft.kind === 'clear_zone' && !draft.zone) {
-    return 'Elegí la sala o zona que hay que limpiar.';
+    return 'Elige la sala o zona que hay que limpiar.';
   }
   if (draft.kind === 'boss' && !draft.boss) {
-    return 'Elegí el enemigo que hace de jefe.';
+    return 'Elige el enemigo que hace de jefe.';
   }
   if (draft.lockOnEnter && !draft.zone) {
     return 'Para cerrar las puertas al entrar hace falta elegir la sala o zona.';
   }
   if (draft.gates.length === 0) {
-    return 'Elegí al menos una entidad que bloquee el paso (una pared, una puerta).';
+    return 'Elige al menos una entidad que bloquee el paso (una pared, una puerta).';
   }
   return null;
 }

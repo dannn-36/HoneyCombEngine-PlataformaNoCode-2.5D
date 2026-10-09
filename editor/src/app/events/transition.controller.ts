@@ -80,11 +80,11 @@ export class TransitionController {
     }
     const level = draft.level.trim();
     if (!level) {
-      this.note('Elegí el nivel al que se pasa.');
+      this.note('Elige el nivel al que se pasa.');
       return;
     }
     if (draft.when !== 'all_enemies' && !draft.entity) {
-      this.note('Elegí la entidad que dispara el paso de nivel.');
+      this.note('Elige la entidad que dispara el paso de nivel.');
       return;
     }
 

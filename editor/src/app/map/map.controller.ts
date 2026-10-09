@@ -306,7 +306,7 @@ export class MapController {
   openTunnelDialog(): void {
     const rooms = this.rooms();
     if (rooms.length < 2) {
-      this.note('Hacen falta al menos dos grillas para conectarlas. Agregá una desde Mapa.');
+      this.note('Hacen falta al menos dos grillas para conectarlas. Agrega una desde Mapa.');
       return;
     }
     this.tunnelDraft.set({
@@ -464,7 +464,7 @@ export class MapController {
 
   tunnelToolClick(event: PointerEvent, cell: GridCoord): void {
     if (this.rooms().length < 2) {
-      this.note('Hacen falta al menos dos grillas para trazar un túnel. Agregá una desde Mapa.');
+      this.note('Hacen falta al menos dos grillas para trazar un túnel. Agrega una desde Mapa.');
       return;
     }
     const room = roomAt(this.rooms(), cell);
@@ -472,7 +472,7 @@ export class MapController {
 
     if (!trace) {
       if (!room) {
-        this.note('Empezá el túnel con un clic dentro de una grilla.');
+        this.note('Empieza el túnel con un clic dentro de una grilla.');
         return;
       }
       this.tunnelTrace.set({ from: room.id, points: [], width: DEFAULT_TUNNEL_WIDTH, editId: null });
@@ -485,7 +485,7 @@ export class MapController {
       return;
     }
     if (room) {
-      this.note('Esa es la grilla de origen: terminá el túnel en otra.');
+      this.note('Esa es la grilla de origen: termina el túnel en otra.');
       return;
     }
     this.tunnelTrace.set({ ...trace, points: [...trace.points, cell] });
@@ -578,7 +578,7 @@ export class MapController {
     this.levels.addZone(zone);
     this.markDirty();
     this.showGridProperties();
-    this.note('Zona "' + zone.id + '" agregada. Ajustá su rectángulo en Escena > Zonas de puzzle.');
+    this.note('Zona "' + zone.id + '" agregada. Ajusta su rectángulo en Escena > Zonas de puzzle.');
   }
 
   updateZone(id: string, changes: Partial<Omit<Zone, 'id'>>): void {

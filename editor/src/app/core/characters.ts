@@ -118,7 +118,7 @@ export const CHARACTERS: readonly CharacterDef[] = [
     stats: { health: 1, damage: 0, speed: 0 },
     color: '#5f9e4a',
     glyph: '◆',
-    hint: 'Objeto: al tocarlo dispara un evento; usalo con la accion "Destruir entidad".',
+    hint: 'Objeto: al tocarlo dispara un evento; úsalo con la accion "Destruir entidad".',
   },
 ];
 

@@ -323,7 +323,7 @@ export class ItemEditorController {
       return;
     }
     if (!this.project.projectRoot() && !(await this.project.ensureRoot())) {
-      this.note('Abrí una carpeta de proyecto para guardar objetos.');
+      this.note('Abre una carpeta de proyecto para guardar objetos.');
       return;
     }
 

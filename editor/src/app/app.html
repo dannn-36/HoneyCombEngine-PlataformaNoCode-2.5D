@@ -926,7 +926,7 @@
             El nivel siguiente tiene que estar en la misma carpeta levels/.
           </p>
           @if (draft.when !== 'all_enemies' && entityIds().length === 0) {
-            <p class="hint hint--warn">El nivel todavía no tiene entidades: colocá un enemigo primero.</p>
+            <p class="hint hint--warn">El nivel todavía no tiene entidades: coloca un enemigo primero.</p>
           }
         </div>
 
@@ -1013,7 +1013,7 @@
               </label>
             } @empty {
               <p class="hint hint--warn">
-                No hay entidades que puedan hacer de puerta. Colocá figuras (un cubo, un pilar) donde se corta el paso.
+                No hay entidades que puedan hacer de puerta. Coloca figuras (un cubo, un pilar) donde se corta el paso.
               </p>
             }
           </div>
@@ -1036,7 +1036,7 @@
           </label>
 
           @if (puzzle.zoneIds().length === 0) {
-            <p class="hint">El nivel no tiene salas ni zonas: agregá una con Combate > Agregar zona de puzzle.</p>
+            <p class="hint">El nivel no tiene salas ni zonas: agrega una con Combate > Agregar zona de puzzle.</p>
           }
           @if (puzzle.error(); as error) {
             <p class="hint hint--warn">{{ error }}</p>
@@ -1274,7 +1274,7 @@
                 class="shape"
                 [class.is-active]="chars.expandedKind() === character.id"
                 draggable="true"
-                [title]="character.label + ': clic para ver los configurados, o arrastrá el básico a la grilla'"
+                [title]="character.label + ': clic para ver los configurados, o arrastra el básico a la grilla'"
                 (dragstart)="view.onCharacterDragStart($event, chars.basePresetId(character.id))"
                 (click)="chars.toggleKind(character.id)"
               >
@@ -1291,7 +1291,7 @@
               @for (preset of chars.presetsOfKind(kind); track preset.id) {
                 <button class="presetlist__item" type="button" draggable="true"
                         [class.is-active]="palette.activeCharacter() === preset.id"
-                        [title]="preset.name + ' — arrastrá a la grilla, o clic para colocarlo'"
+                        [title]="preset.name + ' — arrastra a la grilla, o clic para colocarlo'"
                         (dragstart)="view.onCharacterDragStart($event, preset.id)"
                         (click)="palette.selectCharacter(preset.id)">
                   <span class="presetlist__thumb" [style.background]="chars.kindColor(kind)">
@@ -1333,7 +1333,7 @@
             @for (item of itemLibrary.items(); track item.id) {
               <button class="presetlist__item" type="button" draggable="true"
                       [class.is-active]="palette.activeItem() === item.id"
-                      [title]="item.name + ' — arrastrá a la grilla, o clic para colocarlo'"
+                      [title]="item.name + ' — arrastra a la grilla, o clic para colocarlo'"
                       (dragstart)="items.onItemDragStart($event, item.id)"
                       (click)="palette.selectItem(item.id)">
                 <span class="presetlist__thumb" [style.background]="items.itemColor(item)">
@@ -1371,9 +1371,9 @@
           <button class="tool" [class.is-active]="palette.tool() === 'wall'" (click)="palette.setTool('wall')"
                   title="Alternar pared: bloquea el paso en esa celda">▥</button>
           <button class="tool" [class.is-active]="palette.tool() === 'room'" (click)="palette.setTool('room')"
-                  title="Grilla: arrastrá sobre el vacío para dibujar una nueva, o dentro de una para moverla">▢</button>
+                  title="Grilla: arrastra sobre el vacío para dibujar una nueva, o dentro de una para moverla">▢</button>
           <button class="tool" [class.is-active]="palette.tool() === 'tunnel'" (click)="palette.setTool('tunnel')"
-                  title="Túnel: trazalo a mano, de una grilla a otra">⤳</button>
+                  title="Túnel: trázalo a mano, de una grilla a otra">⤳</button>
         </div>
 
         <span class="head__sep"></span>
@@ -1696,7 +1696,7 @@
                       </div>
                       @if (entity.preset) {
                         <p class="hint">
-                          Basado en el personaje “{{ entity.preset }}”. Lo que cambies acá afecta solo a esta entidad.
+                          Basado en el personaje “{{ entity.preset }}”. Lo que cambies aquí afecta solo a esta entidad.
                         </p>
                       }
                     </div>
@@ -1765,7 +1765,7 @@
                           }
                         </select>
                         @if (combat.weaponOptions().length === 0) {
-                          <p class="hint">Todavía no hay armas: creálas en Combate > Objetos y armas.</p>
+                          <p class="hint">Todavía no hay armas: créalas en Combate > Objetos y armas.</p>
                         }
 
                         <div class="subhead">Movilidad</div>
@@ -1910,8 +1910,8 @@
                     </label>
                     @if (combat.missing().length > 0) {
                       <p class="hint hint--warn">
-                        El nivel usa objetos que no define: {{ combat.missing().join(', ') }}. Volvé a elegirlos, o
-                        creálos en Objetos y armas.
+                        El nivel usa objetos que no define: {{ combat.missing().join(', ') }}. Vuelve a elegirlos, o
+                        créalos en Objetos y armas.
                       </p>
                     }
                   </div>
@@ -2123,7 +2123,7 @@
                 <div class="panel__body">
                   @if (map.rooms().length === 0) {
                     <p class="hint">
-                      El nivel es una sola grilla. Agregá otra para armar salas unidas por túneles.
+                      El nivel es una sola grilla. Agrega otra para armar salas unidas por túneles.
                     </p>
                   }
 
@@ -2210,7 +2210,7 @@
               </button>
               @if (!panels.isCollapsed('zones')) {
                 <div class="panel__body">
-                  <p class="hint">Las salas del mapa ya sirven como zonas. Agregá una para una parte de una sala o un pasillo.</p>
+                  <p class="hint">Las salas del mapa ya sirven como zonas. Agrega una para una parte de una sala o un pasillo.</p>
                   @for (zone of map.zones(); track zone.id) {
                     <div class="maprow">
                       <div class="maprow__head">
