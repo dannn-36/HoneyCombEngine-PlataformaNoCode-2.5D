@@ -324,6 +324,36 @@ export class IsoCanvasRenderer {
       ctx.stroke();
     };
 
+    // Piso con textura (visuals.floor), como lo dibuja el motor: el recorte a
+    // su tamaño, centrado en el punto de cada celda de piso. Sin la imagen
+    // cargada queda el piso liso de siempre.
+    const floorVisual = level.visuals?.floor;
+    const floorImage = floorVisual ? scene.sprite(floorVisual.texture) : null;
+    const drawFloorTextures = () => {
+      if (!floorVisual || !floorImage) {
+        return;
+      }
+      const src = floorVisual.sourceRect;
+      const cellsWithFloor: GridCoord[] = level.tiles
+        ? level.tiles.filter((tile) => tile.floor !== false)
+        : Array.from({ length: grid.width * grid.height }, (_, i) => ({
+            col: i % grid.width,
+            row: Math.floor(i / grid.width),
+          }));
+      for (const cell of cellsWithFloor) {
+        const { x, y } = project(cell);
+        ctx.drawImage(
+          floorImage,
+          src.x, src.y, src.width, src.height,
+          x - (src.width / 2) * zoom, y - (src.height / 2) * zoom, src.width * zoom, src.height * zoom,
+        );
+      }
+    };
+
+    if (!scene.showGrid()) {
+      drawFloorTextures();
+    }
+
     if (scene.showGrid()) {
       // El suelo de la grilla es una sola forma plana, no un damero: Blender no
       // alterna el color de sus cuadros, y el damero competia con el arte.
@@ -358,6 +388,7 @@ export class IsoCanvasRenderer {
           }
         }
       }
+      drawFloorTextures();
 
       // Debajo: un pelo mas claras que el piso. Encima se dibujan despues de
       // las entidades (ver el final de draw()).
