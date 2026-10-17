@@ -1,6 +1,8 @@
 import { Directive, ElementRef, effect, inject, input } from '@angular/core';
 
 import { Point, attackPreview } from '../core/items';
+import { CanvasPalette } from '../core/themes';
+import { ThemeService } from '../services/theme.service';
 import { AttackDef } from '../models/item.model';
 
 /**
@@ -25,9 +27,10 @@ const PADDING = 14;
 export class AttackPreviewDirective {
   readonly attack = input.required<AttackDef>({ alias: 'appAttackPreview' });
   private readonly host = inject<ElementRef<HTMLCanvasElement>>(ElementRef);
+  private readonly theme = inject(ThemeService);
 
   constructor() {
-    effect(() => drawAttackPreview(this.host.nativeElement, this.attack()));
+    effect(() => drawAttackPreview(this.host.nativeElement, this.attack(), this.theme.canvas()));
   }
 }
 
@@ -36,14 +39,14 @@ function iso(point: Point): Point {
   return { x: point.x - point.y, y: (point.x + point.y) / 2 };
 }
 
-export function drawAttackPreview(canvas: HTMLCanvasElement, attack: AttackDef): void {
+export function drawAttackPreview(canvas: HTMLCanvasElement, attack: AttackDef, palette: CanvasPalette): void {
   // jsdom (los tests) no implementa canvas: getContext devuelve null.
   const ctx = canvas.getContext?.('2d');
   if (!ctx) {
     return;
   }
   const { width, height } = canvas;
-  ctx.fillStyle = '#262626';
+  ctx.fillStyle = palette.background;
   ctx.fillRect(0, 0, width, height);
 
   const shapes = attackPreview(attack, AIM);
@@ -75,7 +78,7 @@ export function drawAttackPreview(canvas: HTMLCanvasElement, attack: AttackDef):
   const toCol = Math.ceil(Math.max(...cols)) + 1;
   const fromRow = Math.floor(Math.min(...rows)) - 1;
   const toRow = Math.ceil(Math.max(...rows)) + 1;
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+  ctx.strokeStyle = palette.gridUnder;
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let col = fromCol; col <= toCol; col += 1) {
@@ -103,10 +106,11 @@ export function drawAttackPreview(canvas: HTMLCanvasElement, attack: AttackDef):
       }
     });
     ctx.closePath();
+    // Donde pega, en el rojo del daño: el amarillo queda para la seleccion.
     if (shape.style === 'hit') {
-      ctx.fillStyle = 'rgba(255, 214, 110, 0.35)';
+      ctx.fillStyle = 'rgba(239, 107, 98, 0.3)';
       ctx.fill();
-      ctx.strokeStyle = '#ffd66e';
+      ctx.strokeStyle = '#ef6b62';
       ctx.setLineDash([]);
     } else if (shape.style === 'path') {
       ctx.fillStyle = 'rgba(120, 190, 255, 0.22)';
@@ -114,7 +118,7 @@ export function drawAttackPreview(canvas: HTMLCanvasElement, attack: AttackDef):
       ctx.strokeStyle = 'rgba(120, 190, 255, 0.9)';
       ctx.setLineDash([4, 3]);
     } else {
-      ctx.strokeStyle = 'rgba(200, 200, 200, 0.55)';
+      ctx.strokeStyle = palette.hiddenOutline;
       ctx.setLineDash([4, 4]);
     }
     ctx.lineWidth = 1.5;
@@ -124,11 +128,13 @@ export function drawAttackPreview(canvas: HTMLCanvasElement, attack: AttackDef):
 
   // Quien ataca, y hacia donde apunta.
   const origin = toCanvas({ x: 0, y: 0 });
-  ctx.fillStyle = '#e08a3c';
+  ctx.fillStyle = '#3fb8a9';
   ctx.beginPath();
   ctx.arc(origin.x, origin.y, 4.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.font = '10px Inter, "Segoe UI", sans-serif';
-  ctx.fillStyle = 'rgba(230, 230, 230, 0.6)';
-  ctx.fillText('mouse →', width - 52, 14);
+  ctx.font = '11px "Chakra Petch", "Segoe UI", sans-serif';
+  ctx.fillStyle = palette.label;
+  ctx.textAlign = 'right';
+  ctx.fillText('hacia el mouse', width - 8, 14);
+  ctx.textAlign = 'left';
 }

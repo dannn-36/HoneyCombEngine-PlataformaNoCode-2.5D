@@ -48,7 +48,8 @@ void DrawHealthBar(float x, float y, float width, float height, float ratio, Col
 // que es el que importa: la ventana antes que los recursos, y el loader antes
 // que el nivel que carga.
 GameSession::GameSession(const std::filesystem::path &levelPath)
-    : gfx(800, 450, "HoneyComb Engine - Runtime"),
+    // El titulo dice cual es: la de desarrollo (Debug) o la que se juega.
+    : gfx(800, 450, DevTools::kEnabled ? "HoneyComb Engine - Runtime (Debug)" : "HoneyComb Engine - Runtime"),
       assets((levelPath.parent_path().parent_path() / "assets").string()),
       loader(resources, assets),
       // Load() concentra todo el trabajo de Capa 3: parsea el JSON, construye
@@ -121,6 +122,21 @@ void GameSession::PrepareLevel(LevelStart start)
     for (auto &entity : level.entities)
     {
         entityById[entity.id] = &entity;
+    }
+
+    // El piso, de atras hacia adelante y en coordenadas de mundo, de una vez.
+    // En isometrico la Y de pantalla de una celda es (col + row) * alto / 2, asi
+    // que ordenar por col + row es ordenar por profundidad. Es el mismo orden
+    // en que el ZSortSystem lo ordenaba en cada frame; las baldosas de una
+    // misma fila no se tocan entre si, y el empate da igual.
+    std::vector<GridCoord> floorCells = level.floorTiles;
+    std::stable_sort(floorCells.begin(), floorCells.end(), [](const GridCoord &a, const GridCoord &b)
+                     { return a.col + a.row < b.col + b.row; });
+    floorDrawOrder.clear();
+    floorDrawOrder.reserve(floorCells.size());
+    for (const auto &cell : floorCells)
+    {
+        floorDrawOrder.push_back(level.grid.GridToScreen(cell));
     }
 
     // AnimationSystem: un clip por entidad animada, armado desde el nivel.
@@ -281,30 +297,90 @@ void GameSession::Run()
     // destructores (RAII), en orden inverso al de declaracion en el header.
 }
 
+void GameSession::Benchmark(float seconds)
+{
+    gfx.SetTargetFPS(0);
+    // El primer medio segundo no cuenta: subir texturas a la GPU y llenar las
+    // caches hace lentos los primeros cuadros, y eso no es el ritmo del juego.
+    const double warmup = 0.5;
+    const double start = GetTime();
+    double measuredFrom = 0.0;
+    long frames = 0;
+    while (!gfx.ShouldClose())
+    {
+        const double now = GetTime() - start;
+        if (now >= warmup + seconds)
+        {
+            break;
+        }
+        if (now >= warmup && measuredFrom == 0.0)
+        {
+            measuredFrom = now;
+        }
+        Update(gfx.GetDeltaTime());
+        if (measuredFrom > 0.0)
+        {
+            ++frames;
+        }
+    }
+    const double elapsed = (GetTime() - start) - measuredFrom;
+    const ZSortSystem::Stats &drawn = zsort.LastStats();
+    std::cout << "BENCH " << (DevTools::kEnabled ? "Debug" : "Release")
+              << (culling ? "" : " sin recorte") << " | " << level.name << " | "
+              << frames << " cuadros en " << elapsed << " s | " << (frames / elapsed) << " FPS | "
+              << (elapsed * 1000.0 / frames) << " ms por cuadro | sprites dibujados "
+              << (drawn.ground + drawn.sorted) << ", fuera de camara " << drawn.culled << std::endl;
+}
+
 // =============================================================================
 // UN FRAME
 //
 // Orden de cada frame. NO es arbitrario:
-//   1. teclas de depuracion (F1 grilla / F2 hitboxes / F11 pantalla completa)
+//   1. teclas: F11 pantalla completa, y en Debug las de administrador (F1
+//      grilla, F2 hitboxes, F3 panel... ver game/DevTools.hpp)
 //   2. tamano de la ventana para la camara, y apuntar con el mouse
 //   3. si no se esta pasando de nivel: movimiento del jugador y combate
 //   4. la camara sigue al jugador (en modo Fixed, el encuadre de siempre)
-//   5. pasada del MUNDO, por la camara: piso -> paredes -> entidades al
-//      ZSortSystem, Flush (ordena por profundidad y recien ahi dibuja),
-//      overlays de depuracion, golpes y proyectiles
+//   5. pasada del MUNDO, por la camara: lo que ve la camara (el recorte),
+//      piso -> paredes -> entidades al ZSortSystem, Flush (piso sin ordenar,
+//      el resto ordenado por profundidad), overlays de depuracion, golpes y
+//      proyectiles
 //   6. barras de vida, ya en pantalla
 //   7. resolver colisiones -> correr eventos -> actualizar audio
-//   8. HUD, pantalla de paso de nivel, y la carga cuando termina
+//   8. HUD, pantalla de paso de nivel, panel F3 (solo Debug), y la carga
+//      cuando termina
 // =============================================================================
 void GameSession::Update(float deltaTime)
 {
+    // Desde aca hasta antes de EndFrame es el TRABAJO del cuadro. EndFrame
+    // ademas espera lo que falte para el tope de 60 FPS, y eso no es costo.
+    const double frameStart = GetTime();
+
+    // Herramientas de administrador: solo en Debug (ver game/DevTools.hpp). En
+    // Release kEnabled es false y el compilador borra el bloque entero.
+    if constexpr (DevTools::kEnabled)
+    {
         if (IsKeyPressed(KEY_F1))
-    {
-        showGrid = !showGrid;
-    }
-    if (IsKeyPressed(KEY_F2))
-    {
-        showHitboxes = !showHitboxes;
+        {
+            showGrid = !showGrid;
+        }
+        if (IsKeyPressed(KEY_F2))
+        {
+            showHitboxes = !showHitboxes;
+        }
+        const DevTools::Requests requests = DevTools::HandleKeys(dev);
+        if (requests.fpsCapChanged)
+        {
+            gfx.SetTargetFPS(dev.uncapped ? 0 : 60);
+        }
+        // Recargar es volver a empezar el nivel tal como esta en el disco, sin
+        // la pantalla de espera: sirve para ver al instante lo que se acaba de
+        // guardar en el editor.
+        if (requests.reloadLevel && !transition.active)
+        {
+            BeginTransition(currentLevelPath, "Recargando", true);
+            transition.remaining = 0.0f;
+        }
     }
     if (IsKeyPressed(KEY_F11))
     {
@@ -404,7 +480,8 @@ void GameSession::Update(float deltaTime)
                         input.IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
         intent.ability = input.IsActionPressed("ability");
         intent.defending = mobility.defending;
-        intent.invulnerable = Mobility::IsInvulnerable(mobility);
+        // F7 (solo Debug): invencible, para probar un nivel sin morir.
+        intent.invulnerable = Mobility::IsInvulnerable(mobility) || (DevTools::kEnabled && dev.godMode);
         intent.defenseReduction = player ? player->defense.reduction : 0.0f;
         const Combat::FrameResult combat =
             Combat::Update(level, combatState, player, inventory, intent, deltaTime);
@@ -464,18 +541,30 @@ void GameSession::Update(float deltaTime)
     // camara. El HUD se dibuja despues de EndWorld, en pantalla.
     gfx.BeginWorld(camera.GetCamera());
 
+    // --- Recorte: lo que ve la camara ------------------------------------
+    // Las dos esquinas de la ventana llevadas al mundo. Lo que cae afuera no
+    // se ordena ni se dibuja (ver ZSortSystem::Submit). Solo el dibujo: las
+    // colisiones, la IA y los eventos siguen corriendo en todo el nivel.
+    const Vector2 viewTopLeft = camera.ScreenToWorld(Vector2{0, 0});
+    const Vector2 viewBottomRight = camera.ScreenToWorld(ScreenSize());
+    const Rectangle cameraView{viewTopLeft.x, viewTopLeft.y, viewBottomRight.x - viewTopLeft.x,
+                               viewBottomRight.y - viewTopLeft.y};
+    // F4 (solo Debug): se recorta contra un rectangulo mas chico, dibujado
+    // abajo, para ver las cosas desaparecer al salir de el.
+    const bool previewCulling = DevTools::kEnabled && dev.showCulling;
+    const Rectangle cullView = previewCulling ? DevTools::PreviewView(cameraView) : cameraView;
+    // Un rectangulo vacio apaga el recorte (ver SetCulling).
+    zsort.SetView(culling ? cullView : Rectangle{0, 0, 0, 0});
+
     // --- Piso (SpriteLayer::Ground) --------------------------------------
     // Nada se dibuja directo: todo se ENCOLA en el ZSortSystem, que al final
     // ordena por profundidad y recien ahi dibuja. Por eso un personaje puede
     // quedar tapado por una pared que se encolo antes que el.
     //
-    // El piso es la excepcion: el ZSortSystem lo saca del orden por
-    // profundidad y lo dibuja entero primero, asi nunca tapa a nadie.
-    for (const auto& floorTile : level.floorTiles)
+    // El piso es la excepcion: va en el orden de floorDrawOrder, ya de atras
+    // hacia adelante, y el ZSortSystem lo dibuja entero primero sin ordenarlo.
+    for (const Vector2 &screenPos : floorDrawOrder)
     {
-        Vector2 screenPos = gridToWorld(
-            Vector2{static_cast<float>(floorTile.col), static_cast<float>(floorTile.row)});
-
         if (level.floorTexture)
         {
             zsort.Submit(SpriteInstance{
@@ -759,6 +848,12 @@ void GameSession::Update(float deltaTime)
     // tapados por una pared.
     CombatView::DrawEffects(combatState, gridToWorld);
     CombatView::DrawProjectiles(combatState, gridToWorld);
+
+    // F4: el borde del recorte achicado. Lo que esta del otro lado no se dibujo.
+    if (previewCulling)
+    {
+        DrawRectangleLinesEx(cullView, 2.0f / camera.GetCamera().zoom, Color{242, 179, 61, 255});
+    }
     gfx.EndWorld();
 
     // --- Barras de vida sobre las cabezas --------------------------------
@@ -850,6 +945,38 @@ void GameSession::Update(float deltaTime)
         DrawCentered(gfx, defaultFont, transition.detail, width / 2.0f, height / 2.0f + 24.0f, 20.0f,
                      RAYWHITE);
         transition.remaining -= deltaTime;
+    }
+
+    // --- Herramientas de administrador (solo Debug) ----------------------
+    // Al final, para quedar encima de todo, pantalla de paso incluida.
+    if constexpr (DevTools::kEnabled)
+    {
+        DevTools::RecordFrame(dev, static_cast<float>((GetTime() - frameStart) * 1000.0));
+        if (dev.panel)
+        {
+            const ZSortSystem::Stats &drawn = zsort.LastStats();
+            DevTools::Report report;
+            report.fps = GetFPS();
+            report.ground = drawn.ground;
+            report.sorted = drawn.sorted;
+            report.culled = drawn.culled;
+            report.entities = static_cast<int>(level.entities.size());
+            report.activeEntities = static_cast<int>(std::count_if(
+                level.entities.begin(), level.entities.end(),
+                [](const LevelEntity &entity) { return !entity.destroyed && !entity.hidden; }));
+            report.collisions = static_cast<int>(currentCollisions.size());
+            report.hasPlayer = player != nullptr;
+            report.playerCell = player ? player->precisePosition : Vector2{0, 0};
+            report.zoom = camera.GetCamera().zoom;
+            report.levelFile = currentLevelPath.filename().string();
+            report.showGrid = showGrid;
+            report.showHitboxes = showHitboxes;
+            DevTools::DrawPanel(gfx, defaultFont, dev, report);
+        }
+        else
+        {
+            DevTools::DrawBadge(gfx, defaultFont);
+        }
     }
 
     gfx.EndFrame();

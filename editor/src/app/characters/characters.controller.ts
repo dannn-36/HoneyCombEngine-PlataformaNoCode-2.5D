@@ -10,6 +10,7 @@ import {
   presetFromArchetype,
   presetIdFromName,
 } from '../core/characters';
+import { DEFAULT_FRAME_DURATION, isStripRect, readSpriteFrames, stripRect } from '../core/sprite-frames';
 import { spriteCropStyle, textureName } from '../core/sprite-style';
 import { TextureAsset, decodeImage } from '../core/texture-fit';
 import { CharacterPreset } from '../models/character-preset.model';
@@ -70,7 +71,15 @@ export class CharactersController {
    * vienen reducidas: sirven para reconocer un personaje en la paleta, pero no
    * para ajustar un recorte al pixel.
    */
-  readonly editorTexture = signal<{ name: string; dataUrl: string; width: number; height: number } | null>(null);
+  readonly editorTexture = signal<{
+    name: string;
+    dataUrl: string;
+    width: number;
+    height: number;
+    /** Los cuadros que la imagen dice tener (ver core/sprite-frames.ts). */
+    frames: number;
+    frameDuration: number;
+  } | null>(null);
 
   /** Primer cuadro del borrador, para la vista previa de la ventana. */
   readonly draftPreviewStyle = computed(() => {
@@ -100,7 +109,12 @@ export class CharactersController {
   }
 
   kindColor(kind: CharacterId): string {
-    return characterDef(kind)?.color ?? '#4772b3';
+    return characterDef(kind)?.color ?? '#8f8a80';
+  }
+
+  /** El "type" que el tipo le pone a la entidad: es lo que lee la celda (ver ui/icon.ts). */
+  kindType(kind: CharacterId): string {
+    return characterDef(kind)?.type ?? kind;
   }
 
   kindHint(kind: CharacterId): string {
@@ -153,6 +167,9 @@ export class CharactersController {
 
   closeCharacterEditor(): void {
     this.characterEditor.set(null);
+    // La imagen se vuelve a leer al abrir: la herramienta de sprites pudo
+    // reescribirla mientras tanto, con otro tamano u otros cuadros.
+    this.editorTexture.set(null);
   }
 
   private updateDraft(change: (draft: CharacterPreset) => CharacterPreset): void {
@@ -175,8 +192,27 @@ export class CharactersController {
     this.updateDraft((draft) => ({ ...draft, sourceRect: { ...draft.sourceRect, [field]: Math.max(min, value) } }));
   }
 
+  /**
+   * Cambia los cuadros. Si el recorte es la tira partida en partes iguales (el
+   * que se puso solo al elegir la imagen), se vuelve a partir con la cantidad
+   * nueva: una tira de 4 elegida con 1 cuadro pasa a cuadros de un cuarto, en
+   * vez de pedirle al motor 3 cuadros que caen fuera de la imagen. Un recorte
+   * hecho a mano no se toca.
+   */
   setDraftFrames(value: number): void {
-    this.patchCharacterDraft({ frames: Math.max(1, Math.round(value) || 1) });
+    const frames = Math.max(1, Math.round(value) || 1);
+    const image = this.editorTexture();
+    this.updateDraft((draft) => {
+      const resplit =
+        image !== null &&
+        textureName(draft.texture) === image.name &&
+        isStripRect(draft.sourceRect, image.width, image.height, draft.frames);
+      return {
+        ...draft,
+        frames,
+        sourceRect: resplit ? stripRect(image.width, image.height, frames) : draft.sourceRect,
+      };
+    });
   }
 
   setDraftFrameDuration(value: number): void {
@@ -213,21 +249,24 @@ export class CharactersController {
   }
 
   /**
-   * Cambia el asset del borrador. El recorte arranca con la imagen entera
-   * partida en tantos cuadros como tenga el personaje, uno al lado del otro,
-   * que es como el motor los lee: una tira de 4 cuadros de 128 px de ancho da
-   * cuadros de 32.
+   * Cambia el asset del borrador. Los cuadros pasan a ser los de la IMAGEN, no
+   * los que tenia el personaje: 1 para una imagen suelta, y los que guardo la
+   * herramienta de sprites para una tira hecha ahi. El recorte arranca con la
+   * imagen partida en esos cuadros, uno al lado del otro, que es como el motor
+   * los lee: una tira de 4 cuadros de 128 px de ancho da cuadros de 32.
    */
   async setDraftTexture(name: string): Promise<void> {
     this.patchCharacterDraft({ texture: 'textures/' + name });
     const image = await this.loadEditorTexture(name);
     const draft = this.characterEditor()?.draft;
-    if (!image || !draft) {
+    // Si mientras cargaba se eligio otra imagen, manda esa.
+    if (!image || !draft || textureName(draft.texture) !== name) {
       return;
     }
-    const frames = Math.max(1, draft.frames);
     this.patchCharacterDraft({
-      sourceRect: { x: 0, y: 0, width: Math.max(1, Math.floor(image.width / frames)), height: image.height },
+      frames: image.frames,
+      frameDuration: image.frames > 1 ? image.frameDuration : draft.frameDuration,
+      sourceRect: stripRect(image.width, image.height, image.frames),
     });
   }
 
@@ -242,7 +281,15 @@ export class CharactersController {
         return null;
       }
       const image = await decodeImage(data.dataUrl);
-      const loaded = { name, dataUrl: data.dataUrl, width: image.naturalWidth, height: image.naturalHeight };
+      const strip = readSpriteFrames(data.dataUrl);
+      const loaded = {
+        name,
+        dataUrl: data.dataUrl,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        frames: strip?.frames ?? 1,
+        frameDuration: strip?.frameDuration ?? DEFAULT_FRAME_DURATION,
+      };
       this.editorTexture.set(loaded);
       return loaded;
     } catch {

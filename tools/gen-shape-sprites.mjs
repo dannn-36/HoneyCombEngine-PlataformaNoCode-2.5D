@@ -76,23 +76,36 @@ const GROUND_Y = CELL_H - 1 - HALF_H; // 79
 // pies en el ancla, como siempre.
 const GROUND_OFFSET = CELL_H - GROUND_Y; // 17
 
-// --- Paleta -----------------------------------------------------------------
+// --- Materiales ---------------------------------------------------------------
 //
-// Gris de arcilla, el criterio del material por defecto de Blender: un neutro
-// que deja ver la forma sin competir con el arte real que venga despues.
-const BASE = [157, 157, 157];
-// Brillo por cara, con la luz entrando de arriba a la izquierda. Sin estos tres
-// valores las caras se funden en una mancha plana y se pierde el volumen.
-const FACE_TOP = 1.3;
-const FACE_LEFT = 0.86;
-const FACE_RIGHT = 0.58;
-// Contorno: un gris bien oscuro (no negro puro) que despega la figura del fondo
-// del viewport sin ensuciar la silueta.
-const OUTLINE = [58, 58, 58, 255];
-
-const shade = (factor) => [
-  ...BASE.map((channel) => Math.max(0, Math.min(255, Math.round(channel * factor)))),
-  255,
+// Cuatro materiales. PIEDRA son las ocho figuras de siempre: mismos ids y mismo
+// lugar en el sheet, asi los niveles que ya las usan siguen apuntando al mismo
+// recorte. Madera, pasto y metal se agregan DESPUES, en filas nuevas, con el id
+// de la figura y el material (cube_wood, cone_grass...).
+//
+// Cada material da tres tonos base (tapa, cara izquierda, cara derecha: la luz
+// entra de arriba a la izquierda) y un dibujo propio por cara: juntas de
+// piedra, tablas de madera, borde de pasto sobre tierra, remaches de metal.
+const MATERIALS = [
+  {
+    id: 'stone', suffix: '', label: 'Piedra',
+    top: [178, 174, 166], left: [140, 136, 130], right: [104, 101, 97],
+  },
+  {
+    id: 'wood', suffix: '_wood', label: 'Madera',
+    top: [204, 156, 100], left: [164, 114, 68], right: [122, 82, 48],
+  },
+  {
+    id: 'grass', suffix: '_grass', label: 'Pasto',
+    top: [126, 186, 80], left: [138, 98, 64], right: [104, 72, 46],
+    // Verde de las caras laterales (el borde de pasto, y el follaje de las
+    // figuras redondas: cono = arbol, esfera = arbusto).
+    leafLeft: [96, 154, 60], leafRight: [70, 120, 44],
+  },
+  {
+    id: 'metal', suffix: '_metal', label: 'Metal',
+    top: [176, 188, 200], left: [130, 142, 156], right: [92, 103, 118],
+  },
 ];
 
 // --- Las figuras ------------------------------------------------------------
@@ -101,7 +114,7 @@ const shade = (factor) => [
 // height en cubos, width como escala de la huella sobre la celda.
 const SHAPES = [
   { id: 'cube', label: 'Cubo', height: 1, width: 1 },
-  { id: 'pyramid', label: 'Piramide', height: 1.5, width: 1 },
+  { id: 'pyramid', label: 'Pirámide', height: 1.5, width: 1 },
   { id: 'ramp', label: 'Rampa', height: 1, width: 1 },
   { id: 'slab', label: 'Losa', height: 0.25, width: 1 },
   { id: 'cylinder', label: 'Cilindro', height: 1, width: 0.82 },
@@ -110,9 +123,14 @@ const SHAPES = [
   { id: 'pillar', label: 'Pilar', height: 2, width: 0.42 },
 ];
 
+/** Todas las celdas del sheet: piedra primero (las de siempre), despues el resto. */
+const VARIANTS = MATERIALS.flatMap((material) =>
+  SHAPES.map((shape) => ({ ...shape, id: shape.id + material.suffix, shape: shape.id, material })),
+);
+
 // --- Lienzo de pixeles ------------------------------------------------------
 
-const ROWS = Math.ceil(SHAPES.length / COLS);
+const ROWS = Math.ceil(VARIANTS.length / COLS);
 const SHEET_W = (CELL_W + GUTTER) * COLS - GUTTER;
 const SHEET_H = (CELL_H + GUTTER) * ROWS - GUTTER;
 const pixels = new Uint8Array(SHEET_W * SHEET_H * 4); // RGBA, arranca transparente
@@ -128,20 +146,42 @@ function setPixel(x, y, rgba) {
   pixels[offset + 3] = rgba[3];
 }
 
-function getAlpha(x, y) {
-  if (x < 0 || y < 0 || x >= SHEET_W || y >= SHEET_H) return 0;
-  return pixels[(y * SHEET_W + x) * 4 + 3];
+function getPixel(x, y) {
+  const offset = (y * SHEET_W + x) * 4;
+  return [pixels[offset], pixels[offset + 1], pixels[offset + 2], pixels[offset + 3]];
 }
 
+// --- Color ------------------------------------------------------------------
+
+const clamp = (value) => Math.max(0, Math.min(255, Math.round(value)));
+const mul = (color, factor) => [clamp(color[0] * factor), clamp(color[1] * factor), clamp(color[2] * factor), 255];
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
 /**
- * Rellena un poligono convexo por barrido de scanlines.
+ * Ruido determinista por pixel: el mismo sheet sale identico en cada corrida,
+ * asi que regenerarlo no ensucia el diff con pixeles que cambian al azar.
+ */
+function hash(x, y, seed = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed | 0, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/** Pasa un brillo continuo a pocos escalones: el sombreado se lee como pixel art y no como degradé. */
+const band = (value, steps) => Math.round(value * steps) / steps;
+
+/**
+ * Rellena un poligono convexo por barrido de scanlines, pidiendo el color de
+ * cada pixel a "shader" (o un color fijo).
  *
  * El barrido va por CENTRO de pixel (y + 0.5) a proposito: es lo que hace que
  * un rombo 2:1 salga con el escalonado limpio de dos pixeles de ancho por uno
  * de alto que caracteriza al pixel art isometrico, en vez de un borde con
  * escalones de tamano irregular.
  */
-function fillPolygon(points, rgba) {
+function fillPolygon(points, shader) {
+  const paint = typeof shader === 'function' ? shader : () => shader;
   const ys = points.map((p) => p.y);
   const yStart = Math.max(0, Math.floor(Math.min(...ys)));
   const yEnd = Math.min(SHEET_H - 1, Math.ceil(Math.max(...ys)));
@@ -152,7 +192,6 @@ function fillPolygon(points, rgba) {
     for (let i = 0; i < points.length; i += 1) {
       const a = points[i];
       const b = points[(i + 1) % points.length];
-      // La arista cruza la scanline si scan cae entre sus dos Y.
       if (a.y <= scan && b.y > scan) {
         crossings.push(a.x + ((scan - a.y) / (b.y - a.y)) * (b.x - a.x));
       } else if (b.y <= scan && a.y > scan) {
@@ -164,158 +203,331 @@ function fillPolygon(points, rgba) {
     for (let i = 0; i + 1 < crossings.length; i += 2) {
       const from = Math.round(crossings[i]);
       const to = Math.round(crossings[i + 1]) - 1;
-      for (let x = from; x <= to; x += 1) setPixel(x, y, rgba);
+      for (let x = from; x <= to; x += 1) setPixel(x, y, paint(x, y));
     }
   }
 }
 
-/** Elipse rellena, para las bases y tapas de las figuras redondas. */
-function fillEllipse(cx, cy, rx, ry, rgba) {
+/** Elipse rellena, con color por pixel, para las bases, tapas y esferas. */
+function fillEllipse(cx, cy, rx, ry, shader) {
+  const paint = typeof shader === 'function' ? shader : () => shader;
   for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y += 1) {
     const dy = (y + 0.5 - cy) / ry;
     if (Math.abs(dy) > 1) continue;
     const half = rx * Math.sqrt(1 - dy * dy);
     for (let x = Math.round(cx - half); x < Math.round(cx + half); x += 1) {
-      setPixel(x, y, rgba);
+      setPixel(x, y, paint(x, y));
     }
   }
 }
 
-function fillCircle(cx, cy, r, rgba) {
-  fillEllipse(cx, cy, r, r, rgba);
-}
-
 /**
- * Contorno de 1px alrededor de la silueta de una celda.
+ * Contorno selectivo de 1px alrededor de la silueta de una celda.
  *
- * Se calcula DESPUES de pintar la figura y mirando el alpha: cualquier pixel
- * transparente pegado a uno opaco se vuelve contorno. Asi el borde sigue la
- * silueta real, sin tener que enumerar las aristas de cada figura -- y una
- * figura nueva lo hereda gratis.
+ * Cada pixel vacio pegado a la figura se pinta con el tono de la figura
+ * oscurecido, no con un gris fijo: el borde de una tapa de pasto sale verde
+ * oscuro y el de una cara de madera, marron oscuro. Despega la figura del fondo
+ * sin la linea negra pareja que la hacia ver recortada.
+ *
+ * La sombra en el piso (alpha bajo) cuenta como vacio: no lleva contorno.
  */
 function outlineCell(cellX, cellY) {
-  // Alpha CONFINADO a la celda: fuera de ella cuenta como vacio. Sin esto una
-  // celda ve los pixeles de la de al lado y le pinta contorno adentro -- eso
-  // metia una mota oscura en la primera fila de las figuras de la fila de
-  // abajo, que en el juego se veria como suciedad sobre el sprite.
-  const alphaInCell = (x, y) => {
-    if (x < cellX || y < cellY || x >= cellX + CELL_W || y >= cellY + CELL_H) return 0;
-    return getAlpha(x, y);
-  };
+  const solid = (x, y) =>
+    x >= cellX && y >= cellY && x < cellX + CELL_W && y < cellY + CELL_H && getPixel(x, y)[3] === 255;
 
   const edits = [];
   for (let y = cellY; y < cellY + CELL_H; y += 1) {
     for (let x = cellX; x < cellX + CELL_W; x += 1) {
-      if (alphaInCell(x, y) !== 0) continue;
-      const touchesShape =
-        alphaInCell(x - 1, y) > 0 || alphaInCell(x + 1, y) > 0 ||
-        alphaInCell(x, y - 1) > 0 || alphaInCell(x, y + 1) > 0;
-      if (touchesShape) edits.push([x, y]);
+      if (solid(x, y)) continue;
+      const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].filter(([nx, ny]) => solid(nx, ny));
+      if (neighbors.length === 0) continue;
+      const avg = [0, 1, 2].map(
+        (channel) => neighbors.reduce((acc, [nx, ny]) => acc + getPixel(nx, ny)[channel], 0) / neighbors.length,
+      );
+      edits.push([x, y, [clamp(avg[0] * 0.38), clamp(avg[1] * 0.38), clamp(avg[2] * 0.4), 255]]);
     }
   }
   // En una segunda pasada: si se pintara sobre la marcha, el contorno recien
-  // puesto contaria como "figura" y el borde crecería solo.
-  for (const [x, y] of edits) setPixel(x, y, OUTLINE);
+  // puesto contaria como "figura" y el borde creceria solo.
+  for (const [x, y, color] of edits) setPixel(x, y, color);
+}
+
+// --- Sombreado por material -----------------------------------------------
+//
+// Tres tipos de superficie:
+//   cara vertical: s (0..1 a lo largo de la base), hp (pixeles sobre la base)
+//   tapa:          u, v (0..1 sobre los dos ejes del rombo)
+//   curva:         brillo ya calculado con la normal (cilindro, cono, esfera)
+// lx, ly son la posicion dentro de la celda, para el ruido.
+
+function sideColor(mat, shapeId, face, info) {
+  const { s, hp, height, width, lx, ly } = info;
+  const isLeft = face === 'left';
+  let color = isLeft ? mat.left : mat.right;
+  let f = 1;
+
+  if (mat.id === 'stone') {
+    f *= 1 + (hash(lx, ly, 1) - 0.5) * 0.1;
+    // Sillares: hiladas de 12 px y juntas cada 16 px, trabadas entre hiladas.
+    const course = 12;
+    const row = Math.floor(hp / course);
+    if (height >= course && hp > 1.5 && hp % course < 1) f *= 0.74;
+    const along = s * width + (row % 2) * 8;
+    if (width >= 16 && hp > 1.5 && hp < height - 1.5 && along % 16 < 1) f *= 0.76;
+  } else if (mat.id === 'wood') {
+    // Tablas de 6 px con la veta corriendo a lo largo.
+    if (hp > 1.5 && hp % 6 < 1) f *= 0.7;
+    f *= 0.93 + hash(Math.floor((s * width) / 3), Math.floor(hp / 6), 2) * 0.12;
+    if (hash(lx, ly, 3) > 0.985) f *= 0.78;
+  } else if (mat.id === 'grass') {
+    // Tierra con piedritas y un borde de pasto que cae irregular desde arriba.
+    const lip = 3 + Math.floor(hash(Math.floor((s * width) / 2), 0, 4) * 3);
+    if (hp > height - lip) {
+      color = isLeft ? mat.leafLeft : mat.leafRight;
+      f *= 1 + (hash(lx, ly, 5) - 0.5) * 0.16;
+    } else {
+      f *= 1 + (hash(lx, ly, 6) - 0.5) * 0.14;
+      if (hash(lx, ly, 7) > 0.965) f *= 1.22;
+    }
+  } else if (mat.id === 'metal') {
+    // Placa con degradé vertical, un reflejo, remaches en las esquinas y
+    // juntas cada 32 px en lo alto (el pilar).
+    f *= 0.9 + 0.16 * (hp / Math.max(1, height));
+    if (isLeft && s > 0.18 && s < 0.27) f *= 1.2;
+    if (!isLeft && s > 0.64 && s < 0.7) f *= 1.08;
+    if (hp > 1.5 && hp < height - 1.5 && hp % 32 < 1) f *= 0.74;
+    // Remaches solo en las cajas: en una cara triangular quedaban flotando.
+    if (['cube', 'pillar'].includes(shapeId) && width >= 20 && height >= 16) {
+      const ax = s * width;
+      for (const rx of [4, width - 5]) {
+        for (const ry of [4, height - 5]) {
+          if (Math.abs(ax - rx) < 1 && Math.abs(hp - ry) < 1) f *= 1.45;
+          else if (Math.abs(ax - rx) < 1 && Math.abs(hp - (ry - 1)) < 1) f *= 0.7;
+        }
+      }
+    }
+  }
+
+  // Comunes a todos: oclusion junto al piso, borde de arriba que agarra la luz
+  // y la arista del frente (donde se juntan las dos caras) un poco mas clara.
+  if (hp < 6) f *= 0.84 + 0.16 * (hp / 6);
+  if (hp > height - 1.2) f *= 1.12;
+  if ((isLeft && s > 0.965) || (!isLeft && s < 0.035)) f *= 1.1;
+  return mul(color, f);
+}
+
+function topColor(mat, info) {
+  const { u, v, lx, ly, small } = info;
+  let color = mat.top;
+  let f = 1;
+
+  if (mat.id === 'stone') {
+    f *= 1 + (hash(lx, ly, 11) - 0.5) * 0.09;
+    // Cuatro losas en las tapas grandes.
+    if (!small && (Math.abs(u - 0.5) < 0.025 || Math.abs(v - 0.5) < 0.025)) f *= 0.84;
+  } else if (mat.id === 'wood') {
+    // Cuatro tablas a lo largo de u.
+    if ((v * 4) % 1 < 0.07 && v > 0.05 && v < 0.95) f *= 0.72;
+    f *= 0.93 + hash(Math.floor(u * 20), Math.floor(v * 4), 12) * 0.12;
+  } else if (mat.id === 'grass') {
+    f *= 1 + (hash(lx, ly, 13) - 0.5) * 0.16;
+    const tuft = hash(lx, ly, 14);
+    if (tuft > 0.93) f *= 1.2;
+    else if (tuft < 0.05) f *= 0.8;
+  } else if (mat.id === 'metal') {
+    f *= ly % 2 === 0 ? 1.03 : 0.98;
+    if (Math.abs(u - v) < 0.06 && u + v > 0.6) f *= 1.12;
+  }
+
+  // El borde del frente de la tapa, el que mira a la luz, se aclara.
+  if (u > 0.95 || v > 0.95) f *= 1.1;
+  return mul(color, f);
+}
+
+/** Brillo de una superficie curva a partir de su normal, con la luz arriba a la izquierda. */
+function lambert(nx, ny, nz) {
+  const light = [-0.52, -0.58, 0.63];
+  const length = Math.hypot(...light);
+  return Math.max(0, (nx * light[0] + ny * light[1] + nz * light[2]) / length);
+}
+
+function curvedColor(mat, info) {
+  const { light, lx, ly, leaf, specular, hp, height } = info;
+  let base = leaf && mat.leafLeft ? mat.leafLeft : mat.left;
+  let f = band(0.5 + 0.72 * light, 6);
+
+  if (mat.id === 'stone') {
+    f *= 1 + (hash(lx, ly, 21) - 0.5) * 0.1;
+    if (height >= 24 && hp > 1.5 && hp < height - 1.5 && hp % 12 < 1) f *= 0.8;
+  } else if (mat.id === 'wood') {
+    f *= 0.92 + hash(lx, Math.floor(ly / 6), 22) * 0.12;
+  } else if (mat.id === 'grass') {
+    if (leaf) {
+      f *= 1 + (hash(lx, ly, 23) - 0.5) * 0.22;
+      if (hash(lx, ly, 24) > 0.94) f *= 1.18;
+    } else {
+      const lip = 3 + Math.floor(hash(lx >> 1, 0, 25) * 3);
+      if (hp > height - lip) base = mat.leafLeft;
+      f *= 1 + (hash(lx, ly, 26) - 0.5) * 0.14;
+    }
+  } else if (mat.id === 'metal') {
+    f *= 1 + specular * 0.9;
+  }
+  if (hp !== undefined && hp < 5) f *= 0.86 + 0.14 * (hp / 5);
+  return mul(base, f);
 }
 
 // --- Dibujo de cada figura --------------------------------------------------
 
 function drawShape(def, cellX, cellY) {
+  const mat = def.material;
   const rx = HALF_W * def.width;
   const ry = HALF_H * def.width;
   const height = CUBE * def.height;
 
   const cx = cellX + CELL_W / 2;
   const cy = cellY + GROUND_Y;
+  const local = (x, y) => ({ lx: x - cellX, ly: y - cellY });
 
   // Rombo de la base, en sentido horario desde la punta de arriba.
   const T = { x: cx, y: cy - ry };
   const R = { x: cx + rx, y: cy };
   const B = { x: cx, y: cy + ry };
   const L = { x: cx - rx, y: cy };
-  const up = (p) => ({ x: p.x, y: p.y - height });
+  const up = (p, h = height) => ({ x: p.x, y: p.y - h });
 
-  const top = shade(FACE_TOP);
-  const left = shade(FACE_LEFT);
-  const right = shade(FACE_RIGHT);
+  /** Shader de una cara vertical que apoya en el segmento a -> b. */
+  const sideShader = (face, a, b, faceHeight = () => height) => (x, y) => {
+    const s = Math.min(1, Math.max(0, (x + 0.5 - a.x) / (b.x - a.x)));
+    const base = a.y + s * (b.y - a.y);
+    return sideColor(mat, def.shape, face, {
+      s,
+      hp: base - (y + 0.5),
+      height: faceHeight(s),
+      width: Math.abs(b.x - a.x),
+      ...local(x, y),
+    });
+  };
 
-  switch (def.id) {
+  /** Shader de una tapa con forma de rombo cuya punta de arriba es top. */
+  const topShader = (topPoint, small) => (x, y) => {
+    const dx = (x + 0.5 - topPoint.x) / rx;
+    const dy = (y + 0.5 - topPoint.y) / ry;
+    return topColor(mat, { u: (dx + dy) / 2, v: (dy - dx) / 2, small, ...local(x, y) });
+  };
+
+  /** Shader del cuerpo de una figura de revolucion: ancho a la altura y, y alto total. */
+  const bodyShader = (halfWidthAt, leaf = false, tilt = 0) => (x, y) => {
+    const half = Math.max(0.5, halfWidthAt(y + 0.5));
+    const nx = Math.max(-1, Math.min(1, (x + 0.5 - cx) / half));
+    const nz = Math.sqrt(Math.max(0, 1 - nx * nx));
+    const light = lambert(nx, -tilt, nz);
+    const specular = Math.pow(light, 18);
+    return curvedColor(mat, { light, specular, leaf, hp: cy - (y + 0.5), height, ...local(x, y) });
+  };
+
+  // Sombra en el piso para las figuras que no llenan su casilla: sin ella
+  // parecen flotar. Alpha bajo, asi el contorno no la trata como figura.
+  if (def.width < 1) {
+    fillEllipse(cx + 3, cy + 1, rx * 1.05, ry * 1.05, [20, 18, 16, 56]);
+  }
+
+  switch (def.shape) {
     // Cubo, losa y pilar son la misma construccion con distinto alto y ancho:
     // dos caras verticales al frente y la tapa encima.
     case 'cube':
     case 'slab':
     case 'pillar':
-      fillPolygon([L, B, up(B), up(L)], left);
-      fillPolygon([B, R, up(R), up(B)], right);
-      fillPolygon([up(T), up(R), up(B), up(L)], top);
+      fillPolygon([L, B, up(B), up(L)], sideShader('left', L, B));
+      fillPolygon([B, R, up(R), up(B)], sideShader('right', B, R));
+      fillPolygon([up(T), up(R), up(B), up(L)], topShader(up(T), def.shape === 'pillar'));
       break;
 
     case 'pyramid': {
       const apex = { x: cx, y: cy - height };
-      fillPolygon([L, B, apex], left);
-      fillPolygon([B, R, apex], right);
+      // El alto de cada cara baja hacia las puntas: a la mitad es el total.
+      const rise = (s) => height * (1 - Math.abs(s - 1));
+      const fall = (s) => height * (1 - s);
+      if (mat.id === 'grass') {
+        // Pasto: una loma, verde entero.
+        fillPolygon([L, B, apex], (x, y) => curvedColor(mat, { light: 0.62, specular: 0, leaf: true, ...local(x, y) }));
+        fillPolygon([B, R, apex], (x, y) => curvedColor(mat, { light: 0.3, specular: 0, leaf: true, ...local(x, y) }));
+      } else {
+        fillPolygon([L, B, apex], sideShader('left', L, B, rise));
+        fillPolygon([B, R, apex], sideShader('right', B, R, fall));
+      }
       break;
     }
 
     // Rampa: al ras en la arista de adelante (B-L) y elevada en la de atras
-    // (T-R). La cara inclinada es el plano por el que se sube.
+    // (T-R). La cara inclinada es el plano por el que se sube; lleva escalones
+    // (o tablas, o pasto) en filas horizontales.
     case 'ramp':
-      fillPolygon([L, B, up(R), up(T)], top);
-      fillPolygon([B, R, up(R)], right);
+      fillPolygon([L, B, up(R), up(T)], (x, y) => {
+        const { lx, ly } = local(x, y);
+        const color = topColor(mat, { u: 0.5, v: 0.5, small: true, lx, ly });
+        const step = mat.id === 'grass' ? 1 : ly % 6 === 0 ? 0.8 : 1;
+        return mul(color, 0.95 * step);
+      });
+      fillPolygon([B, R, up(R)], sideShader('right', B, R, (s) => height * s));
       break;
 
     // Las redondas se arman por capas: base, cuerpo, tapa. La mitad inferior de
     // la elipse de la base asoma bajo el cuerpo y da la curvatura de apoyo.
-    case 'cylinder':
-      fillEllipse(cx, cy, rx, ry, right);
+    case 'cylinder': {
+      const body = bodyShader(() => rx);
+      fillEllipse(cx, cy, rx, ry, body);
       fillPolygon(
         [
           { x: cx - rx, y: cy - height }, { x: cx + rx, y: cy - height },
           { x: cx + rx, y: cy }, { x: cx - rx, y: cy },
         ],
-        left,
+        body,
       );
-      fillEllipse(cx, cy - height, rx, ry, top);
+      // Tapa: anillos en la madera (un tronco), placa en el metal, pasto, piedra.
+      fillEllipse(cx, cy - height, rx, ry, (x, y) => {
+        const du = (x + 0.5 - cx) / rx;
+        const dv = (y + 0.5 - (cy - height)) / ry;
+        const r = Math.hypot(du, dv);
+        let color = topColor(mat, { u: 0.5 + du * 0.45, v: 0.5 + dv * 0.45, small: true, ...local(x, y) });
+        if (mat.id === 'wood' && (r * 4) % 1 < 0.2) color = mul(color, 0.8);
+        if (r > 0.86) color = mul(color, 1.08);
+        return color;
+      });
       break;
+    }
 
-    case 'cone':
-      fillEllipse(cx, cy, rx, ry, right);
-      fillPolygon(
-        [{ x: cx - rx, y: cy }, { x: cx + rx, y: cy }, { x: cx, y: cy - height }],
-        left,
-      );
+    case 'cone': {
+      const apexY = cy - height;
+      const halfAt = (y) => rx * Math.min(1, Math.max(0, (y - apexY) / (cy - apexY)));
+      const body = bodyShader(halfAt, mat.id === 'grass', 0.35);
+      fillEllipse(cx, cy, rx, ry, bodyShader(() => rx, mat.id === 'grass', 0.35));
+      fillPolygon([{ x: cx - rx, y: cy }, { x: cx + rx, y: cy }, { x: cx, y: apexY }], body);
       break;
+    }
 
-    // La esfera no tiene caras planas que sombrear, asi que el volumen se hace
-    // con BANDAS concentricas corridas hacia la luz -- la forma clasica de
-    // sombrear una esfera en pixel art. Con dos tonos el brillo se lee como un
-    // disco pegado encima; con cuatro y radios decrecientes, como una curva.
+    // La esfera se sombrea con su normal y en pocos escalones: asi el volumen
+    // se lee como curva y no como un disco con un brillo pegado encima.
     case 'sphere': {
       const radius = rx;
       const center = { x: cx, y: cy - radius * 0.85 };
-
-      fillEllipse(cx, cy, rx * 0.9, ry * 0.9, [40, 40, 40, 90]);
-
-      // De la banda mas oscura (todo el disco) a la mas clara (el reflejo).
-      const bands = [
-        { factor: FACE_RIGHT, radius: 1, offset: 0 },
-        { factor: 0.78, radius: 0.88, offset: 0.1 },
-        { factor: 1.0, radius: 0.68, offset: 0.22 },
-        { factor: FACE_TOP, radius: 0.4, offset: 0.38 },
-      ];
-      for (const band of bands) {
-        fillCircle(
-          center.x - radius * band.offset,
-          center.y - radius * band.offset,
-          radius * band.radius,
-          shade(band.factor),
-        );
-      }
+      fillEllipse(center.x, center.y, radius, radius, (x, y) => {
+        const nx = (x + 0.5 - center.x) / radius;
+        const ny = (y + 0.5 - center.y) / radius;
+        const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+        const light = lambert(nx, ny, nz);
+        return curvedColor(mat, {
+          light,
+          specular: Math.pow(light, 24),
+          leaf: mat.id === 'grass',
+          ...local(x, y),
+        });
+      });
       break;
     }
 
     default:
-      throw new Error('Figura sin dibujo: ' + def.id);
+      throw new Error('Figura sin dibujo: ' + def.shape);
   }
 
   outlineCell(cellX, cellY);
@@ -382,7 +594,7 @@ function encodePng(width, height, rgba) {
 
 // --- Corrida ----------------------------------------------------------------
 
-const cells = SHAPES.map((def, index) => {
+const cells = VARIANTS.map((def, index) => {
   const cellX = (index % COLS) * (CELL_W + GUTTER);
   const cellY = Math.floor(index / COLS) * (CELL_H + GUTTER);
   drawShape(def, cellX, cellY);
@@ -405,6 +617,9 @@ const entries = cells
       `    sourceRect: { x: ${cell.x}, y: ${cell.y}, width: ${CELL_W}, height: ${CELL_H} },\n` +
       `    groundOffset: ${GROUND_OFFSET},\n` +
       `    footprint: ${cell.width},\n` +
+      `    shape: '${cell.shape}',\n` +
+      `    material: '${cell.material.id}',\n` +
+      `    materialLabel: '${cell.material.label}',\n` +
       `  },`,
   )
   .join('\n');
@@ -448,6 +663,11 @@ export interface ShapeCell {
    * "collider" que el editor le pone al colocarla (ver shapeCollider).
    */
   footprint: number;
+  /** La figura sin material (cube, cone...): las variantes la comparten. */
+  shape: string;
+  /** Material del dibujo; las figuras de siempre son de piedra. */
+  material: 'stone' | 'wood' | 'grass' | 'metal';
+  materialLabel: string;
 }
 
 export const SHAPE_CELLS: readonly ShapeCell[] = [
@@ -460,6 +680,6 @@ console.log('PNG   ' + pngPath + '  (' + SHEET_W + 'x' + SHEET_H + ', ' + png.le
 console.log('TS    ' + tsPath);
 for (const cell of cells) {
   console.log(
-    '  ' + cell.id.padEnd(9) + ' recorte ' + `${cell.x},${cell.y} ${CELL_W}x${CELL_H}`,
+    '  ' + cell.id.padEnd(16) + ' recorte ' + `${cell.x},${cell.y} ${CELL_W}x${CELL_H}`,
   );
 }

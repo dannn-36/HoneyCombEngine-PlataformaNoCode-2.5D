@@ -6,6 +6,9 @@
 //
 //     engine/build/engine.exe  C:/.../levels/mi_nivel.json
 //
+// Con el motor que se eligio en el editor: Debug (engine/build) o Release
+// (engine/build-release). Ver engine-modes.js.
+//
 // Se le pasa la ruta ABSOLUTA del nivel a proposito. El motor deduce de ella
 // donde estan los assets (assetsRoot = <nivel>/../../assets, ver main.cpp), asi
 // que con la ruta completa encuentra las texturas sin importar desde donde se
@@ -17,45 +20,22 @@ const { spawn } = require('node:child_process');
 const { ipcMain } = require('electron');
 
 const { INSTALL_ROOT, getProjectRoot } = require('./project-root');
-
-// Donde puede haber quedado el binario, en orden de preferencia. "build" es lo
-// que usan el instalador y el preset de Linux, pero los presets de Windows
-// escriben en build-mingw y build-msvc, y los generadores multi-configuracion
-// (Visual Studio) meten un Debug/ mas adentro. Buscar en todos evita el caso de
-// un motor compilado correctamente que Ejecutar decia no encontrar.
-const ENGINE_BUILD_DIRS = [
-  ['build'],
-  ['build', 'Debug'],
-  ['build-mingw'],
-  ['build-msvc'],
-  ['build-msvc', 'Debug'],
-  ['build-msvc', 'Release'],
-];
+const { MODES, isMode, findEngineExecutable } = require('./engine-modes');
 
 /**
- * Busca el ejecutable del motor.
- *
- * Primero donde esta instalado HoneyComb (junto a editor/): el motor es del
- * programa, y la carpeta del editor -- donde viven los niveles -- no lo
- * tiene. Despues, por compatibilidad, la raiz que se deduce del nivel
- * (<raiz>/levels/<nivel>) y la carpeta del editor, por si alguien la puso
- * dentro de una instalacion.
+ * Las raices donde buscar el motor, en orden. Primero donde esta instalado
+ * HoneyComb (junto a editor/): el motor es del programa, y la carpeta del
+ * editor -- donde viven los niveles -- no lo tiene. Despues, por
+ * compatibilidad, la raiz que se deduce del nivel (<raiz>/levels/<nivel>) y la
+ * carpeta del editor, por si alguien la puso dentro de una instalacion.
  */
-function findEngineExecutable(levelPath) {
-  const exeName = process.platform === 'win32' ? 'engine.exe' : 'engine';
-  const roots = [INSTALL_ROOT, path.dirname(path.dirname(levelPath)), getProjectRoot()].filter(Boolean);
-
-  for (const root of roots) {
-    for (const buildDir of ENGINE_BUILD_DIRS) {
-      const candidate = path.join(root, 'engine', ...buildDir, exeName);
-      if (fsSync.existsSync(candidate)) return candidate;
-    }
-  }
-  return null;
+function engineRoots(levelPath) {
+  return [INSTALL_ROOT, path.dirname(path.dirname(levelPath)), getProjectRoot()].filter(Boolean);
 }
 
 function register() {
-  ipcMain.handle('project:run', async (_event, levelPath) => {
+  // mode: 'debug' (desarrollo, con F3) o 'release' (optimizado). Ver engine-modes.js.
+  ipcMain.handle('project:run', async (_event, { levelPath, mode }) => {
     if (!levelPath) {
       return { ok: false, error: 'No hay un nivel guardado para ejecutar.' };
     }
@@ -63,11 +43,14 @@ function register() {
       return { ok: false, error: `No se encontro el nivel: ${levelPath}` };
     }
 
-    const executable = findEngineExecutable(levelPath);
+    const engineMode = isMode(mode) ? mode : 'debug';
+    const executable = findEngineExecutable(engineRoots(levelPath), engineMode);
     if (!executable) {
+      // "missing" le dice a la UI que puede ofrecer compilarlo.
       return {
         ok: false,
-        error: 'No se encontro engine/build/engine.exe. Compila el motor antes de ejecutar.',
+        missing: true,
+        error: `El motor ${MODES[engineMode].buildType} todavía no está compilado (engine/${MODES[engineMode].buildDir}).`,
       };
     }
 

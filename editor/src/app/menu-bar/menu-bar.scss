@@ -1,9 +1,10 @@
 /* Barra de menus. Los colores salen de las variables que declara app.scss en
-   su :host: las variables CSS se heredan por el DOM aunque los estilos de cada
+   app-root: las variables CSS se heredan por el DOM aunque los estilos de cada
    componente esten encapsulados, asi que este archivo no repite el tema. */
 :host {
   display: flex;
   align-items: center;
+  gap: 1px;
   height: 100%;
 }
 
@@ -11,43 +12,44 @@
   position: relative;
 }
 
-/* Titulo de menu: igual que los botones del topbar, transparente y con fondo
-   solo al pasar por encima o mientras su desplegable esta abierto. */
+/* Titulo de menu: transparente, con fondo solo al pasar por encima o mientras
+   su desplegable esta abierto. */
 .mb-title {
-  height: 20px;
-  padding: 0 8px;
+  height: 24px;
+  padding: 0 9px;
   border: 0;
   border-radius: var(--radius);
   background: transparent;
   color: var(--text);
   font: inherit;
+  font-size: 13px;
   cursor: pointer;
 
   &:hover,
   &.is-open {
-    background: var(--widget);
+    background: var(--surface-3);
   }
 }
 
-/* Desplegable. Borde oscuro y sombra porque es lo unico de la interfaz que
-   flota encima de las areas: sin separarlo, se confunde con el panel de abajo.
-   El z-index le gana a los paneles laterales, que tienen el suyo (2). */
+/* Desplegable. Borde y sombra porque es de lo poco que flota encima de los
+   paneles: sin separarlo, se confunde con lo de abajo. El z-index le gana a
+   los paneles laterales, que tienen el suyo (2). */
 .mb-dropdown {
   position: absolute;
-  top: calc(100% + 3px);
+  top: calc(100% + 4px);
   left: 0;
   z-index: 100;
-  min-width: 260px;
-  padding: 4px 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  min-width: 270px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 
   /* Submenu: a la derecha de la opcion que lo abre, a su misma altura. */
   &--side {
-    top: -5px;
-    left: calc(100% - 2px);
+    top: -6px;
+    left: calc(100% + 2px);
   }
 }
 
@@ -57,79 +59,85 @@
 
 /* Una opcion en tres columnas fijas: marca, texto y atajo (o flecha). Con la
    marca siempre reservada, los textos quedan alineados aunque solo algunas
-   opciones tengan ✓. */
+   opciones tengan una. */
 .mb-item {
   display: grid;
   grid-template-columns: 18px 1fr auto;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  height: 24px;
-  padding: 0 12px 0 6px;
+  height: 28px;
+  padding: 0 10px 0 6px;
   border: 0;
+  border-radius: 5px;
   background: transparent;
   color: var(--text);
   font: inherit;
+  font-size: 13px;
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
 
   &:hover:not(:disabled),
   &.is-open {
-    background: var(--accent);
-    color: var(--text-bright);
+    background: var(--surface-4);
   }
 
   &:disabled {
-    color: var(--text-dim);
+    color: var(--text-2);
+    opacity: 0.6;
     cursor: default;
   }
 
   &__check {
-    text-align: center;
-    font-size: 11px;
+    display: grid;
+    place-items: center;
+    color: var(--detail);
+
+    .icon {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2.2;
+    }
   }
 
-  &__shortcut,
+  &__shortcut {
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
   &__arrow {
-    color: var(--text-dim);
-    font-size: 11px;
+    width: 14px;
+    height: 14px;
+    color: var(--text-2);
   }
 
   /* Planeado y todavia sin hacer: se lee pero no se elige, y el cursor de
      ayuda invita a quedarse encima para leer el tooltip. */
   &--soon {
-    color: var(--text-dim);
+    color: var(--text-2);
     cursor: help;
   }
 
   &__badge {
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: var(--bg-panel-head);
-    color: var(--text-dim);
-    font-size: 9px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: var(--surface-4);
+    color: var(--text-2);
+    font-size: 11px;
+    font-weight: 600;
   }
-}
-
-/* Sobre la fila azul el gris atenuado del atajo no se lee. */
-.mb-item:hover:not(:disabled) .mb-item__shortcut,
-.mb-item:hover:not(:disabled) .mb-item__arrow,
-.mb-item.is-open .mb-item__arrow {
-  color: #d6e2f5;
 }
 
 .mb-sep {
   height: 1px;
-  margin: 4px 8px;
-  background: var(--border-soft);
+  margin: 5px 6px;
+  background: var(--line-soft);
 }
 
 .mb-empty {
-  padding: 4px 12px 4px 30px;
-  color: var(--text-dim);
-  font-style: italic;
+  padding: 6px 12px 6px 32px;
+  color: var(--text-2);
+  font-size: 12px;
   white-space: nowrap;
 }

@@ -1,4 +1,4 @@
-import { DestroyRef, ElementRef, computed, effect, inject, signal } from '@angular/core';
+import { DestroyRef, ElementRef, computed, effect, inject, signal, untracked } from '@angular/core';
 
 import { CharactersController } from '../characters/characters.controller';
 import { EntityOpsController } from '../entities/entity-ops.controller';
@@ -8,13 +8,16 @@ import { SelectionController } from '../selection/selection.controller';
 import { ItemLibraryService } from '../services/item-library.service';
 import { LevelService } from '../services/level.service';
 import { SelectionService } from '../services/selection.service';
+import { ThemeService } from '../services/theme.service';
+import { SpriteCache } from './sprite-cache';
 import { TexturesController } from '../textures/textures.controller';
 import { roomAt, tunnelAt } from '../core/dungeon-layout';
 import { blocksOverlap, entitySpan } from '../core/entity-blocks';
-import { CanvasPoint, CanvasScene, IsoCanvasRenderer, VIEW_TOP_MARGIN } from '../core/iso-canvas-renderer';
+import { CanvasPoint, CanvasRect, CanvasScene, IsoCanvasRenderer, VIEW_TOP_MARGIN } from '../core/iso-canvas-renderer';
 import { GridCoord, IsoProjection } from '../core/iso-projection';
 import { SHAPE_SHEET_DATA_URL, ShapeId, shapeDef } from '../core/iso-shapes';
-import { GridPosition } from '../models/level.model';
+import { stripRect } from '../core/sprite-frames';
+import { GridPosition, LevelEntity } from '../models/level.model';
 
 // Presets de zoom de la barra: enteros, porque en pixel art un zoom fraccionario
 // reparte mal los pixeles del sprite (unos de 1px y otros de 2px) y arruina la
@@ -85,6 +88,13 @@ export class ViewportController {
   private readonly selection = inject(SelectionService);
   private readonly itemLibrary = inject(ItemLibraryService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly theme = inject(ThemeService);
+
+  /** Imagenes del proyecto a tamaño real, para dibujar los sprites. */
+  private readonly sprites = new SpriteCache();
+
+  /** La entidad bajo el puntero: su etiqueta de nombre y tipo se muestra. */
+  readonly hoveredEntity = signal<string | null>(null);
 
   private readonly viewport: ViewportDeps['viewport'];
   private readonly note: ViewportDeps['note'];
@@ -102,6 +112,9 @@ export class ViewportController {
 
   /** Observa el contenedor del canvas para saber cuanto mide. Ver el constructor. */
   private observer?: ResizeObserver;
+
+  /** Si ya se encuadro el nivel la primera vez que el canvas tuvo tamaño. */
+  private framedOnce = false;
 
   constructor(deps: ViewportDeps) {
     this.viewport = deps.viewport;
@@ -135,6 +148,13 @@ export class ViewportController {
       this.observer = new ResizeObserver((entries) => {
         const rect = entries[0].contentRect;
         this.canvasSize.set({ w: Math.floor(rect.width), h: Math.floor(rect.height) });
+        // La primera vez que el canvas tiene tamaño, encuadra el nivel: al
+        // abrir el editor se ve la grilla entera, no una esquina a zoom fijo.
+        // Antes de eso frameAll() no puede calcular nada (mide 0x0).
+        if (!this.framedOnce && rect.width > 0 && rect.height > 0) {
+          this.framedOnce = true;
+          this.frameAll();
+        }
       });
       this.observer.observe(host);
     });
@@ -155,6 +175,21 @@ export class ViewportController {
       sheet.src = SHAPE_SHEET_DATA_URL;
     }
 
+    // El canvas no espera a la fuente de la interfaz: si el primer cuadro sale
+    // antes de que Chakra Petch termine de cargar, las etiquetas usan la de
+    // respaldo. Se redibuja una vez cuando ya esta disponible.
+    if (typeof document !== 'undefined' && document.fonts) {
+      document.fonts.ready.then(() => this.draw());
+    }
+
+    // Reabrir el proyecto (o cambiar de carpeta) descarta las miniaturas de
+    // Recursos; los sprites del viewport se descartan con ellas, porque
+    // "x.png" puede ser otra imagen.
+    effect(() => {
+      this.tex.cacheVersion();
+      untracked(() => this.sprites.invalidate());
+    });
+
     // El ResizeObserver sobrevive al componente si no se lo desconecta.
     this.destroyRef.onDestroy(() => this.observer?.disconnect());
   }
@@ -166,7 +201,7 @@ export class ViewportController {
 
   readonly showGrid = signal(true);
 
-  readonly showColliders = signal(true);
+  readonly showColliders = signal(false);
 
   /** Lineas de la grilla por encima de las entidades (como F1 en el runtime) o debajo. */
   readonly gridOnTop = signal(false);
@@ -208,16 +243,28 @@ export class ViewportController {
   private pressedButton: number | null = null;
 
   /**
-   * Arrastre con Ctrl+clic en curso: la celda donde empezo, la posicion
-   * original de cada entidad que se lleva, y el desplazamiento ya aplicado.
+   * Arrastre de entidades en curso (con Seleccionar, o Ctrl+clic con
+   * cualquier herramienta): la celda donde empezo, la posicion original de
+   * cada entidad que se lleva, el desplazamiento ya aplicado, y a quien dejar
+   * elegido si se suelta sin moverse (ver startMove).
    */
   private moveDrag: {
     startCell: GridCoord;
     originals: Map<string, GridPosition>;
     delta: GridPosition;
+    soloOnClick: string | null;
   } | null = null;
 
-  /** Hay entidades agarradas con Ctrl; la plantilla cambia el cursor a "mano cerrada". */
+  /**
+   * Rectangulo de Seleccionar area mientras se arrastra, en pixeles del canvas.
+   * Es un signal porque el renderer lo dibuja: cambiarlo redibuja.
+   */
+  readonly marquee = signal<CanvasRect | null>(null);
+
+  /** Con Shift el area suma a lo que ya estaba elegido, en vez de reemplazarlo. */
+  private marqueeAdditive = false;
+
+  /** Hay entidades agarradas; la plantilla cambia el cursor a "mano cerrada". */
   readonly moving = signal(false);
 
   /**
@@ -380,6 +427,10 @@ export class ViewportController {
     }
 
     const activeTool = this.palette.tool();
+    if (activeTool === 'marquee') {
+      this.startMarquee(event);
+      return;
+    }
     if (activeTool === 'room') {
       this.map.roomToolDown(event, this.coordAt(event));
       return;
@@ -410,16 +461,31 @@ export class ViewportController {
       this.levels.toggleTile(cell.col, cell.row, activeTool);
       this.markDirty();
     } else {
-      // Shift suma a la seleccion en vez de reemplazarla; sin modificador,
-      // clickear elige una sola y el vacio deselecciona todo. (Ctrl ya no suma
-      // en el viewport: es el gesto de mover, ver arriba.)
-      this.sel.selectEntity(this.entityAt(event), event.shiftKey);
+      // Con Seleccionar, apretar sobre un objeto lo agarra: arrastrar lo mueve,
+      // que es lo primero que intenta alguien que nunca uso un editor. Si ya
+      // estaba elegido junto con otros, se agarra el grupo entero; si se suelta
+      // sin moverlo, queda elegido solo ese, como un clic de siempre.
+      const hit = this.entityAt(event);
+      if (hit && !event.shiftKey) {
+        const inGroup = this.sel.isEntitySelected(hit) && this.selection.selectedEntityIds().length > 1;
+        this.startMove(hit, event, inGroup ? hit : null);
+        return;
+      }
+      // Shift suma a la seleccion en vez de reemplazarla; el vacio deselecciona
+      // todo.
+      this.sel.selectEntity(hit, event.shiftKey);
     }
   }
 
   onPointerMove(event: PointerEvent): void {
     if (this.moveDrag) {
       this.updateMove(event);
+      return;
+    }
+    const marquee = this.marquee();
+    if (marquee) {
+      const point = this.canvasPoint(event);
+      this.marquee.set({ ...marquee, x1: point.x, y1: point.y });
       return;
     }
     if (this.shapeStroke) {
@@ -438,11 +504,16 @@ export class ViewportController {
       return;
     }
     this.hovered.set(this.coordAt(event));
+    this.hoveredEntity.set(this.entityAt(event));
   }
 
   onPointerUp(event: PointerEvent): void {
     if (this.moveDrag) {
       this.finishMove(event);
+      return;
+    }
+    if (this.marquee()) {
+      this.finishMarquee(event);
       return;
     }
     if (this.shapeStroke) {
@@ -502,6 +573,64 @@ export class ViewportController {
     this.contextMenu.set(null);
   }
 
+  // --- Seleccionar area -------------------------------------------------------
+  //
+  // Como el marco rectangular de un editor grafico: se arrastra un rectangulo
+  // y queda elegido todo lo que toca. Apretar sobre algo que ya esta elegido
+  // no empieza otro rectangulo: agarra la seleccion para moverla, que es lo
+  // que se quiere hacer justo despues de elegir varios.
+
+  /** Punto del evento en pixeles del canvas. */
+  private canvasPoint(event: MouseEvent): CanvasPoint {
+    const rect = this.viewport()?.nativeElement.getBoundingClientRect();
+    return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) };
+  }
+
+  private startMarquee(event: PointerEvent): void {
+    const hit = this.entityAt(event);
+    if (hit && !event.shiftKey && this.sel.isEntitySelected(hit)) {
+      const inGroup = this.selection.selectedEntityIds().length > 1;
+      this.startMove(hit, event, inGroup ? hit : null);
+      return;
+    }
+    const point = this.canvasPoint(event);
+    this.marqueeAdditive = event.shiftKey;
+    this.marquee.set({ x0: point.x, y0: point.y, x1: point.x, y1: point.y });
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  private finishMarquee(event: PointerEvent): void {
+    const area = this.marquee();
+    this.marquee.set(null);
+    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
+    if (!area) {
+      return;
+    }
+
+    // Sin arrastre es un clic: elige lo que hay debajo, o deselecciona.
+    if (Math.abs(area.x1 - area.x0) + Math.abs(area.y1 - area.y0) <= CLICK_SLOP) {
+      this.sel.selectEntity(this.entityAt(event), this.marqueeAdditive);
+      return;
+    }
+
+    const found = this.renderer.entitiesInRect(area, this.scene);
+    const ids = this.marqueeAdditive
+      ? [...new Set([...this.selection.selectedEntityIds(), ...found])]
+      : found;
+    this.selection.selectEntities(ids);
+    if (ids.length > 0) {
+      this.showObjectTab();
+    }
+    this.note(
+      found.length === 0
+        ? 'No hay ningún objeto en esa área.'
+        : found.length === 1
+          ? '1 objeto elegido. Arrástralo para moverlo.'
+          : found.length + ' objetos elegidos. Arrastra cualquiera para moverlos juntos.',
+    );
+  }
+
   // --- Mover con Ctrl+arrastrar ---------------------------------------------
   //
   // Ctrl+clic sobre una entidad la agarra y arrastrando se la lleva de celda
@@ -509,7 +638,12 @@ export class ViewportController {
   // la seleccion entera, que es la operacion de grupo que uno espera. Al
   // soltar sobre celdas ocupadas se pregunta, igual que al colocar.
 
-  private startMove(id: string, event: PointerEvent): void {
+  /**
+   * soloOnClick: si se suelta sin moverse, la seleccion queda solo en esa
+   * entidad. Es para el arrastre de Seleccionar sobre un grupo, donde apretar
+   * agarra a todos pero un clic quieto tiene que elegir uno, como siempre.
+   */
+  private startMove(id: string, event: PointerEvent, soloOnClick: string | null = null): void {
     if (!this.sel.isEntitySelected(id)) {
       this.selection.selectEntity(id);
     }
@@ -522,7 +656,7 @@ export class ViewportController {
       }
     }
 
-    this.moveDrag = { startCell: this.coordAt(event), originals, delta: { col: 0, row: 0 } };
+    this.moveDrag = { startCell: this.coordAt(event), originals, delta: { col: 0, row: 0 }, soloOnClick };
     this.moving.set(true);
     // Con captura, el arrastre sigue aunque el cursor pase sobre un panel.
     (event.target as HTMLElement).setPointerCapture(event.pointerId);
@@ -569,6 +703,9 @@ export class ViewportController {
 
     // Se solto donde se agarro: no hubo movimiento, y no hay nada que guardar.
     if (drag.delta.col === 0 && drag.delta.row === 0) {
+      if (drag.soloOnClick) {
+        this.sel.selectEntity(drag.soloOnClick, false);
+      }
       return;
     }
 
@@ -607,6 +744,7 @@ export class ViewportController {
 
   onPointerLeave(): void {
     this.hovered.set(null);
+    this.hoveredEntity.set(null);
   }
 
   /**
@@ -621,23 +759,59 @@ export class ViewportController {
    * terminara. Donde cae se calcula antes de esperar, con el puntero de ese
    * momento.
    */
+  /**
+   * Le pone a una entidad una textura de la biblioteca, con el recorte del
+   * tamano real de la imagen y los cuadros que trae esa imagen. Lo usan soltar
+   * una textura sobre la entidad y el selector de imagen del inspector.
+   *
+   * Los cuadros se reemplazan SIEMPRE, aunque queden en 1: los de la imagen
+   * anterior no le sirven a esta. Un jugador de 2 cuadros con una imagen
+   * suelta le pedia al motor un segundo cuadro fuera de la imagen.
+   */
+  async applyTexture(id: string, name: string): Promise<void> {
+    const look = await this.lookFor(name);
+    this.levels.updateEntity(id, {
+      texture: 'textures/' + name,
+      sourceRect: look.sourceRect,
+      frames: look.frames,
+      frameDuration: look.frameDuration,
+      animation: undefined,
+    });
+    this.sel.selectEntity(id);
+    this.markDirty();
+    this.note('"' + id + '" ahora usa ' + name + '.');
+  }
+
+  /**
+   * El recorte y la animacion de una textura: la imagen partida en los cuadros
+   * que dice tener (ver core/sprite-frames.ts). Con un solo cuadro no lleva
+   * frames ni frameDuration, que es el default del schema.
+   */
+  private async lookFor(name: string): Promise<Pick<LevelEntity, 'sourceRect' | 'frames' | 'frameDuration'>> {
+    const asset = await this.tex.ensureAsset(name);
+    if (!asset || asset.width <= 0) {
+      return { sourceRect: { ...FALLBACK_SOURCE_RECT } };
+    }
+    const look: Pick<LevelEntity, 'sourceRect' | 'frames' | 'frameDuration'> = {
+      sourceRect: stripRect(asset.width, asset.height, asset.frames),
+    };
+    if (asset.frames > 1) {
+      look.frames = asset.frames;
+      look.frameDuration = asset.frameDuration;
+    }
+    return look;
+  }
+
   private async dropTexture(event: DragEvent, name: string): Promise<void> {
     const targetId = this.entityAt(event);
     const coord = targetId ? null : this.coordAt(event);
 
-    const asset = await this.tex.ensureAsset(name);
-    const sourceRect =
-      asset && asset.width > 0
-        ? { x: 0, y: 0, width: asset.width, height: asset.height }
-        : { ...FALLBACK_SOURCE_RECT };
-
     if (targetId) {
-      this.levels.updateEntity(targetId, { texture: 'textures/' + name, sourceRect });
-      this.sel.selectEntity(targetId);
-      this.markDirty();
-      this.note('"' + targetId + '" ahora usa ' + name + '.');
+      await this.applyTexture(targetId, name);
       return;
     }
+
+    const look = await this.lookFor(name);
 
     const grid = this.grid();
     if (!coord || !new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(coord, grid.width, grid.height)) {
@@ -649,7 +823,7 @@ export class ViewportController {
       position: { col: coord.col, row: coord.row },
       // Prefijo "textures/": las rutas del nivel son relativas a assets/.
       texture: 'textures/' + name,
-      sourceRect,
+      ...look,
     });
   }
 
@@ -812,6 +986,15 @@ export class ViewportController {
     roomDrag: () => this.map.roomDrag(),
     tunnelTrace: () => this.map.tunnelTrace(),
     shapeSheet: () => this.shapeSheet(),
+    palette: () => this.theme.canvas(),
+    marquee: () => this.marquee(),
+    sprite: (texture) => {
+      // Leer la version hace que el dibujo se repita cuando termina de
+      // cargar una imagen.
+      this.sprites.version();
+      return this.sprites.get(texture);
+    },
+    hoveredEntityId: () => this.hoveredEntity(),
   };
 
   /** Punto del canvas donde cae la celda (0,0). */

@@ -8,14 +8,14 @@
     <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="room-dialog-title"
              (click)="$event.stopPropagation()">
       <div class="modal__head">
-        <h2 id="room-dialog-title">{{ draft.editId ? 'Grilla “' + draft.editId + '”' : 'Agregar grilla al mapa' }}</h2>
-        <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelRoomDialog()">×</button>
+        <h2 id="room-dialog-title">{{ draft.editId ? 'Sala “' + draft.editId + '”' : 'Agregar sala al mapa' }}</h2>
+        <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="map.cancelRoomDialog()"><svg hcIcon="x"></svg></button>
       </div>
 
       <div class="modal__body">
         @if (!draft.editId && map.rooms().length === 0) {
           <p class="hint">
-            El nivel todavía es una sola grilla. Al agregar esta, el área actual pasa a llamarse
+            El nivel todavía es una sola sala. Al agregar esta, el área actual pasa a llamarse
             “sala_1” y se puede unir con la nueva.
           </p>
         }
@@ -105,7 +105,7 @@
       <div class="modal__actions">
         <button class="btn" type="button" (click)="map.cancelRoomDialog()">Cancelar</button>
         <button class="btn btn--primary" type="button" (click)="map.confirmRoomDialog()">
-          {{ draft.editId ? 'Guardar' : 'Agregar grilla' }}
+          {{ draft.editId ? 'Guardar' : 'Agregar sala' }}
         </button>
       </div>
     </section>

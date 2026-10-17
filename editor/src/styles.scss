@@ -1,11 +1,21 @@
-/* Base global del editor. El resto del tema vive en app.scss.
-   El gris es el de la ventana de Blender: neutro, sin nada de azul. */
+/* Base global del editor. El resto del tema vive en app/app.scss.
+
+   La tipografia va empaquetada con la app (@fontsource, solo el juego latino,
+   que trae las tildes y la ñ): el editor corre sin internet dentro de Electron,
+   y una fuente del sistema cambiaria de una maquina a otra. */
+@import '@fontsource/chakra-petch/latin-400.css';
+@import '@fontsource/chakra-petch/latin-500.css';
+@import '@fontsource/chakra-petch/latin-600.css';
+
 html,
 body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #1d1d1d;
-  color: #e5e5e5;
-  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  /* El grafito del suelo de la ventana: se ve un instante antes de que
+     arranque Angular, y despues detras de las uniones entre paneles. */
+  background: #12100d;
+  color: #ece6dc;
+  font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
 }

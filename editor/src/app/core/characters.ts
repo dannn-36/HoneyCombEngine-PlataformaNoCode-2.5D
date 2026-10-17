@@ -28,7 +28,9 @@ import {
   LevelEntity,
   SourceRect,
 } from '../models/level.model';
+import type { IconName } from '../ui/icons.generated';
 import { nextFreeId } from './dungeon-layout';
+import { entityKindStyle } from './entity-kinds';
 
 export type CharacterId = CharacterKind;
 
@@ -49,9 +51,12 @@ export interface CharacterDef {
   frames: number;
   frameDuration: number;
   stats: EntityStats;
-  /** Color del icono de la paleta y del rectangulo que dibuja el viewport. */
+  /**
+   * Color e icono del tipo, los mismos en la paleta, el arbol de escena y el
+   * viewport. Salen de core/entity-kinds.ts para que no se separen.
+   */
   color: string;
-  glyph: string;
+  icon: IconName;
   /** Que hace en el juego, para la barra de estado al elegirlo. */
   hint: string;
 }
@@ -67,12 +72,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
     texture: 'textures/player.png',
     sourceRect: { ...SPRITE },
     collider: { width: 16, height: 16 },
-    // Los mismos dos cuadros de 0.4 s que tenia escrito a mano main.cpp.
-    frames: 2,
-    frameDuration: 0.4,
+    // Un cuadro, como los demas tipos. Antes eran 2 (los de main.cpp), y ese 2
+    // se arrastraba a cualquier imagen que se le eligiera al jugador: una
+    // imagen suelta pedia un segundo cuadro que no tiene y en el juego se veia
+    // cortada o no se veia. Los cuadros los pone la imagen al elegirla (ver
+    // core/sprite-frames.ts).
+    frames: 1,
+    frameDuration: 0.15,
     stats: { health: 100, damage: 10, speed: 3 },
-    color: '#e08a3c',
-    glyph: '☻',
+    color: entityKindStyle('player').color,
+    icon: entityKindStyle('player').icon,
     hint: 'Jugador: el motor lo mueve con las flechas. Solo uno por nivel.',
   },
   {
@@ -86,8 +95,8 @@ export const CHARACTERS: readonly CharacterDef[] = [
     frames: 1,
     frameDuration: 0.15,
     stats: { health: 30, damage: 10, speed: 1.5 },
-    color: '#c05050',
-    glyph: '☠',
+    color: entityKindStyle('enemy').color,
+    icon: entityKindStyle('enemy').icon,
     hint: 'Enemigo: al tocarlo dispara "Al colisionar". Tiene vida y daño para el combate.',
   },
   {
@@ -101,8 +110,8 @@ export const CHARACTERS: readonly CharacterDef[] = [
     frames: 1,
     frameDuration: 0.15,
     stats: { health: 10, damage: 0, speed: 1 },
-    color: '#4772b3',
-    glyph: '☺',
+    color: entityKindStyle('npc').color,
+    icon: entityKindStyle('npc').icon,
     hint: 'NPC: sensor de contacto, igual que el enemigo pero con otro type.',
   },
   {
@@ -116,8 +125,8 @@ export const CHARACTERS: readonly CharacterDef[] = [
     frames: 1,
     frameDuration: 0.15,
     stats: { health: 1, damage: 0, speed: 0 },
-    color: '#5f9e4a',
-    glyph: '◆',
+    color: entityKindStyle('item').color,
+    icon: entityKindStyle('item').icon,
     hint: 'Objeto: al tocarlo dispara un evento; úsalo con la accion "Destruir entidad".',
   },
 ];

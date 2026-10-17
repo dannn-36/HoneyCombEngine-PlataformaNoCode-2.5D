@@ -5,9 +5,12 @@ import { normalizeItem } from '../core/items';
 import type {
   ConvertSession,
   ConvertSource,
+  EngineMode,
+  EngineRunResult,
   LevelImport,
   ProjectFileData,
   ProjectNode,
+  TextureWriteResult,
   WorkspaceInfo,
 } from '../electron-api';
 import { CharacterPreset } from '../models/character-preset.model';
@@ -168,6 +171,11 @@ export class ProjectService {
     return window.honeycombProject.resetConvert();
   }
 
+  /** El PNG de la herramienta de sprites, a assets/textures/ (ver ipc/textures.js). */
+  async writeTexture(name: string, pngBase64: string, overwrite: boolean): Promise<TextureWriteResult> {
+    return window.honeycombProject.writeTexture(name, pngBase64, overwrite);
+  }
+
   /**
    * Abre un nivel eligiendo el ARCHIVO con el dialogo del sistema, en vez de
    * elegirlo del desplegable del proyecto.
@@ -280,10 +288,32 @@ export class ProjectService {
    *
    * Se le pasa la ruta del NIVEL, no la del motor: el proceso principal deduce
    * de ella donde esta engine.exe, con la misma convencion de carpetas que usa
-   * el propio motor para encontrar los assets.
+   * el propio motor para encontrar los assets. "mode" elige cual de los dos
+   * motores (ver ipc/engine-modes.js).
    */
-  async runLevel(levelPath: string): Promise<{ ok: boolean; executable?: string; error?: string }> {
-    return window.honeycombProject.run(levelPath);
+  async runLevel(levelPath: string, mode: EngineMode): Promise<EngineRunResult> {
+    return window.honeycombProject.run(levelPath, mode);
+  }
+
+  /** Que motores estan compilados. */
+  async engineStatus(): Promise<Record<EngineMode, boolean>> {
+    return window.honeycombProject.engineStatus();
+  }
+
+  /**
+   * Compila el motor de un modo. Cada linea de la salida de CMake llega a
+   * onLine mientras dura; al terminar se deja de escuchar.
+   */
+  async buildEngine(
+    mode: EngineMode,
+    onLine: (line: string) => void,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const stop = window.honeycombProject.onEngineBuildLog(onLine);
+    try {
+      return await window.honeycombProject.buildEngine(mode);
+    } finally {
+      stop();
+    }
   }
 
   /** Imagenes de assets/textures/, que son las que aparecen en el panel Recursos. */

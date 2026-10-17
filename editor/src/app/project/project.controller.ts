@@ -8,6 +8,7 @@ import { LevelService } from '../services/level.service';
 import { ProjectService } from '../services/project.service';
 import { TexturesController } from '../textures/textures.controller';
 import { ViewportController } from '../viewport/viewport.controller';
+import { EngineController } from './engine.controller';
 import { ExplorerController } from './explorer.controller';
 import { DEFAULT_STARTER_TEXTURE } from '../entities/entity-ops.controller';
 import { GridConfig } from '../models/level.model';
@@ -32,6 +33,8 @@ export interface ProjectDeps {
   ev: EventsController;
   /** Pide el nombre en Guardar como, sin el dialogo del sistema. */
   prompt: NamePromptController;
+  /** Con que motor se ejecuta (Debug o Release), y compilarlo si falta. */
+  engine: EngineController;
 }
 
 /**
@@ -60,6 +63,7 @@ export class ProjectController {
   private readonly view: ViewportController;
   private readonly ev: EventsController;
   private readonly prompt: NamePromptController;
+  private readonly engine: EngineController;
 
   private readonly entities = computed(() => this.levels.level().entities);
 
@@ -73,6 +77,7 @@ export class ProjectController {
     this.view = deps.view;
     this.ev = deps.ev;
     this.prompt = deps.prompt;
+    this.engine = deps.engine;
   }
 
   readonly levelFiles = signal<string[]>([]);
@@ -486,11 +491,6 @@ export class ProjectController {
       return;
     }
 
-    const result = await this.project.runLevel(levelPath);
-    this.note(
-      result.ok
-        ? 'Ejecutando ' + levelPath
-        : result.error ?? 'No se pudo ejecutar el motor.',
-    );
+    await this.engine.launch(levelPath);
   }
 }

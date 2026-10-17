@@ -33,6 +33,17 @@ La primera vez tarda entre **10 y 25 minutos**: raylib y el motor se compilan de
 | `editor.cmd` / `./editor.sh` | Abre el editor en modo desarrollo, con recarga en vivo |
 | `engine.sh` *(Linux)* | Recompila y abre el motor por separado |
 
+#### Debug y Release
+
+El motor se compila de dos formas, y el editor deja elegir con cuál se ejecuta (el selector junto a **Ejecutar**, o el menú *Ejecutar*):
+
+| Motor | Carpeta | Para qué |
+| :--- | :--- | :--- |
+| **Debug** | `engine/build` | La versión de desarrollo: sin optimizar (para el depurador) y con **herramientas de administrador**: `F3` abre el panel con FPS, tiempo por cuadro y sprites; `F1` grilla, `F2` hitboxes, `F4` ver el recorte de la cámara, `F6` sin tope de FPS, `F7` invencible, `F8` recargar el nivel del disco. Es la que deja el instalador. |
+| **Release** | `engine/build-release` | La que se juega: optimizada (`-O3`) y sin herramientas. El editor la compila la primera vez que se pide (unos minutos), copiando la configuración de `engine/build`. |
+
+Desde la terminal: `cmake --preset release` y `cmake --build engine/build-release` (en Linux, `--preset linux-release`).
+
 Los niveles, imágenes y bibliotecas que crees con el editor se guardan en **`Documentos/HoneyComb`** (la *carpeta del editor*, ver sección 7.2), no en el repositorio. Se puede cambiar desde *Archivo › Cambiar carpeta del editor…* y abrir con *Archivo › Mostrar carpeta del editor*.
 
 El asistente **no reemplaza** la guía de abajo: si prefieres montar el entorno paso a paso, o algo falla y quieres entender qué hace cada pieza, las secciones 1 a 9 siguen siendo la referencia completa.
@@ -323,6 +334,7 @@ Hay dos carpetas distintas, y no hay que confundirlas:
 │   │   ├── core/                    # Lógica pura con tests (iso-projection.ts, texture-fit.ts...)
 │   │   ├── services/                # ProjectService, CatalogService, LevelService...
 │   │   ├── textures/                # Biblioteca de texturas, miniaturas bajo demanda, convertidor
+│   │   ├── sprites/                 # Herramienta de sprites (pixel art con capas y cuadros, @defer)
 │   │   ├── project/                 # El nivel como documento y el explorador de archivos
 │   │   ├── viewport/ entities/ map/ selection/ palette/ inspector/
 │   │   ├── characters/ combat/ events/ ui/ menu-bar/
@@ -333,6 +345,7 @@ Hay dos carpetas distintas, y no hay que confundirlas:
 │   │   ├── levels.js                # Abrir / importar niveles
 │   │   ├── files.js                 # Leer, escribir, listar, crear carpetas
 │   │   ├── convert.js               # Importar imágenes (PNG, JPG, JPEG → PNG)
+│   │   ├── textures.js              # Guardar el PNG de la herramienta de sprites
 │   │   ├── run.js                   # Lanzar engine.exe
 │   │   └── names.js / media-types.js
 │   ├── main.js                      # Proceso principal de Electron (ventana y registro de IPC)

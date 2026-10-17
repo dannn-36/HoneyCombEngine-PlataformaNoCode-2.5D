@@ -46,6 +46,8 @@ describe('App', () => {
     ['pasar a otro nivel', 'transition-title', (app) => app.transition.openTransitionDialog()],
     ['convertidor', 'converter-title', (app) => app.converter.isOpen.set(true)],
     ['puzzle de sala', 'puzzle-title', (app) => app.puzzle.open()],
+    // No es un dialogo pero se carga igual, con @defer, al pasar a Sprites.
+    ['herramienta de sprites', 'sprite-start-title', (app) => app.setCenterMode('sprites')],
   ];
 
   for (const [name, titleId, open] of dialogs) {

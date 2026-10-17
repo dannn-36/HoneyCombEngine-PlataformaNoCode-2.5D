@@ -5,8 +5,19 @@ import { signal } from '@angular/core';
 // maximo, dejarle al viewport la mitad de una pantalla chica.
 const SIDEBAR_MIN_WIDTH = 170;
 const SIDEBAR_MAX_WIDTH = 560;
-const SIDEBAR_DEFAULT_WIDTH = 230;
-const INSPECTOR_DEFAULT_WIDTH = 290;
+// Elegidos para 1366x768: con 220 + 280 al viewport le quedan ~860px.
+const SIDEBAR_DEFAULT_WIDTH = 220;
+const INSPECTOR_DEFAULT_WIDTH = 280;
+
+// El dock de abajo (recursos, eventos, consola, archivo). El minimo deja ver
+// una fila de fichas; el maximo, que el viewport nunca quede mas chico que el
+// dock.
+const DOCK_MIN_HEIGHT = 120;
+const DOCK_DEFAULT_HEIGHT = 200;
+/** Lo que mide la barra de estado, que va debajo del dock. */
+const STATUSBAR_HEIGHT = 24;
+
+type ResizablePanel = 'sidebar' | 'inspector' | 'dock';
 
 /**
  * La disposicion de la ventana: ancho y visibilidad de los paneles laterales,
@@ -29,9 +40,12 @@ export class PanelsController {
   readonly sidebarVisible = signal(true);
   readonly inspectorWidth = signal(INSPECTOR_DEFAULT_WIDTH);
   readonly inspectorVisible = signal(true);
+  readonly dockHeight = signal(DOCK_DEFAULT_HEIGHT);
+  /** Plegado, el dock queda en su fila de pestañas y el viewport gana el alto. */
+  readonly dockOpen = signal(true);
 
   /** Que borde se esta arrastrando, si alguno. La plantilla lo usa para resaltarlo. */
-  private readonly resizing = signal<'sidebar' | 'inspector' | null>(null);
+  private readonly resizing = signal<ResizablePanel | null>(null);
 
   /**
    * Paneles del inspector plegados, por id. Se guarda el conjunto de PLEGADOS y
@@ -61,11 +75,15 @@ export class PanelsController {
     return columns.join(' ');
   }
 
-  isResizing(panel: 'sidebar' | 'inspector'): boolean {
+  toggleDock(): void {
+    this.dockOpen.update((open) => !open);
+  }
+
+  isResizing(panel: ResizablePanel): boolean {
     return this.resizing() === panel;
   }
 
-  onResizeStart(panel: 'sidebar' | 'inspector', event: PointerEvent): void {
+  onResizeStart(panel: ResizablePanel, event: PointerEvent): void {
     event.preventDefault();
     this.resizing.set(panel);
     // Con captura el arrastre sigue aunque el cursor se vaya sobre el canvas,
@@ -76,6 +94,14 @@ export class PanelsController {
   onResizeMove(event: PointerEvent): void {
     const panel = this.resizing();
     if (!panel) {
+      return;
+    }
+    // El dock crece hacia arriba: su alto es lo que hay del cursor a la barra
+    // de estado. El tope es la mitad de la ventana.
+    if (panel === 'dock') {
+      const height = window.innerHeight - STATUSBAR_HEIGHT - event.clientY;
+      const max = Math.round(window.innerHeight / 2);
+      this.dockHeight.set(Math.min(max, Math.max(DOCK_MIN_HEIGHT, Math.round(height))));
       return;
     }
     // No hace falta guardar donde arranco el gesto: cada panel esta pegado a un
@@ -99,13 +125,17 @@ export class PanelsController {
     (event.target as HTMLElement).releasePointerCapture(event.pointerId);
   }
 
-  /** Un panel del inspector esta plegado solo si figura en el mapa como true. */
-  isCollapsed(id: string): boolean {
-    return this.collapsedPanels()[id] === true;
+  /**
+   * Un panel del inspector esta plegado si figura en el mapa como true. Los
+   * que no figuran usan su valor de entrada: abiertos, salvo los de opciones
+   * avanzadas, que se piden con collapsedByDefault.
+   */
+  isCollapsed(id: string, collapsedByDefault = false): boolean {
+    return this.collapsedPanels()[id] ?? collapsedByDefault;
   }
 
-  togglePanel(id: string): void {
-    this.collapsedPanels.update((state) => ({ ...state, [id]: !state[id] }));
+  togglePanel(id: string, collapsedByDefault = false): void {
+    this.collapsedPanels.update((state) => ({ ...state, [id]: !(state[id] ?? collapsedByDefault) }));
   }
 
   /**
@@ -118,26 +148,8 @@ export class PanelsController {
     this.collapsedPanels.update((state) => ({ ...state, [id]: false }));
   }
 
-  // Las secciones de la barra izquierda se pliegan con el mismo mapa que los
-  // paneles del inspector, con ids "side-*". Plegada, una seccion queda en su
-  // cabecera sola, como las vistas del explorador de VS Code.
-
-  /**
-   * Filas de la barra izquierda. Una seccion plegada mide lo que su cabecera,
-   * y el alto que sobra va a la primera seccion abierta que lo aprovecha: la
-   * escena o el explorador, o Recursos si esa esta plegada. Es el mismo reparto
-   * que hace VS Code con sus vistas.
-   */
-  sidebarRows(): string {
-    const mainOpen = !this.isCollapsed('side-main');
-    const assetsOpen = !this.isCollapsed('side-assets');
-    return [
-      mainOpen ? 'minmax(0, 1fr)' : 'auto',
-      !mainOpen && assetsOpen ? 'minmax(0, 1fr)' : 'auto',
-      'auto',
-      'auto',
-      // Objetos
-      'auto',
-    ].join(' ');
+  /** Alto de la fila del dock en el grid de la ventana. Plegado, solo sus pestañas. */
+  dockRow(): string {
+    return this.dockOpen() ? this.dockHeight() + 'px' : 'auto';
   }
 }

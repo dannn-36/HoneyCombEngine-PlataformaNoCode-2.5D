@@ -150,4 +150,7 @@ export interface TextureAsset {
   dataUrl: string;
   width: number;
   height: number;
+  /** Cuadros que la imagen dice tener (ver core/sprite-frames.ts); 1 si no dice nada. */
+  frames: number;
+  frameDuration: number;
 }

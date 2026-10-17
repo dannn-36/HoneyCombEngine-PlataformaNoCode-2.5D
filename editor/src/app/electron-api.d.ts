@@ -63,6 +63,12 @@ export type ConvertSession =
   | { projectRoot: string; canceled: true }
   | { projectRoot: string; canceled: false; items: ConvertItem[] };
 
+/** Lo que paso al guardar una textura de la herramienta de sprites. "target" es el nombre final, ya limpio. */
+export interface TextureWriteResult {
+  status: 'written' | 'exists';
+  target: string;
+}
+
 export interface HoneycombProjectApi {
   /** Abre un nivel con el dialogo; uno de afuera se importa a levels/. */
   open(): Promise<OpenLevelResult>;
@@ -96,12 +102,39 @@ export interface HoneycombProjectApi {
   writeConvertedImage(index: number, pngBase64: string | null): Promise<{ target: string }>;
   /** Olvida el plan del convertidor (al cerrar su ventana). */
   resetConvert(): Promise<void>;
+  /**
+   * Escribe un PNG de la herramienta de sprites en assets/textures/. El nombre
+   * se limpia y termina en .png. Sin overwrite, un nombre ocupado no se pisa y
+   * vuelve "exists".
+   */
+  writeTexture(name: string, pngBase64: string, overwrite: boolean): Promise<TextureWriteResult>;
 
   /**
-   * Lanza el runtime con el nivel de esa ruta absoluta. El ejecutable lo
-   * localiza el proceso principal a partir de ella.
+   * Lanza el runtime con el nivel de esa ruta absoluta, con el motor del modo
+   * elegido. El ejecutable lo localiza el proceso principal. "missing" dice que
+   * ese motor no esta compilado, y que se puede compilar con buildEngine.
    */
-  run(levelPath: string): Promise<{ ok: boolean; executable?: string; error?: string }>;
+  run(levelPath: string, mode: EngineMode): Promise<EngineRunResult>;
+
+  /** Que motores estan compilados (ver ipc/engine-modes.js). */
+  engineStatus(): Promise<Record<EngineMode, boolean>>;
+  /** Compila el motor de un modo con CMake. La salida llega por onEngineBuildLog. */
+  buildEngine(mode: EngineMode): Promise<{ ok: boolean; executable?: string | null; error?: string }>;
+  /** Escucha la salida de la compilacion, de a una linea. Devuelve como dejar de escucharla. */
+  onEngineBuildLog(callback: (line: string) => void): () => void;
+}
+
+/**
+ * Con que motor se ejecuta: "debug" es la version de desarrollo (sin optimizar,
+ * con las herramientas de F3) y "release" la optimizada, la que se juega.
+ */
+export type EngineMode = 'debug' | 'release';
+
+export interface EngineRunResult {
+  ok: boolean;
+  executable?: string;
+  error?: string;
+  missing?: boolean;
 }
 
 /** Control de la ventana, para lo que antes daba el menu nativo de Electron. */

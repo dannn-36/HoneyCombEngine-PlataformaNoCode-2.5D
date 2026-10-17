@@ -104,6 +104,12 @@ export class LevelService {
   /** Archivo de origen dentro de levels/. Null si el nivel todavia no se guardo nunca. */
   readonly fileName = signal<string | null>(null);
   /**
+   * Sube cada vez que el nivel abierto se REEMPLAZA por otro (nuevo o abierto
+   * del disco), no cuando se lo edita. El historial de deshacer lo mira para
+   * empezar de cero: deshacer no vuelve al nivel que estaba abierto antes.
+   */
+  readonly generation = signal(0);
+  /**
    * La entidad activa, resuelta desde el id que guarda SelectionService.
    * undefined si se borro o no hay ninguna.
    *
@@ -130,6 +136,7 @@ export class LevelService {
   createNew(name: string, grid: GridConfig = DEFAULT_GRID): void {
     this.level.set({ ...emptyLevel(name), grid: { ...grid } });
     this.fileName.set(null);
+    this.generation.update((value) => value + 1);
     this.selection.clear();
   }
 
@@ -148,6 +155,7 @@ export class LevelService {
   adopt(level: Level, fileName: string | null): void {
     this.level.set(level);
     this.fileName.set(fileName);
+    this.generation.update((value) => value + 1);
     this.selection.clear();
   }
 

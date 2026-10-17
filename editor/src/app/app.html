@@ -1,31 +1,36 @@
 <!--
-  Plantilla del editor. La ventana se arma como la de Blender: un topbar con
-  menus y pestanas de workspace, y debajo AREAS -- editores independientes,
-  cada uno con su propia cabecera de 26px -- separadas por un surco de 2px.
+  Plantilla del editor. La ventana se arma como la de un motor de juegos:
 
-    +-----------------------------------------------------+
-    |  topbar: menus  |  Layout · Eventos · Salida         |
-    +-----------+-----------------------------+-----------+
-    | outliner  | ⊞ cabecera del viewport     | ⚙ props   |
-    | (escena)  +-----------------------------+ +---------+
-    +-----------+                             | |t| campos|
-    | recursos  |     canvas isometrico       | |a|       |
-    |           |                             | |b|       |
-    +-----------+-----------------------------+-----------+
-    |  editor inferior (eventos / salida), segun workspace |
-    +-----------------------------------------------------+
-    |  barra de estado: pistas de teclas | estadisticas    |
-    +-----------------------------------------------------+
+    +-----------------------------------------------------------+
+    | marca · menus                       sin guardar · nivel ▾ |  30px
+    +-----------------------------------------------------------+
+    | herramientas · capas      [ ▶ Ejecutar ]    zoom · paneles |  40px
+    +-----------+-------------------------------+---------------+
+    | escena /  |                               | inspector     |
+    | proyecto  |      viewport isometrico      | objeto|escena |
+    |           |                               |               |
+    +-----------+-------------------------------+---------------+
+    | Recursos · Eventos · Consola · Vista previa · JSON (plegable) |
+    +-----------------------------------------------------------+
+    | pistas de teclas · mensaje · estadisticas                 |  24px
+    +-----------------------------------------------------------+
+
+  Los tipos de entidad se reconocen por la CELDA (svg[hcCell], ui/icon.ts): un
+  hexagono con el color y el icono del tipo. Los iconos sueltos son svg[hcIcon].
 
   Todo lee de signals del componente (app.ts) y escribe llamando a sus metodos;
   no hay estado propio de la plantilla. Se usa la sintaxis de control de flujo
   moderna de Angular (@if / @for / @empty), no las directivas *ngIf / *ngFor.
 -->
-<div class="shell">
-  <!-- ===================== TOPBAR ===================== -->
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand__mark">⬢</span>
+<app-icon-sprite />
+
+<div class="shell" [style.grid-template-rows]="'30px 40px minmax(0, 1fr) ' + panels.dockRow() + ' 24px'">
+  <!-- ===================== BARRA DE MENUS ===================== -->
+  <header class="menubar">
+    <div class="brand" title="HoneyComb Engine">
+      <svg class="brand__mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 1.6 21 6.8v10.4L12 22.4 3 17.2V6.8Z" />
+      </svg>
       <span class="brand__name">HoneyComb</span>
     </div>
 
@@ -33,56 +38,203 @@
          describe entera en el computed "menus" de app.ts. -->
     <app-menu-bar [menus]="menus()" />
 
-    <!-- Guarda y lanza el motor con el nivel abierto. Destacado porque es la
-         accion que cierra el ciclo de trabajo: editar, probar, corregir. -->
-    <button class="menu menu--run" (click)="proj.run()" title="Guardar y ejecutar en el motor (F5)">
-      ▶ Ejecutar
-    </button>
+    <div class="menubar__spacer"></div>
 
-    <!-- Pestanas de workspace: no cambian de pantalla, cambian que editores
-         estan abiertos (ver el tipo Workspace en app.ts). -->
-    <nav class="wstabs">
-      <button class="wstab" [class.is-active]="workspace() === 'layout'" (click)="workspace.set('layout')">
-        Layout
-      </button>
-      <button class="wstab" [class.is-active]="workspace() === 'eventos'" (click)="workspace.set('eventos')">
-        Eventos
-      </button>
-      <button class="wstab" [class.is-active]="workspace() === 'salida'" (click)="workspace.set('salida')">
-        Salida
-      </button>
-      <button class="wstab" [class.is-active]="workspace() === 'archivo'" (click)="workspace.set('archivo')"
-              title="Ver el archivo abierto desde el explorador">
-        Archivo
-      </button>
-    </nav>
-
-    <div class="topbar__spacer"></div>
-
-    <!-- Aviso de cambios sin guardar. Antes iba como "Guardar *" en un boton
-         que ahora vive dentro del menu Archivo, donde no se ve de un vistazo. -->
+    <!-- Aviso de cambios sin guardar: punto y texto, para que no dependa del
+         color. Guardar esta en Archivo y en Ctrl+S. -->
     @if (dirty()) {
-      <span class="topbar__dirty" title="Hay cambios sin guardar (Ctrl+S)">● Sin guardar</span>
+      <span class="dirty" title="Hay cambios sin guardar (Ctrl+S)">
+        <span class="dirty__dot" aria-hidden="true"></span>Sin guardar
+      </span>
     }
-
-    <!-- Interruptores de los paneles laterales, a la derecha como los de
-         diseño de VS Code. Tambien estan en el menu Ver. -->
-    <button class="menu" [class.is-active]="panels.sidebarVisible()" (click)="panels.toggleSidebar()"
-            title="Mostrar u ocultar el panel izquierdo (Ctrl+B)">☰</button>
-    <button class="menu" [class.is-active]="panels.inspectorVisible()" (click)="panels.toggleInspector()"
-            title="Mostrar u ocultar el panel de propiedades">⚙</button>
 
     <!-- [selected] en cada opcion, y no solo [value] en el select: Angular
          asigna el valor ANTES de crear las opciones del @for, y el navegador
          se queda con la primera. Pasa en todos los desplegables con opciones
          generadas, por eso se repite en cada uno. -->
-    <select class="select-lone" [value]="levels.fileName() ?? ''" (change)="proj.loadLevel(str($event))">
-      <option value="" disabled [selected]="!levels.fileName()">— nivel —</option>
-      @for (file of proj.levelFiles(); track file) {
-        <option [value]="file" [selected]="levels.fileName() === file">{{ file }}</option>
-      }
-    </select>
+    <label class="levelpick" title="Nivel abierto">
+      <svg hcIcon="map"></svg>
+      <select class="levelpick__select" aria-label="Nivel abierto" [value]="levels.fileName() ?? ''"
+              (change)="proj.loadLevel(str($event))">
+        <option value="" disabled [selected]="!levels.fileName()">Elegir nivel</option>
+        @for (file of proj.levelFiles(); track file) {
+          <option [value]="file" [selected]="levels.fileName() === file">{{ file }}</option>
+        }
+      </select>
+    </label>
   </header>
+
+  <!-- ===================== BARRA DE HERRAMIENTAS =====================
+       Tres zonas: lo que se hace sobre la grilla a la izquierda, Ejecutar al
+       centro (es la accion que cierra el ciclo editar, probar, corregir) y la
+       vista a la derecha. -->
+  <div class="toolbar" role="toolbar" aria-label="Herramientas">
+    <div class="toolbar__side">
+      <!-- Que muestra el area central: el nivel o la herramienta de sprites. Con
+           Sprites, la barra cambia sus herramientas por las de dibujo. -->
+      <div class="tgroup" role="group" aria-label="Área central">
+        <button class="tbtn" type="button" [class.is-active]="centerMode() === 'mapa'"
+                [attr.aria-pressed]="centerMode() === 'mapa'" (click)="setCenterMode('mapa')"
+                title="Mapa: editar el nivel en el viewport" aria-label="Mapa">
+          <svg hcIcon="map"></svg>
+        </button>
+        <button class="tbtn" type="button" [class.is-active]="centerMode() === 'sprites'"
+                [attr.aria-pressed]="centerMode() === 'sprites'" (click)="setCenterMode('sprites')"
+                title="Sprites: dibujar pixel art con capas y cuadros, o retocar una textura" aria-label="Sprites">
+          <svg hcIcon="brush"></svg>
+        </button>
+      </div>
+
+      <span class="toolbar__sep" aria-hidden="true"></span>
+
+      @if (centerMode() === 'sprites') {
+        <div class="tgroup" role="group" aria-label="Herramienta de dibujo">
+          @for (tool of spriteTools; track tool.id) {
+            <button class="tbtn tbtn--tool" type="button" [class.is-active]="sprite.tool() === tool.id"
+                    [attr.aria-pressed]="sprite.tool() === tool.id" [attr.aria-label]="tool.label"
+                    [attr.aria-keyshortcuts]="tool.key" [title]="tool.hint + ' (' + tool.key + ')'"
+                    (click)="sprite.setTool(tool.id)">
+              <svg [hcIcon]="tool.icon"></svg>
+            </button>
+          }
+        </div>
+
+        <div class="tgroup" role="group" aria-label="Tamaño del pincel">
+          <button class="tbtn" type="button" (click)="sprite.stepBrush(-1)" title="Pincel más chico ([)"
+                  aria-label="Pincel más chico"><svg hcIcon="minus"></svg></button>
+          <span class="zoom__value" title="Lado del pincel">{{ sprite.brushSize() }} px</span>
+          <button class="tbtn" type="button" (click)="sprite.stepBrush(1)" title="Pincel más grande (])"
+                  aria-label="Pincel más grande"><svg hcIcon="plus"></svg></button>
+        </div>
+
+        <span class="toolbar__sep" aria-hidden="true"></span>
+
+        <div class="tgroup" role="group" aria-label="Ayudas del lienzo">
+          <button class="tbtn" type="button" [class.is-active]="sprite.showPixelGrid()"
+                  [attr.aria-pressed]="sprite.showPixelGrid()" (click)="sprite.showPixelGrid.set(!sprite.showPixelGrid())"
+                  title="Cuadrícula de píxeles (se ve desde 600 %)" aria-label="Cuadrícula de píxeles">
+            <svg hcIcon="grid-3x3"></svg>
+          </button>
+          <button class="tbtn" type="button" [class.is-active]="sprite.showIsoGuide()"
+                  [attr.aria-pressed]="sprite.showIsoGuide()" (click)="sprite.showIsoGuide.set(!sprite.showIsoGuide())"
+                  title="Guía isométrica: el rombo de la casilla del nivel" aria-label="Guía isométrica">
+            <svg hcIcon="diamond"></svg>
+          </button>
+        </div>
+      } @else {
+        <!-- Deshacer y rehacer el nivel. El titulo dice que paso deshace
+             ("Deshacer: mover player_1"). En Sprites estan en su cabecera. -->
+        <div class="tgroup" role="group" aria-label="Historial">
+          <button class="tbtn" type="button" [disabled]="!canUndo()" (click)="undo()"
+                  [title]="undoText() + ' (Ctrl+Z)'" aria-label="Deshacer" aria-keyshortcuts="Control+Z">
+            <svg hcIcon="undo-2"></svg>
+          </button>
+          <button class="tbtn" type="button" [disabled]="!canRedo()" (click)="redo()"
+                  [title]="redoText() + ' (Ctrl+Y)'" aria-label="Rehacer" aria-keyshortcuts="Control+Y">
+            <svg hcIcon="redo-2"></svg>
+          </button>
+        </div>
+
+        <span class="toolbar__sep" aria-hidden="true"></span>
+
+        <div class="tgroup" role="group" aria-label="Herramienta">
+          @for (tool of toolButtons; track tool.id) {
+            <button class="tbtn tbtn--tool" type="button" [class.is-active]="palette.tool() === tool.id"
+                    [attr.aria-pressed]="palette.tool() === tool.id"
+                    [attr.aria-label]="toolLabels[tool.id]" [attr.aria-keyshortcuts]="tool.key"
+                    [title]="tool.hint + ' (' + tool.key + ')'"
+                    (click)="palette.setTool(tool.id)">
+              <svg [hcIcon]="tool.icon"></svg>
+            </button>
+          }
+        </div>
+
+        <span class="toolbar__sep" aria-hidden="true"></span>
+
+        <!-- Capas del viewport: se encienden y apagan, como los overlays de un motor. -->
+        <div class="tgroup" role="group" aria-label="Capas del viewport">
+          <button class="tbtn tbtn--label" type="button" [class.is-active]="view.showGrid()"
+                  [attr.aria-pressed]="view.showGrid()" (click)="view.toggleGrid()" title="Mostrar la grilla">
+            <svg hcIcon="grid-3x3"></svg><span>Grilla</span>
+          </button>
+          <button class="tbtn tbtn--label" type="button" [class.is-active]="view.showColliders()"
+                  [attr.aria-pressed]="view.showColliders()" (click)="view.toggleColliders()"
+                  title="Mostrar las colisiones">
+            <svg hcIcon="box-select"></svg><span>Colisiones</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- Guarda y lanza el motor con el nivel abierto, con el motor elegido
+         (selector de al lado). Ver project/engine.controller.ts. -->
+    <button class="run" type="button" (click)="proj.run()" [disabled]="engine.building() !== null"
+            [title]="engine.building() ? 'Compilando el motor…' : 'Guardar y ejecutar el nivel con el motor ' + engine.label(engine.mode()) + ' (F5)'">
+      <svg hcIcon="play"></svg>
+      @if (engine.building()) {
+        <span>Compilando {{ engine.progress() }}</span>
+      } @else {
+        <span>Ejecutar</span>
+        <kbd>F5</kbd>
+      }
+    </button>
+
+    <div class="toolbar__side toolbar__side--end">
+      <!-- Con que motor ejecuta: Debug (desarrollo, con F3 en el juego) o
+           Release (optimizado). Va primero en este lado, pegado a Ejecutar, y
+           no en la columna del centro: ahi le quitaba lugar a las
+           herramientas de la izquierda. El punto marca el que todavia no esta
+           compilado: se compila al ejecutar. -->
+      <div class="seg runmode" role="radiogroup" aria-label="Motor con el que se ejecuta">
+        @for (mode of engine.modes; track mode.id) {
+          <button class="tool" type="button" role="radio" [class.is-active]="engine.mode() === mode.id"
+                  [attr.aria-checked]="engine.mode() === mode.id" [title]="engine.hint(mode.id)"
+                  (click)="engine.setMode(mode.id)">
+            {{ mode.label }}
+            @if (engine.isMissing(mode.id)) {
+              <span class="runmode__missing" aria-label="sin compilar"></span>
+            }
+          </button>
+        }
+      </div>
+
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button class="tbtn" type="button" (click)="stepZoom(-1)" title="Alejar" aria-label="Alejar">
+          <svg hcIcon="zoom-out"></svg>
+        </button>
+        <span class="zoom__value">{{ centerMode() === 'sprites' ? sprite.zoomLabel() : view.zoomLabel() }}</span>
+        <button class="tbtn" type="button" (click)="stepZoom(1)" title="Acercar" aria-label="Acercar">
+          <svg hcIcon="zoom-in"></svg>
+        </button>
+        <button class="tbtn" type="button" (click)="centerMode() === 'sprites' ? sprite.fit() : view.frameAll()"
+                title="Encuadrar todo (Inicio)" aria-label="Encuadrar todo">
+          <svg hcIcon="scan"></svg>
+        </button>
+      </div>
+
+      <span class="toolbar__sep" aria-hidden="true"></span>
+
+      <!-- Interruptores de los paneles, como los de diseño de VS Code. Tambien
+           estan en el menu Ver. -->
+      <div class="tgroup" role="group" aria-label="Paneles">
+        <button class="tbtn" type="button" [class.is-active]="panels.sidebarVisible()"
+                [attr.aria-pressed]="panels.sidebarVisible()" (click)="panels.toggleSidebar()"
+                title="Mostrar u ocultar la escena (Ctrl+B)" aria-label="Escena">
+          <svg hcIcon="panel-left"></svg>
+        </button>
+        <button class="tbtn" type="button" [class.is-active]="panels.dockOpen()"
+                [attr.aria-pressed]="panels.dockOpen()" (click)="panels.toggleDock()"
+                title="Mostrar u ocultar el panel inferior (Ctrl+J)" aria-label="Panel inferior">
+          <svg hcIcon="panel-bottom"></svg>
+        </button>
+        <button class="tbtn" type="button" [class.is-active]="panels.inspectorVisible()"
+                [attr.aria-pressed]="panels.inspectorVisible()" (click)="panels.toggleInspector()"
+                title="Mostrar u ocultar el inspector" aria-label="Inspector">
+          <svg hcIcon="panel-right"></svg>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Dialogo de nivel nuevo. Click en el fondo cierra; el stopPropagation del
        <section> evita que un click dentro del dialogo llegue al fondo y lo cierre. -->
@@ -92,7 +244,7 @@
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="new-level-title">Crear nivel</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="proj.cancelNewLevel()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="proj.cancelNewLevel()"><svg hcIcon="x"></svg></button>
         </div>
 
         <div class="modal__body">
@@ -161,7 +313,7 @@
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="occupied-title">Esa celda ya esta ocupada</h2>
-          <button class="icon-button" type="button" title="Cancelar" (click)="entityOps.cancelPending()">×</button>
+          <button class="icon-button" type="button" title="Cancelar" aria-label="Cancelar" (click)="entityOps.cancelPending()"><svg hcIcon="x"></svg></button>
         </div>
 
         <div class="modal__body">
@@ -188,7 +340,7 @@
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="entity-menu-title">{{ entity.id }}</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="view.closeContextMenu()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="view.closeContextMenu()"><svg hcIcon="x"></svg></button>
         </div>
 
         <div class="modal__body">
@@ -285,7 +437,7 @@
                (click)="$event.stopPropagation()">
         <div class="modal__head">
           <h2 id="prompt-title">{{ request.title }}</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="prompt.cancel()">×</button>
+          <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="prompt.cancel()"><svg hcIcon="x"></svg></button>
         </div>
 
         <div class="modal__body">
@@ -313,363 +465,143 @@
     <app-puzzle-dialog />
   }
 
-  <!-- ===================== CUERPO: TRES AREAS =====================
-       El ancho de la barra lateral sale de un signal y se inyecta en las
+  <!-- ===================== CUERPO: ESCENA, VIEWPORT, INSPECTOR =====================
+       El ancho de la columna izquierda sale de un signal y se inyecta en las
        columnas del grid, asi que arrastrar su borde o esconderla con Ctrl+B no
        necesita tocar el DOM a mano: cambia el signal y el layout se recalcula.
-       Con la barra oculta esa columna directamente no existe. -->
+       Con la columna oculta, directamente no existe. -->
   <div class="body" [style.grid-template-columns]="panels.bodyColumns()">
-    <!-- --------- AREA IZQUIERDA: outliner + paletas --------- -->
+    <!-- --------- COLUMNA IZQUIERDA: escena o archivos del proyecto --------- -->
     @if (panels.sidebarVisible()) {
-    <div class="stack" [style.grid-template-rows]="panels.sidebarRows()">
-      <!-- Borde arrastrable, como el de VS Code. Va dentro de la barra y
-           posicionado sobre su canto derecho para no ocupar una columna
-           propia del grid. -->
+    <section class="dock-col dock-col--left" aria-label="Escena y proyecto">
+      <!-- Borde arrastrable, como el de VS Code. Va dentro de la columna y
+           posicionado sobre su canto derecho para no ocupar una columna propia
+           del grid. -->
       <div class="grip grip--right" [class.is-active]="panels.isResizing('sidebar')"
            title="Arrastra para cambiar el ancho"
            (pointerdown)="panels.onResizeStart('sidebar', $event)"
            (pointermove)="panels.onResizeMove($event)"
            (pointerup)="panels.onResizeEnd($event)"
            (pointercancel)="panels.onResizeEnd($event)"></div>
-      <!-- Un area, dos editores. Las pestanas de la cabecera no abren otra
-           pantalla: cambian QUE editor ocupa este espacio, igual que el
-           selector de tipo de editor de Blender. "Escena" es el outliner de
-           entidades del nivel abierto; "Proyecto", el organizador de archivos
-           de la carpeta del proyecto (levels/, assets/, schema/). -->
-      <section class="area">
-        <div class="area__head">
-          <!-- Plegar la seccion, como en VS Code. Elegir una de las dos
-               pestanas de al lado la vuelve a desplegar. -->
-          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-main')"
-                  [attr.aria-expanded]="!panels.isCollapsed('side-main')"
-                  (click)="panels.togglePanel('side-main')" title="Plegar o desplegar esta seccion">
-            <span class="area__chevron">▾</span>
+
+      <!-- Dos vistas del mismo lugar: "Escena" es el arbol de entidades del
+           nivel abierto; "Proyecto", los archivos de la carpeta del editor
+           (levels/, assets/, schema/). -->
+      <!-- tabs--fit: con la columna angosta las pestañas se achican y cortan
+           su nombre con "…" en vez de salirse de la columna. -->
+      <div class="tabs tabs--fit" role="tablist" aria-label="Vista de la columna izquierda">
+        <button class="tab" type="button" role="tab" [class.is-active]="leftEditor() === 'escena'"
+                [attr.aria-selected]="leftEditor() === 'escena'" (click)="setLeftEditor('escena')"
+                title="Entidades del nivel abierto">
+          <svg hcIcon="list-tree"></svg><span class="tab__label">Escena</span>
+          <span class="tab__count">{{ entities().length }}</span>
+        </button>
+        <button class="tab" type="button" role="tab" [class.is-active]="leftEditor() === 'proyecto'"
+                [attr.aria-selected]="leftEditor() === 'proyecto'" (click)="setLeftEditor('proyecto')"
+                title="Archivos de la carpeta del editor">
+          <svg hcIcon="folder"></svg><span class="tab__label">Proyecto</span>
+        </button>
+      </div>
+
+      @if (leftEditor() === 'escena') {
+        <div class="dock-col__body tree" role="tree" aria-label="Entidades del nivel">
+          <!-- Raiz del arbol: deseleccionar todo. Las entidades cuelgan de ella
+               con sangria. -->
+          <button class="tree__item tree__item--root" [class.is-active]="!selected()"
+                  (click)="sel.selectEntity(null)" title="Deseleccionar todo y ver el nivel">
+            <svg class="tree__brand" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 1.6 21 6.8v10.4L12 22.4 3 17.2V6.8Z" />
+            </svg>
+            <span class="tree__label">{{ levels.level().name }}</span>
           </button>
-          <div class="seg">
-            <button class="tool" [class.is-active]="leftEditor() === 'escena'"
-                    (click)="setLeftEditor('escena')" title="Escena: entidades del nivel abierto">☰</button>
-            <button class="tool" [class.is-active]="leftEditor() === 'proyecto'"
-                    (click)="setLeftEditor('proyecto')" title="Proyecto: archivos en disco">🗀</button>
-          </div>
-          <span class="area__title">{{ leftEditor() === 'escena' ? 'Escena' : 'Proyecto' }}</span>
-          <div class="head__spacer"></div>
-          @if (leftEditor() === 'escena') {
-            <span class="area__title">{{ entities().length }}</span>
-          } @else {
-            <button class="tool" (click)="explorer.refreshTree()" title="Releer la carpeta del proyecto">⟳</button>
+
+          <!-- Ctrl+clic suma o quita una fila, Shift+clic selecciona el rango
+               desde la activa: las mismas reglas que cualquier lista de
+               escritorio. "is-active" pinta toda la seleccion; la celda con
+               anillo de miel marca la activa, la que muestra el inspector. -->
+          @for (entity of entities(); track entity.id) {
+            <button class="tree__item tree__item--child"
+                    [class.is-active]="sel.isEntitySelected(entity.id)"
+                    [class.is-current]="selected()?.id === entity.id"
+                    [attr.aria-selected]="sel.isEntitySelected(entity.id)"
+                    [title]="kindOf(entity.type).label + ' · ' + entity.id"
+                    (click)="sel.onOutlinerClick(entity.id, $event)">
+              <svg [hcCell]="entity.type" [active]="selected()?.id === entity.id"></svg>
+              <span class="tree__label">{{ entity.id }}</span>
+              <span class="tree__meta">{{ entity.position.col }},{{ entity.position.row }}</span>
+            </button>
+          } @empty {
+            <div class="empty">
+              <p class="empty__title">El nivel está vacío</p>
+              <p>Arrastra una figura o un personaje desde <b>Recursos</b>, abajo, hasta la grilla.</p>
+            </div>
           }
         </div>
-
-        @if (!panels.isCollapsed('side-main') && leftEditor() === 'escena') {
-          <div class="area__body tree">
-            <!-- Raiz del arbol: deseleccionar todo. Las entidades cuelgan de ella
-                 con sangria, como los objetos bajo una coleccion en Blender. -->
-            <button class="tree__item tree__item--root" [class.is-active]="!selected()"
-                    (click)="sel.selectEntity(null)">
-              <span class="tree__icon">▾</span>{{ levels.level().name }}
+      } @else {
+        <div class="dock-col__body filetree">
+          <!-- El arbol es SIEMPRE la carpeta del editor (ver
+               ipc/project-root.js). Abrir escena arranca en levels/, y una de
+               afuera se importa: se copia adentro con sus assets. Nueva carpeta
+               crea dentro de la ultima carpeta clickeada. -->
+          <div class="filetools">
+            <button class="btn btn--small" type="button" (click)="proj.openLevelFile()"
+                    title="Abrir un nivel (Ctrl+O). Uno de fuera de la carpeta del editor se copia adentro">
+              <svg hcIcon="folder-open"></svg>Abrir…
             </button>
-
-            <!-- Ctrl+clic suma o quita una fila, Shift+clic selecciona el rango
-                 desde la activa: las mismas reglas que cualquier lista de
-                 escritorio. "is-active" pinta toda la seleccion; "is-current",
-                 solo la que esta mostrando el inspector. -->
-            @for (entity of entities(); track entity.id) {
-              <button class="tree__item tree__item--child"
-                      [class.is-active]="sel.isEntitySelected(entity.id)"
-                      [class.is-current]="selected()?.id === entity.id"
-                      (click)="sel.onOutlinerClick(entity.id, $event)">
-                <span class="tree__icon tree__icon--{{ entity.type }}">▣</span>
-                <span class="tree__label">{{ entity.id }}</span>
-                <span class="tree__meta">{{ entity.position.col }},{{ entity.position.row }}</span>
+            <button class="btn btn--small" type="button" (click)="explorer.createFolder()"
+                    [title]="'Crear una carpeta en ' + (explorer.currentDir() || 'la raíz')">
+              <svg hcIcon="folder-plus"></svg>Carpeta…
+            </button>
+            <!-- Releer va aca, con las demas acciones de la carpeta, y no en la
+                 fila de pestañas: ahi no entraba y quedaba fuera de la columna,
+                 encima del viewport. -->
+            <span class="filetools__icons">
+              <button class="ibtn" type="button" (click)="explorer.refreshTree()"
+                      title="Releer la carpeta del proyecto" aria-label="Releer la carpeta del proyecto">
+                <svg hcIcon="refresh-cw"></svg>
               </button>
-            } @empty {
-              <p class="empty">Sin entidades. Elige una textura y usa la herramienta Colocar.</p>
-            }
-          </div>
-        } @else if (!panels.isCollapsed('side-main')) {
-          <div class="area__body filetree">
-            <!-- El arbol es SIEMPRE la carpeta del editor (ver
-                 ipc/project-root.js). Abrir escena arranca en levels/, y una
-                 de afuera se importa: se copia adentro con sus assets. Nueva
-                 carpeta crea dentro de la ultima carpeta clickeada. -->
-            <div class="filetools">
-              <button class="btn btn--small" (click)="proj.openLevelFile()"
-                      title="Abrir un nivel (Ctrl+O). Uno de fuera de la carpeta del editor se copia adentro">Abrir escena…</button>
-              <button class="btn btn--small" (click)="explorer.createFolder()"
-                      [title]="'Crear una carpeta en ' + (explorer.currentDir() || 'la raíz')">Nueva carpeta…</button>
-              <button class="btn btn--small" (click)="proj.revealWorkspace()"
-                      [title]="'Abrir en el sistema: ' + (project.projectRoot() ?? '')">Mostrar</button>
-            </div>
-
-            <!-- Una sola lista plana: la sangria la da la profundidad que
-                 calculo explorer.rows(). Cada fila es un boton porque todas
-                 hacen algo -- abrir la carpeta, cargar el nivel, elegir la
-                 textura, o mostrar el archivo en el visor de abajo. -->
-            @for (row of explorer.rows(); track row.node.path) {
-              <button class="tree__item filerow"
-                      [class.is-active]="explorer.isOpenLevel(row.node) || explorer.isOpenFile(row.node)"
-                      [class.filerow--dir]="row.node.kind === 'dir'"
-                      [style.padding-left.px]="8 + row.depth * 12"
-                      [title]="row.node.path"
-                      (click)="explorer.openTreeEntry(row.node)">
-                <span class="tree__icon">{{ explorer.treeGlyph(row.node) }}</span>
-                <span class="tree__label">{{ row.node.name }}</span>
+              <button class="ibtn" type="button" (click)="proj.revealWorkspace()"
+                      [title]="'Abrir en el sistema: ' + (project.projectRoot() ?? '')"
+                      aria-label="Mostrar la carpeta en el sistema">
+                <svg hcIcon="external-link"></svg>
               </button>
-            } @empty {
-              <p class="empty">
-                Preparando la carpeta del editor… Si no aparece, revisa la barra de estado o usa
-                Archivo › Cambiar carpeta del editor.
-              </p>
-            }
+            </span>
           </div>
-        }
-      </section>
 
-      <!-- Texturas del proyecto. "Importar…" abre el convertidor con las
-           imagenes que se elijan (nunca una carpeta entera) y las copia a
-           assets/textures/, y desde ahi cada una se puede arrastrar sobre una
-           entidad del viewport para cambiarle el arte, o sobre una celda vacia
-           para crear una entidad nueva con ella. -->
-      <section class="area">
-        <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-assets')"
-                  [attr.aria-expanded]="!panels.isCollapsed('side-assets')"
-                  (click)="panels.togglePanel('side-assets')" title="Plegar o desplegar Recursos">
-            <span class="area__chevron">▾</span>▦
-          </button>
-          <span class="area__title">Recursos</span>
-          <div class="head__spacer"></div>
-          <span class="area__title">{{ tex.textures().length }}</span>
-          <button class="tool" [disabled]="converter.busy()" (click)="converter.openAndAdd('files')"
-                  title="Elegir imágenes (PNG, JPG, JPEG): se convierten y se copian a assets/textures/ de la carpeta del editor">
-            Importar…
-          </button>
-        </div>
-
-        @if (!panels.isCollapsed('side-assets')) {
-        <div class="area__body assets" [class.assets--fill]="panels.isCollapsed('side-main')">
-          @for (texture of tex.textures(); track texture) {
-            <button class="asset" [class.is-active]="palette.activeTexture() === texture"
-                    draggable="true"
-                    (dragstart)="tex.onTextureDragStart($event, texture)"
-                    (click)="palette.selectTexture(texture)"
-                    [title]="texture + ' — arrastra sobre una entidad para cambiarle la textura'">
-              <span class="asset__thumb" [appTextureThumb]="texture">
-                @if (tex.textureAssets()[texture]; as asset) {
-                  <img class="asset__img" [src]="asset.dataUrl" [alt]="texture" />
-                }
-              </span>
-              <span class="asset__name">{{ texture }}</span>
+          <!-- Una sola lista plana: la sangria la da la profundidad que calculo
+               explorer.rows(). Cada fila es un boton porque todas hacen algo --
+               abrir la carpeta, cargar el nivel, elegir la textura, o mostrar el
+               archivo en el visor de abajo. -->
+          @for (row of explorer.rows(); track row.node.path) {
+            <button class="tree__item filerow"
+                    [class.is-active]="explorer.isOpenLevel(row.node) || explorer.isOpenFile(row.node)"
+                    [class.filerow--dir]="row.node.kind === 'dir'"
+                    [style.padding-left.px]="10 + row.depth * 14"
+                    [title]="row.node.path"
+                    (click)="explorer.openTreeEntry(row.node)">
+              <svg [hcIcon]="explorer.treeIcon(row.node)"></svg>
+              <span class="tree__label">{{ row.node.name }}</span>
             </button>
           } @empty {
             <p class="empty">
-              assets/textures/ vacio. Usa “Importar…” para traer imagenes (PNG, JPG, JPEG).
+              Preparando la carpeta del editor… Si no aparece, revisa la barra de estado o usa
+              Archivo › Cambiar carpeta del editor.
             </p>
           }
         </div>
-        }
-      </section>
-
-      <!-- Primitivas de bloqueo. Se pueden arrastrar al viewport o clickear
-           para dejarlas como "lo que se va a colocar" con la herramienta de
-           colocar. Las miniaturas las genera app.ts con la misma funcion que
-           dibuja en el canvas (ver core/iso-shapes.ts). -->
-      <section class="area">
-        <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-shapes')"
-                  [attr.aria-expanded]="!panels.isCollapsed('side-shapes')"
-                  (click)="panels.togglePanel('side-shapes')" title="Plegar o desplegar Figuras">
-            <span class="area__chevron">▾</span>◆
-          </button>
-          <span class="area__title">Figuras</span>
-          <div class="head__spacer"></div>
-          <span class="area__title">arrastra a la grilla</span>
-        </div>
-
-        @if (!panels.isCollapsed('side-shapes')) {
-        <div class="area__body shapes">
-          @for (shape of shapes; track shape.id) {
-            <button
-              class="shape"
-              [class.is-active]="palette.activeShape() === shape.id"
-              draggable="true"
-              [title]="shape.label + ' — arrastra al viewport, o haz clic para colocar'"
-              (dragstart)="view.onShapeDragStart($event, shape.id)"
-              (click)="palette.selectShape(shape.id)"
-            >
-              <!-- La miniatura es un recorte del MISMO sheet que va al juego,
-                   escalado a la mitad: no hay un icono aparte que pueda quedar
-                   desincronizado del sprite real. Las cuentas estan en
-                   thumbStyle() porque son cuatro valores acoplados entre si. -->
-              <span class="shape__icon" [style]="thumbStyle(shape)"></span>
-              <span class="shape__name">{{ shape.label }}</span>
-            </button>
-          }
-        </div>
-        }
-      </section>
-
-      <!-- Arquetipos de personaje. Funcionan igual que las figuras -- clic para
-           elegir, o arrastrar a la grilla -- pero lo que colocan es una entidad
-           con su type, su collider y su clip de animacion ya puestos como los
-           espera el motor (ver core/characters.ts). -->
-      <section class="area">
-        <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-characters')"
-                  [attr.aria-expanded]="!panels.isCollapsed('side-characters')"
-                  (click)="panels.togglePanel('side-characters')" title="Plegar o desplegar Personajes">
-            <span class="area__chevron">▾</span>☻
-          </button>
-          <span class="area__title">Personajes</span>
-          <div class="head__spacer"></div>
-          <button class="tool" type="button" (click)="chars.openCharacterEditor()"
-                  title="Configurar personajes: asset, tamaño y características">Configurar…</button>
-        </div>
-
-        <!-- Cada tipo es un boton que DESPLIEGA sus personajes: el base y los
-             configurados en "Configurar…". Arrastrar el boton del tipo coloca
-             el base; arrastrar uno de la lista coloca ese. -->
-        @if (!panels.isCollapsed('side-characters')) {
-        <div class="area__body">
-          <div class="shapes">
-            @for (character of characters; track character.id) {
-              <button
-                class="shape"
-                [class.is-active]="chars.expandedKind() === character.id"
-                draggable="true"
-                [title]="character.label + ': clic para ver los configurados, o arrastra el básico a la grilla'"
-                (dragstart)="view.onCharacterDragStart($event, chars.basePresetId(character.id))"
-                (click)="chars.toggleKind(character.id)"
-              >
-                <span class="shape__icon character__icon" [style.background]="character.color">
-                  {{ character.glyph }}
-                </span>
-                <span class="shape__name">{{ character.label }} {{ chars.expandedKind() === character.id ? '▴' : '▾' }}</span>
-              </button>
-            }
-          </div>
-
-          @if (chars.expandedKind(); as kind) {
-            <div class="presetlist">
-              @for (preset of chars.presetsOfKind(kind); track preset.id) {
-                <button class="presetlist__item" type="button" draggable="true"
-                        [class.is-active]="palette.activeCharacter() === preset.id"
-                        [title]="preset.name + ' — arrastra a la grilla, o clic para colocarlo'"
-                        (dragstart)="view.onCharacterDragStart($event, preset.id)"
-                        (click)="palette.selectCharacter(preset.id)">
-                  <span class="presetlist__thumb" [style.background]="chars.kindColor(kind)" [appTextureThumb]="preset.texture">
-                    @if (chars.presetSpriteStyle(preset); as style) {
-                      <span class="presetlist__sprite" [style]="style"></span>
-                    }
-                  </span>
-                  <span class="presetlist__name">{{ preset.name }}</span>
-                  <span class="presetlist__stats">♥{{ preset.stats.health }} ⚔{{ preset.stats.damage }}</span>
-                </button>
-              }
-              <button class="btn btn--small presetlist__new" type="button" (click)="chars.openCharacterEditor(kind)">
-                + Nuevo {{ chars.kindLabel(kind).toLowerCase() }}…
-              </button>
-            </div>
-          }
-        </div>
-        }
-      </section>
-      <!-- Objetos de la biblioteca del proyecto (items.json): armas, curaciones y
-           monedas. Arrastrar uno a la grilla lo deja para juntarlo, y copia su
-           definicion al nivel (ver core/items.ts). -->
-      <section class="area">
-        <div class="area__head">
-          <button class="area__toggle" type="button" [class.is-collapsed]="panels.isCollapsed('side-items')"
-                  [attr.aria-expanded]="!panels.isCollapsed('side-items')"
-                  (click)="panels.togglePanel('side-items')" title="Plegar o desplegar Objetos">
-            <span class="area__chevron">▾</span>⚔
-          </button>
-          <span class="area__title">Objetos</span>
-          <div class="head__spacer"></div>
-          <button class="tool" type="button" (click)="itemEditor.open()"
-                  title="Crear y editar armas, curaciones y monedas">Configurar…</button>
-        </div>
-
-        @if (!panels.isCollapsed('side-items')) {
-        <div class="area__body">
-          <div class="presetlist">
-            @for (item of itemLibrary.items(); track item.id) {
-              <button class="presetlist__item" type="button" draggable="true"
-                      [class.is-active]="palette.activeItem() === item.id"
-                      [title]="item.name + ' — arrastra a la grilla, o clic para colocarlo'"
-                      (dragstart)="items.onItemDragStart($event, item.id)"
-                      (click)="palette.selectItem(item.id)">
-                <span class="presetlist__thumb" [style.background]="items.itemColor(item)" [appTextureThumb]="item.texture">
-                  @if (items.itemSpriteStyle(item); as style) {
-                    <span class="presetlist__sprite" [style]="style"></span>
-                  } @else {
-                    {{ items.itemGlyph(item) }}
-                  }
-                </span>
-                <span class="presetlist__name">{{ item.name }}</span>
-                <span class="presetlist__stats">{{ items.itemStat(item) }}</span>
-              </button>
-            } @empty {
-              <p class="empty">Sin objetos. “Configurar…” crea armas, curaciones y monedas.</p>
-            }
-          </div>
-        </div>
-        }
-      </section>
-    </div>
+      }
+    </section>
     }
 
-    <!-- --------- AREA CENTRAL: viewport isometrico --------- -->
-    <section class="area viewport">
-      <div class="area__head">
-        <span class="area__kind" title="Viewport isometrico">⊞</span>
-
-        <div class="seg">
-          <button class="tool" [class.is-active]="palette.tool() === 'select'" (click)="palette.setTool('select')"
-                  title="Seleccionar: clic sobre una entidad">▶</button>
-          <button class="tool" [class.is-active]="palette.tool() === 'place'" (click)="palette.setTool('place')"
-                  title="Colocar entidad: textura o figura elegida">✚</button>
-          <button class="tool" [class.is-active]="palette.tool() === 'floor'" (click)="palette.setTool('floor')"
-                  title="Alternar piso: una celda sin suelo no se puede pisar">▱</button>
-          <button class="tool" [class.is-active]="palette.tool() === 'wall'" (click)="palette.setTool('wall')"
-                  title="Alternar pared: bloquea el paso en esa celda">▥</button>
-          <button class="tool" [class.is-active]="palette.tool() === 'room'" (click)="palette.setTool('room')"
-                  title="Grilla: arrastra sobre el vacío para dibujar una nueva, o dentro de una para moverla">▢</button>
-          <button class="tool" [class.is-active]="palette.tool() === 'tunnel'" (click)="palette.setTool('tunnel')"
-                  title="Túnel: trázalo a mano, de una grilla a otra">⤳</button>
-        </div>
-
-        <span class="head__sep"></span>
-
-        <!-- Toggles de overlay: en Blender viven juntos y encendidos se ponen
-             azules, que es exactamente lo que hace .tool.is-active. -->
-        <div class="seg">
-          <button class="tool" [class.is-active]="view.showGrid()" (click)="view.toggleGrid()"
-                  title="Mostrar grilla">Grilla</button>
-          <button class="tool" [class.is-active]="view.showColliders()" (click)="view.toggleColliders()"
-                  title="Mostrar colisiones">Colisiones</button>
-        </div>
-
-        <span class="head__sep"></span>
-
-        <span class="head__label">Zoom</span>
-        <div class="seg">
-          @for (step of view.zoomSteps; track step) {
-            <button class="tool tool--zoom" [class.is-active]="view.zoom() === step" (click)="view.setZoom(step)">
-              {{ step }}x
-            </button>
-          }
-        </div>
-        <button class="tool" (click)="view.frameAll()" title="Encuadrar todo (Inicio)">Encuadrar</button>
-
-        <div class="head__spacer"></div>
-        <span class="head__label">{{ view.zoomLabel() }}</span>
-      </div>
-
-      <!-- El canvas no tiene width/height en el HTML: se los fija draw() con
-           lo que mide el contenedor (ver el ResizeObserver en app.ts). Los
-           eventos de puntero cubren seleccionar, colocar y desplazar; la rueda
-           hace zoom anclado al cursor. -->
+    <!-- --------- CENTRO: viewport isometrico ---------
+         En modo Sprites se esconde (no se destruye: el canvas y su
+         ResizeObserver siguen siendo los mismos al volver) y su lugar en la
+         grilla lo toma la herramienta de sprites, de abajo. -->
+    <section class="viewport" [class.is-hidden]="centerMode() === 'sprites'" aria-label="Viewport">
+      <!-- El canvas no tiene width/height en el HTML: se los fija draw() con lo
+           que mide el contenedor (ver el ResizeObserver en app.ts). Los eventos
+           de puntero cubren seleccionar, colocar y desplazar; la rueda hace
+           zoom anclado al cursor. -->
       <div class="canvas-host">
         <canvas
           #viewport
@@ -688,19 +620,21 @@
           (drop)="view.onCanvasDrop($event)"
         ></canvas>
 
-        <!-- Nivel y objeto activo arriba a la izquierda, como el texto de
-             coleccion/objeto del viewport de Blender. -->
+        <!-- Nivel y objeto activo arriba a la izquierda. -->
         <div class="vp-info">
-          {{ levels.level().name }}
+          <span class="vp-info__level">{{ levels.level().name }}</span>
           @if (selected(); as entity) {
-            <span class="vp-info__active"> | {{ entity.id }}</span>
+            <span class="vp-info__active">
+              <svg [hcCell]="entity.type" [active]="true"></svg>{{ entity.id }}
+            </span>
           }
-          <!-- Lineas de la grilla por encima de las entidades (como la de F1
-               en el runtime) o por debajo, que es como se ve el piso. -->
+          <!-- Lineas de la grilla por encima de las entidades (como la de F1 en
+               el runtime) o por debajo, que es como se ve el piso. -->
           <div class="vp-gridpos" role="group" aria-label="Líneas de la grilla">
             <!-- Tres capas = lineas encima de todo; las mismas capas tachadas =
                  lineas debajo, sin tapar las entidades. -->
             <button type="button" [class.is-active]="view.gridOnTop()" (click)="view.setGridOnTop(true)"
+                    [attr.aria-pressed]="view.gridOnTop()"
                     title="Líneas de la grilla encima de las entidades" aria-label="Líneas encima">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M8 2 14 5 8 8 2 5Z" />
@@ -709,6 +643,7 @@
               </svg>
             </button>
             <button type="button" [class.is-active]="!view.gridOnTop()" (click)="view.setGridOnTop(false)"
+                    [attr.aria-pressed]="!view.gridOnTop()"
                     title="Líneas de la grilla debajo de las entidades" aria-label="Líneas debajo">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M8 2 14 5 8 8 2 5Z" />
@@ -720,32 +655,41 @@
           </div>
         </div>
 
-
         <div class="vp-chips">
           @if (view.hovered(); as cell) {
-            <span>{{ cell.col }}, {{ cell.row }}</span>
+            <span>Celda {{ cell.col }}, {{ cell.row }}</span>
           }
           @if (palette.tool() === 'place') {
-            <span>colocar · {{ palette.activeCharacterLabel() ?? palette.activeItemLabel() ?? palette.activeShape() ?? palette.activeTexture() ?? 'nada elegido' }}</span>
+            <span>Colocar: {{ palette.activeCharacterLabel() ?? palette.activeItemLabel() ?? palette.activeShape() ?? palette.activeTexture() ?? 'nada elegido' }}</span>
           }
           @if (selectionCount() > 1) {
             <span>{{ selectionCount() }} seleccionadas</span>
           }
           @if (map.tunnelTrace(); as trace) {
-            <span>túnel desde {{ trace.from }} · {{ trace.points.length }} puntos · Retroceso deshace · Escape cancela</span>
+            <span>Túnel desde {{ trace.from }} · {{ trace.points.length }} puntos · Retroceso deshace · Escape cancela</span>
           }
         </div>
       </div>
     </section>
 
-    <!-- --------- AREA DERECHA: editor de propiedades ---------
-         Columna de pestanas a la izquierda (objeto / escena) y paneles
-         plegables a la derecha, como el Properties editor de Blender. Cada
-         control escribe con un patch* del componente, nunca directo sobre el
-         objeto del nivel. -->
+    <!-- --------- CENTRO en modo Sprites: sprites/sprite-editor.html ---------
+         Se carga aparte la primera vez que se elige Sprites, como los dialogos
+         grandes. Despues queda montada y se esconde sola al volver al mapa. -->
+    @defer (when centerMode() === 'sprites') {
+      <app-sprite-editor />
+    } @loading {
+      <!-- Ocupa la celda mientras baja el codigo: sin esto, con el viewport
+           escondido el inspector se correria a la columna del medio. -->
+      <div class="spritehost"></div>
+    }
+
+    <!-- --------- COLUMNA DERECHA: inspector ---------
+         Dos pestañas: el objeto activo y la escena (nivel, grilla, camara,
+         mapa). Debajo, paneles plegables. Cada control escribe con un patch*
+         del componente, nunca directo sobre el objeto del nivel. -->
     @if (panels.inspectorVisible()) {
-    <section class="area inspector">
-      <!-- Mismo borde arrastrable que el panel izquierdo, en su canto interno. -->
+    <section class="dock-col dock-col--right inspector" aria-label="Inspector">
+      <!-- Mismo borde arrastrable que la columna izquierda, en su canto interno. -->
       <div class="grip grip--left" [class.is-active]="panels.isResizing('inspector')"
            title="Arrastra para cambiar el ancho"
            (pointerdown)="panels.onResizeStart('inspector', $event)"
@@ -753,86 +697,501 @@
            (pointerup)="panels.onResizeEnd($event)"
            (pointercancel)="panels.onResizeEnd($event)"></div>
 
-      <div class="area__head">
-        <span class="area__kind" title="Propiedades">⚙</span>
-        <span class="area__title">Propiedades</span>
+      <!-- Pestañas con teclado: flechas izquierda y derecha (ver onInspectorTabsKey).
+           Cambiar de pestaña vuelve el contenido arriba. -->
+      <div class="tabs" role="tablist" aria-label="Inspector" (keydown)="onInspectorTabsKey($event, inspectorBody)">
+        <button class="tab" id="inspector-tab-objeto" type="button" role="tab" aria-controls="inspector-panel"
+                [class.is-active]="inspectorTab() === 'objeto'" [attr.aria-selected]="inspectorTab() === 'objeto'"
+                [attr.tabindex]="inspectorTab() === 'objeto' ? 0 : -1"
+                (click)="showInspectorTab('objeto', inspectorBody)" title="El objeto elegido en el mapa">
+          <svg hcIcon="box"></svg>Objeto
+        </button>
+        <button class="tab" id="inspector-tab-escena" type="button" role="tab" aria-controls="inspector-panel"
+                [class.is-active]="inspectorTab() === 'escena'" [attr.aria-selected]="inspectorTab() === 'escena'"
+                [attr.tabindex]="inspectorTab() === 'escena' ? 0 : -1"
+                (click)="showInspectorTab('escena', inspectorBody)" title="El nivel: nombre, fondo, tamaño, cámara y salas">
+          <svg hcIcon="map"></svg>Nivel
+        </button>
       </div>
 
-      <div class="area__body props">
-        <nav class="ptabs">
-          <button class="ptab" [class.is-active]="inspectorTab() === 'objeto'"
-                  (click)="inspectorTab.set('objeto')" title="Objeto">▣</button>
-          <button class="ptab" [class.is-active]="inspectorTab() === 'escena'"
-                  (click)="inspectorTab.set('escena')" title="Escena">⊞</button>
-        </nav>
-
+      <div class="dock-col__body props" #inspectorBody id="inspector-panel" role="tabpanel"
+           [attr.aria-labelledby]="'inspector-tab-' + inspectorTab()">
         <div class="props__body">
           @if (inspectorTab() === 'objeto') {
             @if (selected(); as entity) {
-              <!-- Con varias seleccionadas los campos siguen mostrando UNA (no
-                   se pueden mostrar dos valores en el mismo campo), asi que
-                   hay que decir cual y cuantas hay detras: lo que se escriba
-                   arriba cambia solo la activa, mientras que los botones del
-                   final y la casilla de pared van a todas. -->
+              <!-- Quien es: la celda del tipo con el anillo de objeto activo,
+                   el nombre y el tipo en palabras. -->
+              <div class="identity">
+                <svg [hcCell]="entity.type" [active]="true"></svg>
+                <div class="identity__text">
+                  <span class="identity__name">{{ entity.id }}</span>
+                  <span class="identity__kind">{{ kindOf(entity.type).label }} · celda {{ entity.position.col }}, {{ entity.position.row }}</span>
+                </div>
+              </div>
+
+              <!-- Con varios elegidos los campos siguen mostrando UNO (no se
+                   pueden mostrar dos valores en el mismo campo), asi que hay
+                   que decir cual y cuantos hay detras. -->
               @if (selectionCount() > 1) {
-                <p class="hint hint--warn">
-                  {{ selectionCount() }} entidades seleccionadas. Los campos editan “{{ entity.id }}”;
-                  Duplicar, Eliminar, Colisión y Pared actuan sobre todas.
+                <p class="hint hint--warn hint--banner">
+                  {{ selectionCount() }} objetos elegidos. Los campos editan “{{ entity.id }}”; Duplicar, Eliminar,
+                  «No se puede atravesar» y «Bloquea toda su casilla» actúan sobre todos.
                 </p>
               }
 
+              <!-- BASICO: lo que alguien busca primero. Nombre, que es en el
+                   juego, como se ve, cuanto ocupa y donde esta. -->
               <section class="panel">
-                <button class="panel__head" (click)="panels.togglePanel('obj')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('obj')">▶</span>
-                  Objeto
+                <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('obj')" (click)="panels.togglePanel('obj')">
+                  <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('obj')" hcIcon="chevron-down"></svg>
+                  Básico
                 </button>
                 @if (!panels.isCollapsed('obj')) {
                   <div class="panel__body">
                     <label class="field">
-                      <span>ID</span>
-                      <input class="input" [value]="entity.id" (change)="inspector.patchEntity({ id: str($event) })" />
+                      <span>Nombre</span>
+                      <input class="input" spellcheck="false" [value]="entity.id"
+                             (change)="inspector.renameEntity($any($event.target))" />
                     </label>
+                    @if (inspector.isEnginePlayer(entity)) {
+                      <p class="hint hint--field">El motor mueve con las flechas al que se llama «{{ inspector.enginePlayerId }}». Si lo renombras, deja de moverse.</p>
+                    } @else {
+                      <p class="hint hint--field">Único en el nivel. Los eventos lo usan para encontrar este objeto.</p>
+                    }
+
                     <label class="field">
-                      <span>Tipo</span>
-                      <input class="input" [value]="entity.type" (change)="inspector.patchEntity({ type: str($event) })" />
+                      <span>Qué es</span>
+                      <select class="input" (change)="inspector.setKind(str($event))">
+                        <optgroup label="En el juego">
+                          @for (option of inspector.roleOptions; track option.value) {
+                            <option [value]="option.value" [selected]="entity.type === option.value">{{ option.label }}</option>
+                          }
+                        </optgroup>
+                        @if (inspector.showsShapes(entity)) {
+                          @for (group of inspector.shapeGroups; track group.label) {
+                            <optgroup [label]="'Figura de ' + group.label.toLowerCase()">
+                              @for (shape of group.shapes; track shape.id) {
+                                <option [value]="shape.id" [selected]="entity.type === shape.id">{{ shape.label }}</option>
+                              }
+                            </optgroup>
+                          }
+                        }
+                        @if (inspector.isCustomKind(entity)) {
+                          <option [value]="entity.type" selected disabled>Otro: {{ entity.type }}</option>
+                        }
+                      </select>
                     </label>
-                    <label class="field">
-                      <span>Textura</span>
-                      <input class="input" [value]="entity.texture"
-                             (change)="inspector.patchEntity({ texture: str($event) })" />
-                    </label>
+                    <p class="hint hint--field">{{ inspector.kindHint(entity) }}</p>
+
+                    <div class="field field--stack">
+                      <span>Apariencia</span>
+                      <div class="appearance">
+                        @if (!inspector.usesShapeSheet(entity)) {
+                          <span class="appearance__thumb" [appTextureThumb]="entity.texture">
+                            @if (tex.textureAssets()[textureLabel(entity)]; as asset) {
+                              <img [src]="asset.dataUrl" alt="" />
+                            }
+                          </span>
+                        }
+                        <span class="appearance__name" [title]="entity.texture">
+                          {{ inspector.usesShapeSheet(entity) ? 'Dibujo de figura' : textureLabel(entity) }}
+                        </span>
+                        <button class="btn btn--small" type="button" [attr.aria-expanded]="texturePickerOpen()"
+                                (click)="texturePickerOpen.set(!texturePickerOpen())">
+                          {{ texturePickerOpen() ? 'Listo' : 'Cambiar…' }}
+                        </button>
+                      </div>
+                    </div>
+                    @if (textureMissing(entity)) {
+                      <p class="hint hint--warn hint--field">
+                        <svg hcIcon="triangle-alert"></svg>No se encontró la imagen «{{ textureLabel(entity) }}» en assets/textures/. Elige otra.
+                      </p>
+                    }
+                    @if (texturePickerOpen()) {
+                      <div class="texpicker appearance__picker">
+                        @for (texture of tex.textures(); track texture) {
+                          <button class="texpicker__item" type="button" [title]="texture" [appTextureThumb]="texture"
+                                  [class.is-active]="entity.texture === 'textures/' + texture"
+                                  (click)="view.applyTexture(entity.id, texture)">
+                            @if (tex.textureAssets()[texture]; as asset) {
+                              <img [src]="asset.dataUrl" [alt]="texture" />
+                            }
+                          </button>
+                        } @empty {
+                          <p class="hint">Todavía no hay imágenes en el proyecto. Impórtalas desde Recursos › Texturas.</p>
+                        }
+                      </div>
+                      @if (inspector.usesShapeSheet(entity)) {
+                        <p class="hint hint--field">Elegir una imagen reemplaza el dibujo de la figura.</p>
+                      }
+                    } @else {
+                      <p class="hint hint--field">También puedes arrastrar una imagen desde Recursos › Texturas hasta el objeto.</p>
+                    }
+
+                    <div class="field-row">
+                      @if (entityOps.isShape(entity)) {
+                        <label class="field">
+                          <span>Casillas</span>
+                          <select class="input" (change)="entityOps.setSpan(entity.id, int($event))">
+                            @for (size of entityOps.spanChoices; track size) {
+                              <option [value]="size" [selected]="entityOps.spanOf(entity) === size"
+                                      [disabled]="size > entityOps.maxSpan()">{{ size }} × {{ size }}</option>
+                            }
+                            @if (entityOps.spanOf(entity) > 4) {
+                              <option [value]="entityOps.spanOf(entity)" selected>
+                                {{ entityOps.spanOf(entity) }} × {{ entityOps.spanOf(entity) }}
+                              </option>
+                            }
+                          </select>
+                        </label>
+                      }
+                      <label class="field">
+                        <span>Escala</span>
+                        <input class="input" type="number" min="0.25" step="0.25" [value]="entity.scale ?? 1"
+                               (change)="inspector.patchEntityScale(num($event))" />
+                      </label>
+                    </div>
+                    <p class="hint hint--field">
+                      @if (entityOps.isShape(entity)) {
+                        Casillas: cuánto ocupa en el mapa; su colisión crece con ella.
+                      }
+                      Escala agranda o achica el dibujo: 2 es el doble.
+                    </p>
+
+                    <div class="field-row">
+                      <label class="field">
+                        <span>Columna</span>
+                        <input class="input" type="number" step="1" [value]="entity.position.col"
+                               (input)="inspector.patchPosition('col', int($event))" />
+                      </label>
+                      <label class="field">
+                        <span>Fila</span>
+                        <input class="input" type="number" step="1" [value]="entity.position.row"
+                               (input)="inspector.patchPosition('row', int($event))" />
+                      </label>
+                    </div>
                   </div>
                 }
               </section>
 
+              <!-- EL ROL: lo que hace en el juego, segun lo elegido en "Que es".
+                   La logica esta en combat/combat-inspector.controller.ts. -->
+              @let role = combat.roleOf(entity);
+              @if (role !== 'other') {
+                <section class="panel">
+                  <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('combat')" (click)="panels.togglePanel('combat')">
+                    <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('combat')" hcIcon="chevron-down"></svg>
+                    {{ role === 'npc' ? 'Tienda' : role === 'item' ? 'Al juntarlo' : 'Combate' }}
+                  </button>
+                  @if (!panels.isCollapsed('combat')) {
+                    <div class="panel__body">
+                      @if (role !== 'item' && inspector.isCharacter(entity)) {
+                        <div class="field-row">
+                          <label class="field">
+                            <span>Vida</span>
+                            <input class="input" type="number" min="0" step="1" [value]="inspector.statsOf(entity).health"
+                                   (change)="inspector.patchEntityStats('health', num($event))" />
+                          </label>
+                          <label class="field">
+                            <span>Daño</span>
+                            <input class="input" type="number" min="0" step="1" [value]="inspector.statsOf(entity).damage"
+                                   (change)="inspector.patchEntityStats('damage', num($event))" />
+                          </label>
+                          <label class="field">
+                            <span>Velocidad</span>
+                            <input class="input" type="number" min="0" step="0.5" [value]="inspector.statsOf(entity).speed"
+                                   (change)="inspector.patchEntityStats('speed', num($event))" />
+                          </label>
+                        </div>
+                        <p class="hint hint--field">
+                          Velocidad en casillas por segundo.
+                          @if (entity.preset) {
+                            Basado en el personaje “{{ entity.preset }}”: lo que cambies aquí afecta solo a este.
+                          }
+                        </p>
+                      }
+
+                      @switch (role) {
+                        @case ('player') {
+                          @let inventory = combat.inventoryOf(entity);
+                          <div class="subhead">Inventario</div>
+                          <div class="field-row">
+                            <label class="field">
+                              <span>Espacios para armas</span>
+                              <input class="input" type="number" min="1" max="9" step="1" [value]="inventory.slots"
+                                     (change)="combat.patchInventory(entity, { slots: int($event) })" />
+                            </label>
+                            <label class="field">
+                              <span>Monedas</span>
+                              <input class="input" type="number" min="0" step="1" [value]="inventory.coins"
+                                     (change)="combat.patchInventory(entity, { coins: int($event) })" />
+                            </label>
+                          </div>
+                          <p class="hint hint--field">En el juego las armas se eligen con las teclas 1 a 9.</p>
+                          <label class="check">
+                            <input type="checkbox" [checked]="inventory.locked"
+                                   (change)="combat.patchInventory(entity, { locked: checked($event) })" />
+                            <span>Los eventos no cambian los espacios</span>
+                          </label>
+                          <label class="field" style="margin-top: 6px">
+                            <span>Con el inventario lleno</span>
+                            <select class="input" (change)="combat.patchInventory(entity, { onFull: items.onFullOf(str($event)) })">
+                              @for (option of combat.onFullOptions; track option.value) {
+                                <option [value]="option.value" [selected]="inventory.onFull === option.value">{{ option.label }}</option>
+                              }
+                            </select>
+                          </label>
+                          <p class="hint hint--field">{{ combat.onFullHint(inventory.onFull) }}</p>
+
+                          <div class="subhead">Armas con las que arranca</div>
+                          @for (id of inventory.items; track id; let index = $index) {
+                            <div class="maprow maprow--inline">
+                              <span class="maprow__name">{{ index + 1 }} · {{ combat.itemLabel(id) }}</span>
+                              <button class="btn btn--small btn--danger" type="button" title="Quitar" aria-label="Quitar arma"
+                                      (click)="combat.removeStartItem(entity, index)"><svg hcIcon="x"></svg></button>
+                            </div>
+                          }
+                          @if (inventory.items.length > inventory.slots) {
+                            <p class="hint hint--warn">Hay más armas que espacios: el motor descarta las que no entran.</p>
+                          }
+                          <select class="input" aria-label="Agregar arma" (change)="combat.addStartItem(entity, str($event)); resetSelect($event)">
+                            <option value="" selected>+ Agregar arma…</option>
+                            @for (weapon of combat.weaponOptions(); track weapon.id) {
+                              <option [value]="weapon.id">{{ weapon.name }}</option>
+                            }
+                          </select>
+                          @if (combat.weaponOptions().length === 0) {
+                            <p class="hint">Todavía no hay armas: créalas en Combate › Objetos y armas.</p>
+                          }
+
+                          <div class="subhead">Movimientos</div>
+                          <label class="check">
+                            <input type="checkbox" [checked]="!!combat.dashOf(entity)"
+                                   (change)="combat.setDashEnabled(entity, checked($event))" />
+                            <span>Esquive (Shift)</span>
+                          </label>
+                          @if (combat.dashOf(entity); as dash) {
+                            <div class="field-row">
+                              <label class="field">
+                                <span>Distancia</span>
+                                <input class="input" type="number" min="0.5" step="0.5" [value]="dash.distance"
+                                       (change)="combat.patchDash(entity, 'distance', num($event))" />
+                              </label>
+                              <label class="field">
+                                <span>Duración (s)</span>
+                                <input class="input" type="number" min="0.05" step="0.02" [value]="dash.duration"
+                                       (change)="combat.patchDash(entity, 'duration', num($event))" />
+                              </label>
+                            </div>
+                            <div class="field-row">
+                              <label class="field">
+                                <span>Espera (s)</span>
+                                <input class="input" type="number" min="0" step="0.1" [value]="dash.cooldown"
+                                       (change)="combat.patchDash(entity, 'cooldown', num($event))" />
+                              </label>
+                              <label class="field">
+                                <span>Invulnerable (s)</span>
+                                <input class="input" type="number" min="0" step="0.05" [value]="dash.iframes"
+                                       (change)="combat.patchDash(entity, 'iframes', num($event))" />
+                              </label>
+                            </div>
+                            <p class="hint hint--field">
+                              Distancia en casillas. Espera: hasta poder repetirlo. Invulnerable: segundos sin recibir daño
+                              desde que empieza.
+                            </p>
+                          }
+                          <label class="check">
+                            <input type="checkbox" [checked]="!!combat.defenseOf(entity)"
+                                   (change)="combat.setDefenseEnabled(entity, checked($event))" />
+                            <span>Defensa (clic derecho o K)</span>
+                          </label>
+                          @if (combat.defenseOf(entity); as defense) {
+                            <div class="field-row">
+                              <label class="field">
+                                <span>Daño evitado %</span>
+                                <input class="input" type="number" min="0" max="100" step="5"
+                                       [value]="combat.percent(defense.reduction)"
+                                       (change)="combat.patchDefensePercent(entity, 'reduction', num($event))" />
+                              </label>
+                              <label class="field">
+                                <span>Velocidad %</span>
+                                <input class="input" type="number" min="0" max="100" step="5"
+                                       [value]="combat.percent(defense.speedMultiplier)"
+                                       (change)="combat.patchDefensePercent(entity, 'speedMultiplier', num($event))" />
+                              </label>
+                            </div>
+                            <p class="hint hint--field">Velocidad al caminar defendiendo. Defendiendo no se puede atacar.</p>
+                          }
+                        }
+
+                        @case ('enemy') {
+                          <label class="check">
+                            <input type="checkbox" [checked]="entity.boss === true"
+                                   (change)="combat.setBoss(entity, checked($event))" />
+                            <span>Jefe (barra de vida grande)</span>
+                          </label>
+                          <label class="field" style="margin-top: 6px">
+                            <span>Arma</span>
+                            <select class="input" (change)="combat.setWeapon(entity, str($event))">
+                              <option value="" [selected]="!entity.weapon">Ninguna</option>
+                              @for (weapon of combat.weaponOptions(); track weapon.id) {
+                                <option [value]="weapon.id" [selected]="entity.weapon === weapon.id">{{ weapon.name }}</option>
+                              }
+                            </select>
+                          </label>
+                          @if (entity.weapon) {
+                            <p class="hint hint--field">{{ items.weaponSummary(entity.weapon) }}</p>
+                          } @else {
+                            <p class="hint hint--field">Sin arma, hace daño al tocar al jugador.</p>
+                          }
+
+                          <div class="subhead">Puede soltar al caer</div>
+                          @for (drop of entity.drops ?? []; track $index; let index = $index) {
+                            <div class="maprow maprow--inline">
+                              <select class="input maprow__select" aria-label="Objeto que suelta"
+                                      (change)="combat.setDropItem(entity, index, str($event))">
+                                @for (item of combat.options(); track item.id) {
+                                  <option [value]="item.id" [selected]="drop.item === item.id">{{ item.name }}</option>
+                                }
+                              </select>
+                              <input class="input maprow__num" type="number" min="0" max="100" step="5"
+                                     [value]="combat.percent(drop.chance)" title="Probabilidad (%)" aria-label="Probabilidad en %"
+                                     (change)="combat.setDropPercent(entity, index, num($event))" />
+                              <span class="maprow__unit">%</span>
+                              <button class="btn btn--small btn--danger" type="button" title="Quitar" aria-label="Quitar"
+                                      (click)="combat.removeDrop(entity, index)"><svg hcIcon="x"></svg></button>
+                            </div>
+                          }
+                          <button class="btn btn--small" type="button" [disabled]="combat.options().length === 0"
+                                  (click)="combat.addDrop(entity)">+ Botín</button>
+                          @if (combat.options().length === 0) {
+                            <p class="hint">Para dar botín, crea primero un objeto en Combate › Objetos y armas.</p>
+                          } @else {
+                            <p class="hint">Cada entrada se sortea aparte. Lo que suelta queda en el piso para juntarlo.</p>
+                          }
+                        }
+
+                        @case ('npc') {
+                          <p class="hint hint--field">En el juego, acercarse y apretar E abre la tienda; se compra con 1 a 9.</p>
+                          @for (entry of combat.shopOf(entity); track $index; let index = $index) {
+                            <div class="maprow maprow--inline">
+                              <select class="input maprow__select" aria-label="Objeto en venta"
+                                      (change)="combat.setShopItem(entity, index, { item: str($event) })">
+                                @for (item of combat.options(); track item.id) {
+                                  <option [value]="item.id" [selected]="entry.item === item.id">{{ item.name }}</option>
+                                }
+                              </select>
+                              <input class="input maprow__num" type="number" min="0" step="1" [value]="entry.price"
+                                     title="Precio en monedas" aria-label="Precio en monedas"
+                                     (change)="combat.setShopItem(entity, index, { price: int($event) })" />
+                              <span class="maprow__unit" title="Precio en monedas"><svg hcIcon="coins"></svg></span>
+                              <button class="btn btn--small btn--danger" type="button" title="Quitar" aria-label="Quitar"
+                                      (click)="combat.removeShopItem(entity, index)"><svg hcIcon="x"></svg></button>
+                            </div>
+                          }
+                          <button class="btn btn--small" type="button" [disabled]="combat.options().length === 0"
+                                  (click)="combat.addShopItem(entity)">+ Objeto en venta</button>
+                          @if (combat.options().length === 0) {
+                            <p class="hint">Para vender algo, crea primero un objeto en Combate › Objetos y armas.</p>
+                          }
+                        }
+
+                        @case ('item') {
+                          <label class="field">
+                            <span>Objeto</span>
+                            <select class="input" (change)="combat.setPickupItem(entity, str($event))">
+                              <option value="" disabled [selected]="!entity.item">Elegir…</option>
+                              @for (item of combat.options(); track item.id) {
+                                <option [value]="item.id" [selected]="entity.item === item.id">{{ item.name }}</option>
+                              }
+                            </select>
+                          </label>
+                          @if (combat.options().length === 0) {
+                            <p class="hint hint--field">Todavía no hay objetos: créalos en Combate › Objetos y armas.</p>
+                          } @else {
+                            <p class="hint hint--field">El jugador lo junta al tocarlo. Elegirlo también le pone el dibujo del objeto.</p>
+                          }
+                        }
+                      }
+
+                      @if (combat.missing().length > 0) {
+                        <p class="hint hint--warn">
+                          El nivel usa objetos que no define: {{ combat.missing().join(', ') }}. Vuelve a elegirlos, o
+                          créalos en Objetos y armas.
+                        </p>
+                      }
+                    </div>
+                  }
+                </section>
+              }
+
+              <!-- EN EL JUEGO: como choca y si arranca a la vista. Colision y
+                   Pared son excluyentes (ver entities/entity-ops.controller.ts)
+                   y van a toda la seleccion, como en el menu del clic derecho. -->
               <section class="panel">
-                <button class="panel__head" (click)="panels.togglePanel('transform')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('transform')">▶</span>
-                  Transformacion
+                <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('collider')" (click)="panels.togglePanel('collider')">
+                  <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('collider')" hcIcon="chevron-down"></svg>
+                  En el juego
                 </button>
-                @if (!panels.isCollapsed('transform')) {
+                @if (!panels.isCollapsed('collider')) {
                   <div class="panel__body">
-                    <label class="field">
-                      <span>Columna</span>
-                      <input class="input" type="number" step="1" [value]="entity.position.col"
-                             (input)="inspector.patchPosition('col', int($event))" />
+                    <label class="check">
+                      <input type="checkbox" [checked]="entityOps.hasCollision(entity)"
+                             (change)="entityOps.setCollisionOnSelection(checked($event))" />
+                      <span>No se puede atravesar</span>
                     </label>
-                    <label class="field">
-                      <span>Fila</span>
-                      <input class="input" type="number" step="1" [value]="entity.position.row"
-                             (input)="inspector.patchPosition('row', int($event))" />
+                    <p class="hint hint--field">Choca con el área de su dibujo.</p>
+                    <label class="check">
+                      <input type="checkbox" [checked]="entityOps.isWall(entity)"
+                             (change)="entityOps.setWallOnSelection(checked($event))" />
+                      <span>Bloquea toda su casilla</span>
                     </label>
+                    <p class="hint hint--field">Un muro invisible del tamaño de la casilla, tenga la forma que tenga. Es una u otra, no las dos.</p>
+                    <label class="check">
+                      <input type="checkbox" [checked]="entity.hidden === true"
+                             (change)="combat.setHidden(entity, checked($event))" />
+                      <span>Oculta al empezar</span>
+                    </label>
+                    <p class="hint hint--field">No se ve hasta que un evento la muestre. Sirve para puertas y sorpresas.</p>
                   </div>
                 }
               </section>
 
+              <!-- EVENTOS: el puente con la logica del nivel. Solo cuenta y
+                   lleva a la pestaña Eventos del dock; no edita nada aca. -->
+              @let usedIn = inspector.eventCount(entity.id);
               <section class="panel">
-                <button class="panel__head" (click)="panels.togglePanel('sprite')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('sprite')">▶</span>
-                  Sprite
+                <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('obj-events')" (click)="panels.togglePanel('obj-events')">
+                  <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('obj-events')" hcIcon="chevron-down"></svg>
+                  Eventos
+                  @if (usedIn > 0) {
+                    <span class="tab__count">{{ usedIn }}</span>
+                  }
                 </button>
-                @if (!panels.isCollapsed('sprite')) {
+                @if (!panels.isCollapsed('obj-events')) {
                   <div class="panel__body">
+                    <p class="hint hint--field">
+                      {{ usedIn === 0 ? 'Ningún evento usa este objeto todavía.' : usedIn === 1 ? 'Lo usa 1 evento del nivel.' : 'Lo usan ' + usedIn + ' eventos del nivel.' }}
+                      Un evento dice qué pasa en el juego: “cuando el jugador toca este objeto, desaparece”.
+                    </p>
+                    <button class="btn btn--small" type="button" (click)="showDock('eventos')">
+                      <svg hcIcon="zap"></svg>{{ usedIn === 0 ? 'Abrir Eventos' : 'Ver en Eventos' }}
+                    </button>
+                  </div>
+                }
+              </section>
+
+              <!-- AVANZADO: plegado de entrada. Recorte, animacion, caja de
+                   colision y los datos crudos del nivel. -->
+              <section class="panel">
+                <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('obj-advanced', true)"
+                        (click)="panels.togglePanel('obj-advanced', true)">
+                  <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('obj-advanced', true)" hcIcon="chevron-down"></svg>
+                  Avanzado
+                </button>
+                @if (!panels.isCollapsed('obj-advanced', true)) {
+                  <div class="panel__body">
+                    <div class="subhead">Recorte de la imagen</div>
                     <div class="field-row">
                       <label class="field">
                         <span>X</span>
@@ -844,68 +1203,20 @@
                         <input class="input" type="number" step="1" [value]="entity.sourceRect.y"
                                (input)="inspector.patchSourceRect('y', int($event))" />
                       </label>
-                    </div>
-                    <div class="field-row">
                       <label class="field">
-                        <span>W</span>
+                        <span>Ancho</span>
                         <input class="input" type="number" step="1" [value]="entity.sourceRect.width"
                                (input)="inspector.patchSourceRect('width', int($event))" />
                       </label>
                       <label class="field">
-                        <span>H</span>
+                        <span>Alto</span>
                         <input class="input" type="number" step="1" [value]="entity.sourceRect.height"
                                (input)="inspector.patchSourceRect('height', int($event))" />
                       </label>
                     </div>
-                  </div>
-                }
-              </section>
+                    <p class="hint hint--field">Qué parte de la imagen se dibuja, en píxeles. Sirve si tu imagen trae varios dibujos juntos.</p>
 
-              <section class="panel">
-                <button class="panel__head" (click)="panels.togglePanel('collider')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('collider')">▶</span>
-                  Fisica
-                </button>
-                @if (!panels.isCollapsed('collider')) {
-                  <div class="panel__body">
-                    <!-- Lo mismo que ofrece el menu del click derecho. Esta
-                         tambien aca porque es una propiedad del objeto, y el
-                         inspector es donde uno la busca. -->
-                    <label class="check">
-                      <input type="checkbox" [checked]="entityOps.hasCollision(entity)"
-                             (change)="entityOps.setCollisionOnSelection(checked($event))" />
-                      <span>Colisión (solo con su forma)</span>
-                    </label>
-                    <label class="check" style="margin-top: 6px">
-                      <input type="checkbox" [checked]="entityOps.isWall(entity)"
-                             (change)="entityOps.setWallOnSelection(checked($event))" />
-                      <span>Pared (bloquea todo el tile)</span>
-                    </label>
-                    @if (entity.collider; as collider) {
-                      <div class="field-row" style="margin-top: 6px">
-                        <label class="field">
-                          <span>W</span>
-                          <input class="input" type="number" step="1" [value]="collider.width"
-                                 (input)="inspector.patchCollider('width', int($event))" />
-                        </label>
-                        <label class="field">
-                          <span>H</span>
-                          <input class="input" type="number" step="1" [value]="collider.height"
-                                 (input)="inspector.patchCollider('height', int($event))" />
-                        </label>
-                      </div>
-                    }
-                  </div>
-                }
-              </section>
-
-              <section class="panel">
-                <button class="panel__head" (click)="panels.togglePanel('anim')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('anim')">▶</span>
-                  Animación y tamaño
-                </button>
-                @if (!panels.isCollapsed('anim')) {
-                  <div class="panel__body">
+                    <div class="subhead">Animación</div>
                     <div class="field-row">
                       <label class="field">
                         <span>Cuadros</span>
@@ -913,270 +1224,46 @@
                                (change)="inspector.patchEntityFrames(int($event))" />
                       </label>
                       <label class="field">
-                        <span>Seg/cuadro</span>
+                        <span>Segundos por cuadro</span>
                         <input class="input" type="number" min="0.05" step="0.05"
                                [value]="inspector.effectiveFrameDuration(entity)"
                                (change)="inspector.patchEntityFrameDuration(num($event))" />
                       </label>
-                      <label class="field">
-                        <span>Escala</span>
-                        <input class="input" type="number" min="0.25" step="0.25" [value]="entity.scale ?? 1"
-                               (change)="inspector.patchEntityScale(num($event))" />
-                      </label>
                     </div>
-                    <p class="hint">
-                      Los cuadros van uno al lado del otro en la textura, del ancho del recorte. Con 1 el sprite
-                      queda quieto.
+                    <p class="hint hint--field">
+                      Los cuadros van uno al lado del otro en la imagen, cada uno del ancho del recorte. Con 1 no se anima.
+                      Si el recorte es la imagen entera, cambiarlos la reparte en partes iguales.
                     </p>
-                  </div>
-                }
-              </section>
 
-              @if (inspector.isCharacter(entity)) {
-                <section class="panel">
-                  <button class="panel__head" (click)="panels.togglePanel('stats')">
-                    <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('stats')">▶</span>
-                    Características
-                  </button>
-                  @if (!panels.isCollapsed('stats')) {
-                    <div class="panel__body">
+                    @if (entity.collider; as collider) {
+                      <div class="subhead">Caja de colisión</div>
                       <div class="field-row">
                         <label class="field">
-                          <span>Vida</span>
-                          <input class="input" type="number" min="0" step="1" [value]="inspector.statsOf(entity).health"
-                                 (change)="inspector.patchEntityStats('health', num($event))" />
+                          <span>Ancho</span>
+                          <input class="input" type="number" step="1" [value]="collider.width"
+                                 (input)="inspector.patchCollider('width', int($event))" />
                         </label>
                         <label class="field">
-                          <span>Daño</span>
-                          <input class="input" type="number" min="0" step="1" [value]="inspector.statsOf(entity).damage"
-                                 (change)="inspector.patchEntityStats('damage', num($event))" />
-                        </label>
-                        <label class="field">
-                          <span>Velocidad</span>
-                          <input class="input" type="number" min="0" step="0.5" [value]="inspector.statsOf(entity).speed"
-                                 (change)="inspector.patchEntityStats('speed', num($event))" />
+                          <span>Alto</span>
+                          <input class="input" type="number" step="1" [value]="collider.height"
+                                 (input)="inspector.patchCollider('height', int($event))" />
                         </label>
                       </div>
-                      @if (entity.preset) {
-                        <p class="hint">
-                          Basado en el personaje “{{ entity.preset }}”. Lo que cambies aquí afecta solo a esta entidad.
-                        </p>
-                      }
-                    </div>
-                  }
-                </section>
-              }
-
-              <!-- Combate, objetos y puzzles. Lo que muestra depende del type:
-                   inventario y movilidad del jugador, arma y botin de un
-                   enemigo, tienda de un NPC, que objeto es un objeto. La logica
-                   esta en combat/combat-inspector.controller.ts. -->
-              @let role = combat.roleOf(entity);
-              <section class="panel">
-                <button class="panel__head" (click)="panels.togglePanel('combat')">
-                  <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('combat')">▶</span>
-                  {{ role === 'npc' ? 'Tienda' : role === 'item' ? 'Objeto para juntar' : role === 'other' ? 'Puzzle' : 'Combate' }}
-                </button>
-                @if (!panels.isCollapsed('combat')) {
-                  <div class="panel__body">
-                    @switch (role) {
-                      @case ('player') {
-                        @let inventory = combat.inventoryOf(entity);
-                        <div class="subhead">Inventario</div>
-                        <div class="field-row">
-                          <label class="field">
-                            <span title="Armas que entran; en el juego se eligen con 1 a 9">Casilleros</span>
-                            <input class="input" type="number" min="1" max="9" step="1" [value]="inventory.slots"
-                                   (change)="combat.patchInventory(entity, { slots: int($event) })" />
-                          </label>
-                          <label class="field">
-                            <span>Monedas</span>
-                            <input class="input" type="number" min="0" step="1" [value]="inventory.coins"
-                                   (change)="combat.patchInventory(entity, { coins: int($event) })" />
-                          </label>
-                        </div>
-                        <label class="check">
-                          <input type="checkbox" [checked]="inventory.locked"
-                                 (change)="combat.patchInventory(entity, { locked: checked($event) })" />
-                          <span>Límite bloqueado (los eventos no lo cambian)</span>
-                        </label>
-                        <label class="field" style="margin-top: 6px">
-                          <span>Con el inventario lleno</span>
-                          <select class="input" (change)="combat.patchInventory(entity, { onFull: items.onFullOf(str($event)) })">
-                            @for (option of combat.onFullOptions; track option.value) {
-                              <option [value]="option.value" [selected]="inventory.onFull === option.value">{{ option.label }}</option>
-                            }
-                          </select>
-                        </label>
-                        <p class="hint">{{ combat.onFullHint(inventory.onFull) }}</p>
-
-                        <div class="subhead">Armas con las que arranca</div>
-                        @for (id of inventory.items; track id; let index = $index) {
-                          <div class="maprow maprow--inline">
-                            <span class="maprow__name">{{ index + 1 }} · {{ combat.itemLabel(id) }}</span>
-                            <button class="btn btn--small btn--danger" type="button" title="Quitar"
-                                    (click)="combat.removeStartItem(entity, index)">×</button>
-                          </div>
-                        }
-                        @if (inventory.items.length > inventory.slots) {
-                          <p class="hint hint--warn">Hay más armas que casilleros: el motor descarta las que no entran.</p>
-                        }
-                        <select class="input" (change)="combat.addStartItem(entity, str($event)); resetSelect($event)">
-                          <option value="" selected>+ Agregar arma…</option>
-                          @for (weapon of combat.weaponOptions(); track weapon.id) {
-                            <option [value]="weapon.id">{{ weapon.name }}</option>
-                          }
-                        </select>
-                        @if (combat.weaponOptions().length === 0) {
-                          <p class="hint">Todavía no hay armas: créalas en Combate > Objetos y armas.</p>
-                        }
-
-                        <div class="subhead">Movilidad</div>
-                        <label class="check">
-                          <input type="checkbox" [checked]="!!combat.dashOf(entity)"
-                                 (change)="combat.setDashEnabled(entity, checked($event))" />
-                          <span>Esquive (Shift)</span>
-                        </label>
-                        @if (combat.dashOf(entity); as dash) {
-                          <div class="field-row">
-                            <label class="field">
-                              <span title="Celdas que recorre">Distancia</span>
-                              <input class="input" type="number" min="0.5" step="0.5" [value]="dash.distance"
-                                     (change)="combat.patchDash(entity, 'distance', num($event))" />
-                            </label>
-                            <label class="field">
-                              <span title="Segundos que dura">Duración</span>
-                              <input class="input" type="number" min="0.05" step="0.02" [value]="dash.duration"
-                                     (change)="combat.patchDash(entity, 'duration', num($event))" />
-                            </label>
-                          </div>
-                          <div class="field-row">
-                            <label class="field">
-                              <span title="Segundos hasta poder repetirlo">Pausa</span>
-                              <input class="input" type="number" min="0" step="0.1" [value]="dash.cooldown"
-                                     (change)="combat.patchDash(entity, 'cooldown', num($event))" />
-                            </label>
-                            <label class="field">
-                              <span title="Segundos de invulnerabilidad desde que empieza el esquive">I-frames</span>
-                              <input class="input" type="number" min="0" step="0.05" [value]="dash.iframes"
-                                     (change)="combat.patchDash(entity, 'iframes', num($event))" />
-                            </label>
-                          </div>
-                        }
-                        <label class="check">
-                          <input type="checkbox" [checked]="!!combat.defenseOf(entity)"
-                                 (change)="combat.setDefenseEnabled(entity, checked($event))" />
-                          <span>Defensa (clic derecho o K)</span>
-                        </label>
-                        @if (combat.defenseOf(entity); as defense) {
-                          <div class="field-row">
-                            <label class="field">
-                              <span title="Parte del daño que evita al defender, en %">Bloqueo %</span>
-                              <input class="input" type="number" min="0" max="100" step="5"
-                                     [value]="combat.percent(defense.reduction)"
-                                     (change)="combat.patchDefensePercent(entity, 'reduction', num($event))" />
-                            </label>
-                            <label class="field">
-                              <span title="Velocidad mientras defiende, en % de la normal">Veloc. %</span>
-                              <input class="input" type="number" min="0" max="100" step="5"
-                                     [value]="combat.percent(defense.speedMultiplier)"
-                                     (change)="combat.patchDefensePercent(entity, 'speedMultiplier', num($event))" />
-                            </label>
-                          </div>
-                          <p class="hint">Defendiendo no se puede atacar.</p>
-                        }
-                      }
-
-                      @case ('enemy') {
-                        <label class="check">
-                          <input type="checkbox" [checked]="entity.boss === true"
-                                 (change)="combat.setBoss(entity, checked($event))" />
-                          <span>Jefe (barra de vida grande)</span>
-                        </label>
-                        <label class="field" style="margin-top: 6px">
-                          <span>Arma</span>
-                          <select class="input" (change)="combat.setWeapon(entity, str($event))">
-                            <option value="" [selected]="!entity.weapon">— sin arma: pega por contacto —</option>
-                            @for (weapon of combat.weaponOptions(); track weapon.id) {
-                              <option [value]="weapon.id" [selected]="entity.weapon === weapon.id">{{ weapon.name }}</option>
-                            }
-                          </select>
-                        </label>
-                        @if (entity.weapon) {
-                          <p class="hint">{{ items.weaponSummary(entity.weapon) }}</p>
-                        }
-
-                        <div class="subhead">Puede soltar al caer</div>
-                        @for (drop of entity.drops ?? []; track $index; let index = $index) {
-                          <div class="maprow maprow--inline">
-                            <select class="input maprow__select" (change)="combat.setDropItem(entity, index, str($event))">
-                              @for (item of combat.options(); track item.id) {
-                                <option [value]="item.id" [selected]="drop.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
-                              }
-                            </select>
-                            <input class="input maprow__num" type="number" min="0" max="100" step="5"
-                                   [value]="combat.percent(drop.chance)" title="Probabilidad (%)"
-                                   (change)="combat.setDropPercent(entity, index, num($event))" />
-                            <span class="maprow__unit">%</span>
-                            <button class="btn btn--small btn--danger" type="button" title="Quitar"
-                                    (click)="combat.removeDrop(entity, index)">×</button>
-                          </div>
-                        }
-                        <button class="btn btn--small" type="button" [disabled]="combat.options().length === 0"
-                                (click)="combat.addDrop(entity)">+ Botín</button>
-                        <p class="hint">Cada entrada se sortea aparte. Lo que suelta queda en el piso para juntarlo.</p>
-                      }
-
-                      @case ('npc') {
-                        <p class="hint">En el juego, acercarse y apretar E abre la tienda; se compra con 1 a 9.</p>
-                        @for (entry of combat.shopOf(entity); track $index; let index = $index) {
-                          <div class="maprow maprow--inline">
-                            <select class="input maprow__select"
-                                    (change)="combat.setShopItem(entity, index, { item: str($event) })">
-                              @for (item of combat.options(); track item.id) {
-                                <option [value]="item.id" [selected]="entry.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
-                              }
-                            </select>
-                            <input class="input maprow__num" type="number" min="0" step="1" [value]="entry.price"
-                                   title="Precio en monedas" (change)="combat.setShopItem(entity, index, { price: int($event) })" />
-                            <span class="maprow__unit">●</span>
-                            <button class="btn btn--small btn--danger" type="button" title="Quitar"
-                                    (click)="combat.removeShopItem(entity, index)">×</button>
-                          </div>
-                        }
-                        <button class="btn btn--small" type="button" [disabled]="combat.options().length === 0"
-                                (click)="combat.addShopItem(entity)">+ Objeto en venta</button>
-                      }
-
-                      @case ('item') {
-                        <label class="field">
-                          <span>Objeto</span>
-                          <select class="input" (change)="combat.setPickupItem(entity, str($event))">
-                            <option value="" disabled [selected]="!entity.item">— elegir —</option>
-                            @for (item of combat.options(); track item.id) {
-                              <option [value]="item.id" [selected]="entity.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
-                            }
-                          </select>
-                        </label>
-                        <p class="hint">El jugador lo junta al tocarlo. Elegirlo también le pone el sprite del objeto.</p>
-                      }
-
-                      @default {
-                        <p class="hint">Una entidad oculta al empezar sirve de puerta: la muestran y ocultan los eventos (Combate > Puzzle de sala).</p>
-                      }
+                      <p class="hint hint--field">El área que choca o detecta contactos, en píxeles.</p>
                     }
 
-                    <label class="check" style="margin-top: 6px">
-                      <input type="checkbox" [checked]="entity.hidden === true"
-                             (change)="combat.setHidden(entity, checked($event))" />
-                      <span>Oculta al empezar</span>
+                    <div class="subhead">Datos del nivel</div>
+                    <label class="field">
+                      <span>Tipo</span>
+                      <input class="input" spellcheck="false" [value]="entity.type"
+                             (change)="inspector.patchEntity({ type: str($event) })" />
                     </label>
-                    @if (combat.missing().length > 0) {
-                      <p class="hint hint--warn">
-                        El nivel usa objetos que no define: {{ combat.missing().join(', ') }}. Vuelve a elegirlos, o
-                        créalos en Objetos y armas.
-                      </p>
-                    }
+                    <label class="field">
+                      <span>Ruta de la imagen</span>
+                      <input class="input" spellcheck="false" [value]="entity.texture"
+                             (change)="inspector.patchEntity({ texture: str($event) })" />
+                    </label>
+                    <p class="hint hint--field">Lo mismo que guarda el archivo del nivel. Cámbialo solo si sabes qué espera el motor.</p>
                   </div>
                 }
               </section>
@@ -1184,37 +1271,37 @@
               <section class="panel panel--flat">
                 <div class="panel__body">
                   <div class="field-row">
-                    <button class="btn" style="flex: 1" (click)="entityOps.duplicateSelected()">Duplicar</button>
-                    <button class="btn btn--danger" style="flex: 1" (click)="entityOps.deleteSelected()">Eliminar</button>
+                    <button class="btn" type="button" style="flex: 1" (click)="entityOps.duplicateSelected()"
+                            title="Duplicar la selección (Shift+D)">
+                      <svg hcIcon="copy"></svg>Duplicar
+                    </button>
+                    <button class="btn btn--danger" type="button" style="flex: 1" (click)="entityOps.deleteSelected()"
+                            title="Eliminar la selección (X o Supr)">
+                      <svg hcIcon="trash-2"></svg>Eliminar
+                    </button>
                   </div>
                 </div>
               </section>
             } @else {
-              <p class="empty">Sin objeto activo. Selecciona una entidad en la escena o en el viewport.</p>
+              <div class="empty">
+                @if (levels.level().entities.length === 0) {
+                  <p class="empty__title">Todavía no hay nada en el nivel</p>
+                  <p>Arrastra una figura o un personaje desde <b>Recursos</b>, abajo, hasta la grilla. Después haz clic sobre él para editarlo aquí.</p>
+                } @else {
+                  <p class="empty__title">Elige algo del mapa</p>
+                  <p>Haz clic en un objeto del mapa o de la lista <b>Escena</b> para ver y cambiar cómo es y qué hace en el juego.</p>
+                }
+                <button class="btn btn--small empty__action" type="button" (click)="showInspectorTab('escena', inspectorBody)">
+                  <svg hcIcon="map"></svg>Ajustes del nivel
+                </button>
+              </div>
             }
-
-            <!-- Fuera del @if de la seleccion: sirve para colocar, asi que
-                 tiene que estar aunque no haya nada elegido. -->
-            <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('shapes')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('shapes')">▶</span>
-                Figuras
-              </button>
-              @if (!panels.isCollapsed('shapes')) {
-                <div class="panel__body">
-                  <label class="check">
-                    <input type="checkbox" [checked]="palette.paintShapes()" (change)="palette.paintShapes.set(checked($event))" />
-                    <span>Pintar figuras arrastrando</span>
-                  </label>
-                  <p class="hint">Shift + arrastrar pinta siempre.</p>
-                </div>
-              }
-            </section>
           } @else {
+            <!-- BASICO del nivel: nombre, color de fondo, tamaño y camara. -->
             <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('level')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('level')">▶</span>
-                Nivel
+              <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('level')" (click)="panels.togglePanel('level')">
+                <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('level')" hcIcon="chevron-down"></svg>
+                Básico
               </button>
               @if (!panels.isCollapsed('level')) {
                 <div class="panel__body">
@@ -1222,69 +1309,55 @@
                     <span>Nombre</span>
                     <input class="input" [value]="levels.level().name" (change)="inspector.renameLevel(str($event))" />
                   </label>
-                </div>
-              }
-            </section>
 
-            <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('background')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('background')">▶</span>
-                Fondo y colores
-              </button>
-              @if (!panels.isCollapsed('background')) {
-                <div class="panel__body">
-                  <!-- Selector a lo Photoshop, sin ventana aparte: el cuadro
-                       elige saturacion (X) y brillo (Y), la barra el tono. -->
-                  <div class="picker">
-                    <div class="picker__square" [style.background-color]="bg.backgroundHueCss()"
-                         (pointerdown)="bg.onBackgroundSquare($event)" (pointermove)="bg.onBackgroundSquare($event)">
-                      <span class="picker__cursor"
-                            [style.left.%]="bg.backgroundHsv().s * 100"
-                            [style.top.%]="(1 - bg.backgroundHsv().v) * 100"
-                            [style.background-color]="bg.backgroundHex()"></span>
-                    </div>
-                    <div class="picker__hue"
-                         (pointerdown)="bg.onBackgroundHue($event)" (pointermove)="bg.onBackgroundHue($event)">
-                      <span class="picker__hue-cursor" [style.top.%]="bg.backgroundHsv().h / 360 * 100"></span>
-                    </div>
-                  </div>
+                  <div class="subhead">Color de fondo</div>
                   <div class="picker__row">
                     <span class="picker__swatch" [style.background-color]="bg.backgroundHex()"></span>
-                    <label class="field">
-                      <span>Hex</span>
-                      <input class="input" maxlength="7" spellcheck="false" [value]="bg.backgroundHex()"
-                             (change)="bg.setBackgroundHex(str($event))" />
-                    </label>
+                    <input class="input picker__hex" maxlength="7" spellcheck="false" aria-label="Color de fondo en hexadecimal"
+                           title="Color en hexadecimal, como #1e1e1e" [value]="bg.backgroundHex()"
+                           (change)="bg.setBackgroundHex(str($event))" />
+                    <button class="btn btn--small" type="button" [attr.aria-expanded]="colorPickerOpen()"
+                            (click)="colorPickerOpen.set(!colorPickerOpen())">
+                      {{ colorPickerOpen() ? 'Listo' : 'Elegir…' }}
+                    </button>
                   </div>
-                  <div class="field-row">
-                    <label class="field">
-                      <span>R</span>
-                      <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().r"
-                             (change)="bg.patchBackground({ r: int($event) })" />
-                    </label>
-                    <label class="field">
-                      <span>G</span>
-                      <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().g"
-                             (change)="bg.patchBackground({ g: int($event) })" />
-                    </label>
-                    <label class="field">
-                      <span>B</span>
-                      <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().b"
-                             (change)="bg.patchBackground({ b: int($event) })" />
-                    </label>
-                  </div>
-                  <p class="hint">Color RGB del fondo de la escena al ejecutar el runtime.</p>
-                </div>
-              }
-            </section>
+                  @if (colorPickerOpen()) {
+                    <!-- Selector a lo Photoshop, sin ventana aparte: el cuadro
+                         elige saturacion (X) y brillo (Y), la barra el tono. -->
+                    <div class="picker">
+                      <div class="picker__square" [style.background-color]="bg.backgroundHueCss()"
+                           (pointerdown)="bg.onBackgroundSquare($event)" (pointermove)="bg.onBackgroundSquare($event)">
+                        <span class="picker__cursor"
+                              [style.left.%]="bg.backgroundHsv().s * 100"
+                              [style.top.%]="(1 - bg.backgroundHsv().v) * 100"
+                              [style.background-color]="bg.backgroundHex()"></span>
+                      </div>
+                      <div class="picker__hue"
+                           (pointerdown)="bg.onBackgroundHue($event)" (pointermove)="bg.onBackgroundHue($event)">
+                        <span class="picker__hue-cursor" [style.top.%]="bg.backgroundHsv().h / 360 * 100"></span>
+                      </div>
+                    </div>
+                    <div class="field-row">
+                      <label class="field">
+                        <span>R</span>
+                        <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().r"
+                               (change)="bg.patchBackground({ r: int($event) })" />
+                      </label>
+                      <label class="field">
+                        <span>G</span>
+                        <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().g"
+                               (change)="bg.patchBackground({ g: int($event) })" />
+                      </label>
+                      <label class="field">
+                        <span>B</span>
+                        <input class="input" type="number" step="1" min="0" max="255" [value]="bg.backgroundColor().b"
+                               (change)="bg.patchBackground({ b: int($event) })" />
+                      </label>
+                    </div>
+                  }
+                  <p class="hint hint--field">El color detrás del mapa al jugar. Se ve al ejecutar (F5), no en el editor.</p>
 
-            <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('grid')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('grid')">▶</span>
-                Grilla
-              </button>
-              @if (!panels.isCollapsed('grid')) {
-                <div class="panel__body">
+                  <div class="subhead">Tamaño del mapa</div>
                   <div class="field-row">
                     <label class="field">
                       <span>Ancho</span>
@@ -1297,40 +1370,19 @@
                              (input)="inspector.patchGrid({ height: int($event) })" />
                     </label>
                   </div>
-                  <div class="field-row">
-                    <label class="field">
-                      <span>Tile W</span>
-                      <input class="input" type="number" step="1" min="1" [value]="grid().tileWidth"
-                             (input)="inspector.patchGrid({ tileWidth: int($event) })" />
-                    </label>
-                    <label class="field">
-                      <span>Tile H</span>
-                      <input class="input" type="number" step="1" min="1" [value]="grid().tileHeight"
-                             (input)="inspector.patchGrid({ tileHeight: int($event) })" />
-                    </label>
-                  </div>
-                  <p class="hint">Proporcion 2:1 (64×32) es el estandar de pixel art isometrico.</p>
-                </div>
-              }
-            </section>
+                  <p class="hint hint--field">En casillas.</p>
 
-            <!-- Camara del runtime. Los numeros usan (change) y no (input):
-                 con (input), borrar el campo para escribir un "2" mandaria un
-                 valor vacio y el zoom saltaria al minimo mientras se escribe.
-                 El viewport del editor NO simula la camara: sigue mostrando el
-                 nivel entero, que es lo que hace falta para armarlo. -->
-            <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('camera')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('camera')">▶</span>
-                Cámara
-              </button>
-              @if (!panels.isCollapsed('camera')) {
-                <div class="panel__body">
+                  <!-- Camara del runtime. Los numeros usan (change) y no (input):
+                       con (input), borrar el campo para escribir un "2" mandaria un
+                       valor vacio y el zoom saltaria al minimo mientras se escribe.
+                       El viewport del editor NO simula la camara: sigue mostrando el
+                       nivel entero, que es lo que hace falta para armarlo. -->
+                  <div class="subhead">Cámara</div>
                   <label class="field">
                     <span>Modo</span>
                     <select class="input"
                             (change)="inspector.patchCamera({ mode: str($event) === 'follow' ? 'follow' : 'fixed' })">
-                      <option value="fixed" [selected]="inspector.camera().mode === 'fixed'">Fija — el nivel entero centrado</option>
+                      <option value="fixed" [selected]="inspector.camera().mode === 'fixed'">Fija: todo el nivel</option>
                       <option value="follow" [selected]="inspector.camera().mode === 'follow'">Seguir al jugador</option>
                     </select>
                   </label>
@@ -1339,71 +1391,53 @@
                     <input class="input" type="number" step="0.25" min="0.25" max="8" [value]="inspector.camera().zoom"
                            (change)="inspector.patchCamera({ zoom: num($event) })" />
                   </label>
-                  @if (inspector.camera().mode === 'follow') {
-                    <label class="field">
-                      <span>Suavizado (s)</span>
-                      <input class="input" type="number" step="0.05" min="0" max="2" [value]="inspector.camera().smoothing"
-                             (change)="inspector.patchCamera({ smoothing: num($event) })" />
-                    </label>
-                    <div class="field-row">
-                      <label class="field">
-                        <span>Zona muerta W</span>
-                        <input class="input" type="number" step="10" min="0" [value]="inspector.camera().deadzone.width"
-                               (change)="inspector.patchDeadzone('width', num($event))" />
-                      </label>
-                      <label class="field">
-                        <span>Zona muerta H</span>
-                        <input class="input" type="number" step="10" min="0" [value]="inspector.camera().deadzone.height"
-                               (change)="inspector.patchDeadzone('height', num($event))" />
-                      </label>
-                    </div>
-                    <label class="check">
-                      <input type="checkbox" [checked]="inspector.camera().clampToLevel"
-                             (change)="inspector.patchCamera({ clampToLevel: checked($event) })" />
-                      <span>No mostrar el vacío fuera del mapa</span>
-                    </label>
-                    <p class="hint">Sigue a player_1. La zona muerta va en píxeles de pantalla: dentro de ella el jugador se mueve sin arrastrar la cámara. Suavizado 0 = rígida.</p>
-                  } @else {
-                    <p class="hint">El nivel entero centrado en la ventana, como siempre. Con zoom se acerca sobre el centro.</p>
+                  <p class="hint hint--field">
+                    {{ inspector.camera().mode === 'follow' ? 'Sigue a «' + inspector.enginePlayerId + '» por el mapa.' : 'Muestra el nivel entero centrado en la ventana.' }}
+                    Zoom: qué tan cerca se ve, 2 es el doble. Se ve al ejecutar (F5); no cambia el zoom del editor.
+                  </p>
+                  @if (inspector.camera().mode === 'follow' && !inspector.hasEnginePlayer()) {
+                    <p class="hint hint--warn hint--field">
+                      <svg hcIcon="triangle-alert"></svg>No hay nadie llamado «{{ inspector.enginePlayerId }}» en el nivel: coloca un Jugador para que la cámara lo siga.
+                    </p>
                   }
                   @if (inspector.hasCustomCamera()) {
-                    <button class="btn" type="button" (click)="inspector.resetCamera()">Volver a la cámara de siempre</button>
+                    <button class="btn btn--small" type="button" (click)="inspector.resetCamera()">Volver a la cámara de siempre</button>
                   }
                 </div>
               }
             </section>
 
-            <!-- Grillas y tuneles del mapa. Los numeros usan (change) y no
+            <!-- Salas y tuneles del mapa. Los numeros usan (change) y no
                  (input): cada cambio recalcula el mapa entero, y hacerlo con
                  cada tecla dibujaria salas de tamaños intermedios sin sentido
                  mientras se escribe un "12". -->
             <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('map')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('map')">▶</span>
-                Mapa
+              <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('map')" (click)="panels.togglePanel('map')">
+                <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('map')" hcIcon="chevron-down"></svg>
+                Salas y túneles
               </button>
               @if (!panels.isCollapsed('map')) {
                 <div class="panel__body">
                   @if (map.rooms().length === 0) {
-                    <p class="hint">
-                      El nivel es una sola grilla. Agrega otra para armar salas unidas por túneles.
+                    <p class="hint hint--field">
+                      El nivel es una sola sala. Agrega otra para armar salas unidas por túneles.
                     </p>
                   }
 
                   @for (room of map.rooms(); track room.id) {
                     <div class="maprow">
                       <div class="maprow__head">
-                        <span class="maprow__name">▦ {{ room.id }}</span>
+                        <span class="maprow__name"><svg hcIcon="square-dashed"></svg>{{ room.id }}</span>
                         <span class="maprow__actions">
-                          <button class="btn btn--small" type="button" title="Configurar la grilla"
-                                  (click)="map.editRoom(room.id)">✎</button>
-                          <button class="btn btn--small btn--danger" type="button"
-                                  title="Quitar la grilla y sus túneles" (click)="map.removeRoom(room.id)">×</button>
+                          <button class="btn btn--small" type="button" title="Configurar la sala" aria-label="Configurar la sala"
+                                  (click)="map.editRoom(room.id)"><svg hcIcon="pencil"></svg></button>
+                          <button class="btn btn--small btn--danger" type="button" title="Quitar la sala y sus túneles"
+                                  aria-label="Quitar la sala y sus túneles" (click)="map.removeRoom(room.id)"><svg hcIcon="x"></svg></button>
                         </span>
                       </div>
                       <div class="field-row">
                         <label class="field">
-                          <span>Col</span>
+                          <span>Columna</span>
                           <input class="input" type="number" step="1" [value]="room.col"
                                  (change)="map.updateRoom(room.id, { col: int($event) })" />
                         </label>
@@ -1435,25 +1469,28 @@
                           {{ tunnel.from }} → {{ tunnel.to }}{{ tunnel.path?.length ? ' · a mano' : '' }}
                         </span>
                         <input class="input maprow__num" type="number" min="1" step="1" [value]="tunnel.width"
-                               title="Ancho en celdas caminables" (change)="map.updateTunnel(tunnel.id, int($event))" />
+                               title="Ancho en casillas caminables" aria-label="Ancho en casillas"
+                               (change)="map.updateTunnel(tunnel.id, int($event))" />
                         <button class="btn btn--small" type="button" title="Configurar: lados, trazado y ancho"
-                                (click)="map.editTunnel(tunnel.id)">✎</button>
+                                aria-label="Configurar el túnel" (click)="map.editTunnel(tunnel.id)"><svg hcIcon="pencil"></svg></button>
                         <button class="btn btn--small btn--danger" type="button" title="Quitar el túnel"
-                                (click)="map.removeTunnel(tunnel.id)">×</button>
+                                aria-label="Quitar el túnel" (click)="map.removeTunnel(tunnel.id)"><svg hcIcon="x"></svg></button>
                       </div>
                     }
                   }
 
                   <div class="field-row" style="margin-top: 8px">
-                    <button class="btn" style="flex: 1" type="button" (click)="map.openRoomDialog()">+ Grilla</button>
+                    <button class="btn" style="flex: 1" type="button" (click)="map.openRoomDialog()">+ Sala</button>
                     <button class="btn" style="flex: 1" type="button" [disabled]="map.rooms().length < 2"
                             (click)="map.openTunnelDialog()">+ Túnel</button>
                   </div>
+                  @if (map.rooms().length < 2) {
+                    <p class="hint">Un túnel une dos salas: agrega al menos dos.</p>
+                  }
 
                   @if (tileEditCount() > 0) {
                     <p class="hint" style="margin-top: 8px">
-                      {{ tileEditCount() }} celdas retocadas a mano con Piso/Pared se aplican encima de las
-                      grillas.
+                      {{ tileEditCount() }} casillas retocadas a mano con Piso/Pared se aplican encima de las salas.
                     </p>
                     <button class="btn btn--small" type="button" (click)="map.clearTileEdits()">
                       Descartar retoques
@@ -1467,25 +1504,25 @@
                  zona" y "Al entrar a una zona". Las salas del mapa ya cuentan
                  como zonas; esto es para lo que no es una sala entera. -->
             <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('zones')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('zones')">▶</span>
+              <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('zones')" (click)="panels.togglePanel('zones')">
+                <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('zones')" hcIcon="chevron-down"></svg>
                 Zonas de puzzle
               </button>
               @if (!panels.isCollapsed('zones')) {
                 <div class="panel__body">
-                  <p class="hint">Las salas del mapa ya sirven como zonas. Agrega una para una parte de una sala o un pasillo.</p>
+                  <p class="hint hint--field">Las salas ya sirven como zonas. Agrega una para una parte de una sala o un pasillo.</p>
                   @for (zone of map.zones(); track zone.id) {
                     <div class="maprow">
                       <div class="maprow__head">
-                        <span class="maprow__name">◇ {{ zone.id }}</span>
+                        <span class="maprow__name"><svg hcIcon="scan"></svg>{{ zone.id }}</span>
                         <span class="maprow__actions">
-                          <button class="btn btn--small btn--danger" type="button" title="Quitar la zona"
-                                  (click)="map.removeZone(zone.id)">×</button>
+                          <button class="btn btn--small btn--danger" type="button" title="Quitar la zona" aria-label="Quitar la zona"
+                                  (click)="map.removeZone(zone.id)"><svg hcIcon="x"></svg></button>
                         </span>
                       </div>
                       <div class="field-row">
                         <label class="field">
-                          <span>Col</span>
+                          <span>Columna</span>
                           <input class="input" type="number" min="0" step="1" [value]="zone.col"
                                  (change)="map.updateZone(zone.id, { col: int($event) })" />
                         </label>
@@ -1515,18 +1552,67 @@
               }
             </section>
 
+            <!-- AVANZADO del nivel: plegado de entrada. Tamaño de casilla y el
+                 seguimiento fino de la camara. -->
             <section class="panel">
-              <button class="panel__head" (click)="panels.togglePanel('project')">
-                <span class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('project')">▶</span>
-                Proyecto
+              <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('level-advanced', true)"
+                      (click)="panels.togglePanel('level-advanced', true)">
+                <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('level-advanced', true)" hcIcon="chevron-down"></svg>
+                Avanzado
               </button>
-              @if (!panels.isCollapsed('project')) {
+              @if (!panels.isCollapsed('level-advanced', true)) {
                 <div class="panel__body">
-                  <p class="hint">{{ project.projectRoot() ?? 'Sin proyecto abierto.' }}</p>
-                  @if (!hasFileSystem) {
-                    <p class="hint hint--warn">
-                      Modo navegador: sin acceso a disco. Abre el editor con "npm run electron".
+                  <div class="subhead">Tamaño de casilla (px)</div>
+                  <div class="field-row">
+                    <label class="field">
+                      <span>Ancho</span>
+                      <input class="input" type="number" step="1" min="1" [value]="grid().tileWidth"
+                             (input)="inspector.patchGrid({ tileWidth: int($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>Alto</span>
+                      <input class="input" type="number" step="1" min="1" [value]="grid().tileHeight"
+                             (input)="inspector.patchGrid({ tileHeight: int($event) })" />
+                    </label>
+                  </div>
+                  @if (inspector.tileRatioOk()) {
+                    <p class="hint hint--field">Usa un ancho del doble del alto, como 64 × 32: es la proporción del pixel art isométrico.</p>
+                  } @else {
+                    <p class="hint hint--warn hint--field">
+                      <svg hcIcon="triangle-alert"></svg>El ancho no es el doble del alto: el mapa se va a ver deformado. Prueba con 64 × 32.
                     </p>
+                  }
+
+                  @if (inspector.camera().mode === 'follow') {
+                    <div class="subhead">Seguimiento de la cámara</div>
+                    <label class="field">
+                      <span>Suavizado (s)</span>
+                      <input class="input" type="number" step="0.05" min="0" max="2" [value]="inspector.camera().smoothing"
+                             (change)="inspector.patchCamera({ smoothing: num($event) })" />
+                    </label>
+                    <div class="field-row">
+                      <label class="field">
+                        <span>Margen ancho</span>
+                        <input class="input" type="number" step="10" min="0" [value]="inspector.camera().deadzone.width"
+                               (change)="inspector.patchDeadzone('width', num($event))" />
+                      </label>
+                      <label class="field">
+                        <span>Margen alto</span>
+                        <input class="input" type="number" step="10" min="0" [value]="inspector.camera().deadzone.height"
+                               (change)="inspector.patchDeadzone('height', num($event))" />
+                      </label>
+                    </div>
+                    <label class="check">
+                      <input type="checkbox" [checked]="inspector.camera().clampToLevel"
+                             (change)="inspector.patchCamera({ clampToLevel: checked($event) })" />
+                      <span>No mostrar el vacío fuera del mapa</span>
+                    </label>
+                    <p class="hint hint--field">
+                      Suavizado: cuánto tarda en alcanzar al jugador; 0 la deja pegada. Margen: espacio, en píxeles de
+                      pantalla, en el que el jugador se mueve sin que la cámara lo siga.
+                    </p>
+                  } @else {
+                    <p class="hint">Con la cámara en «Seguir al jugador» aparecen aquí el suavizado y el margen.</p>
                   }
                 </div>
               }
@@ -1538,249 +1624,524 @@
     }
   </div>
 
-  <!-- ===================== AREA INFERIOR =====================
-       Solo existe en las workspaces "eventos" y "salida"; en "layout" el
-       viewport se queda con todo el alto, que es lo que hace que cambiar de
-       workspace se sienta como en Blender.
+  <!-- ===================== DOCK INFERIOR =====================
+       Como el cajon de contenido de un motor: una fila de pestañas que siempre
+       se ve, y debajo la que esta al frente. Clic en la pestaña activa (o
+       Ctrl+J) lo pliega y el viewport se queda con el alto.
+
+       Recursos es lo que se puede colocar en la grilla: figuras, personajes,
+       objetos y texturas. Todo se arrastra al viewport, o se elige con un clic
+       y se coloca con la herramienta Colocar.
 
        Los eventos son el corazon NoCode. Nada de esto esta escrito a mano: los
        <select> se llenan con lo que declara schema/event_catalog.json y los
        campos de parametros salen de ev.paramRows(), que lee los params del bloque
-       elegido. Un bloque nuevo en el catalogo aparece aca sin tocar el HTML.
+       elegido. Un bloque nuevo en el catalogo aparece aca sin tocar el HTML. -->
+  <section class="dock" [class.is-collapsed]="!panels.dockOpen()" aria-label="Panel inferior">
+    <div class="grip grip--top" [class.is-active]="panels.isResizing('dock')"
+         title="Arrastra para cambiar el alto"
+         (pointerdown)="panels.onResizeStart('dock', $event)"
+         (pointermove)="panels.onResizeMove($event)"
+         (pointerup)="panels.onResizeEnd($event)"
+         (pointercancel)="panels.onResizeEnd($event)"></div>
 
-       Los params de tipo entity_ref se muestran como desplegable de entidades
-       del nivel (y no como texto libre) para que no se pueda escribir un id
-       que no existe. -->
-  @if (workspace() !== 'layout') {
-    <section class="area bottom">
-      <div class="area__head">
-        @if (workspace() === 'eventos') {
-          <span class="area__kind" title="Editor de eventos">⚡</span>
-          <span class="area__title">Eventos</span>
-          <span class="head__sep"></span>
-          <button class="tool" (click)="ev.addEvent()">+ Evento</button>
-          <button class="tool" (click)="puzzle.open()"
-                  title="Armar los eventos de una sala que bloquea el paso hasta resolverla">Puzzle de sala…</button>
-          <div class="head__spacer"></div>
-          <span class="head__label">{{ ev.events().length }} eventos</span>
-        } @else if (workspace() === 'archivo') {
-          <span class="area__kind" title="Visor de archivos">◈</span>
-          <span class="area__title">{{ explorer.openFile()?.path ?? 'Archivo' }}</span>
-          <div class="head__spacer"></div>
-          @if (explorer.openFile(); as file) {
-            <span class="head__label">{{ explorer.fileSize(file.data.size) }}</span>
-            <button class="tool" (click)="explorer.closeOpenFile()" title="Cerrar el archivo">×</button>
+    <div class="tabs tabs--dock" role="tablist" aria-label="Panel inferior">
+      @for (tab of dockTabs; track tab.id) {
+        <button class="tab" type="button" role="tab" [class.is-active]="workspace() === tab.id && panels.dockOpen()"
+                [attr.aria-selected]="workspace() === tab.id" (click)="onDockTab(tab.id)">
+          <svg [hcIcon]="tab.icon"></svg>{{ workspaceLabels[tab.id] }}
+          @if (tab.id === 'eventos') {
+            <span class="tab__count">{{ ev.events().length }}</span>
           }
-        } @else {
-          <span class="area__kind" title="Consola">›_</span>
-          <span class="area__title">Salida</span>
-          <div class="head__spacer"></div>
-          <span class="head__label">{{ log().length }} lineas</span>
+        </button>
+      }
+
+      <div class="tabs__spacer"></div>
+
+      @if (panels.dockOpen()) {
+        <!-- Acciones de la pestaña al frente. -->
+        @switch (workspace()) {
+          @case ('layout') {
+            @switch (assetTab()) {
+              @case ('personajes') {
+                <button class="btn btn--small" type="button" (click)="chars.openCharacterEditor()"
+                        title="Configurar personajes: asset, tamaño y características">
+                  <svg hcIcon="pencil"></svg>Configurar personajes…
+                </button>
+              }
+              @case ('objetos') {
+                <button class="btn btn--small" type="button" (click)="itemEditor.open()"
+                        title="Crear y editar armas, curaciones y monedas">
+                  <svg hcIcon="pencil"></svg>Objetos y armas…
+                </button>
+              }
+              @case ('texturas') {
+                <button class="btn btn--small" type="button" [disabled]="!palette.activeTexture() || sprite.busy()"
+                        (click)="editTextureInSprites(palette.activeTexture())"
+                        title="Abrir la textura elegida en la herramienta de sprites para retocarla">
+                  <svg hcIcon="brush"></svg>Editar en Sprites
+                </button>
+                <button class="btn btn--small" type="button" [disabled]="converter.busy()"
+                        (click)="converter.openAndAdd('files')"
+                        title="Elegir imágenes (PNG, JPG, JPEG): se convierten y se copian a assets/textures/ de la carpeta del editor">
+                  <svg hcIcon="image-plus"></svg>Importar imágenes…
+                </button>
+              }
+            }
+          }
+          @case ('eventos') {
+            <button class="btn btn--small" type="button" (click)="puzzle.open()"
+                    title="Armar los eventos de una sala que bloquea el paso hasta resolverla">Puzzle de sala…</button>
+            <button class="btn btn--small btn--primary" type="button" (click)="ev.addEvent()">
+              <svg hcIcon="plus"></svg>Evento
+            </button>
+          }
+          @case ('archivo') {
+            @if (explorer.openFile(); as file) {
+              <span class="tabs__info" [title]="file.path">{{ file.path }} · {{ explorer.fileSize(file.data.size) }}</span>
+              <button class="ibtn" type="button" (click)="explorer.closeOpenFile()" title="Cerrar el archivo"
+                      aria-label="Cerrar el archivo">
+                <svg hcIcon="x"></svg>
+              </button>
+            }
+          }
+          @case ('salida') {
+            <span class="tabs__info">{{ log().length }} mensajes</span>
+          }
+          @case ('json') {
+            <span class="tabs__info">{{ json.summary() }}</span>
+            <div class="seg" role="group" aria-label="Qué parte del JSON se muestra">
+              <button class="tool" type="button" [class.is-active]="json.scope() === 'nivel'"
+                      [attr.aria-pressed]="json.scope() === 'nivel'" (click)="json.scope.set('nivel')"
+                      title="El nivel entero, como queda en el archivo">Nivel</button>
+              <button class="tool" type="button" [class.is-active]="json.scope() === 'seleccion'"
+                      [attr.aria-pressed]="json.scope() === 'seleccion'" (click)="json.scope.set('seleccion')"
+                      title="Solo las entidades seleccionadas">Selección ({{ json.selectionCount() }})</button>
+            </div>
+            <button class="btn btn--small" type="button" [disabled]="json.text() === null" (click)="json.copy()"
+                    title="Copiar el JSON al portapapeles">
+              <svg hcIcon="copy"></svg>Copiar
+            </button>
+          }
         }
-      </div>
+      }
+    </div>
 
-      <div class="area__body pad">
-        @if (workspace() === 'eventos') {
-          <!-- Los controles de los parametros de un paso (trigger, condicion o
-               accion) se escriben una sola vez aca y se reusan en las tres
-               filas: el control sale del tipo que declara el catalogo.
-               entity_ref, level_ref, zone_ref e item_ref se eligen de una lista
-               para no escribir a mano algo que no existe. -->
-          <ng-template #stepParams let-step let-stepKind="stepKind" let-eventIndex="eventIndex"
-                       let-stepIndex="stepIndex">
-            @for (row of ev.paramRows(ev.catalogKindOf(stepKind), step.type); track row.key) {
-              <label class="field field--inline" [title]="row.def.description ?? ''">
-                <span>{{ row.key }}</span>
-                @switch (row.def.type) {
-                  @case ('entity_ref') {
-                    <select class="select-lone"
-                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— entidad —</option>
-                      @for (id of entityIds(); track id) {
-                        <option [value]="id" [selected]="ev.paramValue(step, row.key) === id">{{ id }}</option>
+    @if (panels.dockOpen()) {
+      @switch (workspace()) {
+        @case ('layout') {
+          <div class="browser">
+            <nav class="browser__nav" aria-label="Categorías de recursos">
+              @for (tab of assetTabs; track tab.id) {
+                <button class="browser__cat" type="button" [class.is-active]="assetTab() === tab.id"
+                        [attr.aria-pressed]="assetTab() === tab.id" (click)="assetTab.set(tab.id)">
+                  <svg [hcIcon]="tab.icon"></svg>
+                  <span>{{ tab.label }}</span>
+                  <span class="browser__count">{{ assetCount(tab.id) }}</span>
+                </button>
+              }
+            </nav>
+
+            <div class="browser__body">
+              @switch (assetTab()) {
+                @case ('figuras') {
+                  <!-- Primitivas de bloqueo. La miniatura es un recorte del MISMO
+                       sheet que va al juego (ver thumbStyle() en app.ts): no hay
+                       un icono aparte que pueda quedar desincronizado del sprite. -->
+                  <!-- Arriba, en una sola fila: el material (cuatro de cada figura;
+                       se elige uno y se ven esas ocho) y Pintar, que deja la
+                       figura elegida en cada casilla por la que pasa el clic
+                       apretado. Vive aca porque es una forma de colocar figuras,
+                       no una propiedad del objeto elegido. -->
+                  <div class="browser__bar">
+                    <div class="seg" role="group" aria-label="Material de las figuras">
+                      @for (material of shapeMaterials; track material.id) {
+                        <button class="tool" type="button" [class.is-active]="shapeMaterial() === material.id"
+                                [attr.aria-pressed]="shapeMaterial() === material.id"
+                                (click)="shapeMaterial.set(material.id)">{{ material.label }}</button>
                       }
-                    </select>
-                  }
-                  @case ('level_ref') {
-                    <select class="select-lone"
-                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— nivel —</option>
-                      @for (file of proj.levelFiles(); track file) {
-                        <option [value]="file" [selected]="ev.paramValue(step, row.key) === file">{{ file }}</option>
-                      }
-                    </select>
-                  }
-                  @case ('zone_ref') {
-                    <select class="select-lone"
-                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— sala o zona —</option>
-                      @for (id of map.zoneIds(); track id) {
-                        <option [value]="id" [selected]="ev.paramValue(step, row.key) === id">{{ id }}</option>
-                      }
-                    </select>
-                  }
-                  @case ('item_ref') {
-                    <select class="select-lone"
-                            (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
-                      <option value="" [selected]="ev.paramValue(step, row.key) === ''">— cualquiera —</option>
-                      @for (item of combat.options(); track item.id) {
-                        <option [value]="item.id" [selected]="ev.paramValue(step, row.key) === item.id">
-                          {{ items.itemGlyph(item) }} {{ item.name }}
-                        </option>
-                      }
-                    </select>
-                  }
-                  @case ('boolean') {
-                    <input type="checkbox" [checked]="step.params[row.key] === true"
-                           (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, checked($event))" />
-                  }
-                  @default {
-                    <input class="select-lone" [type]="row.def.type === 'number' ? 'number' : 'text'"
-                           [value]="ev.paramValue(step, row.key)"
-                           (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))" />
-                  }
+                    </div>
+                    <label class="check" title="Con Shift + arrastrar pinta siempre">
+                      <input type="checkbox" [checked]="palette.paintShapes()" (change)="palette.paintShapes.set(checked($event))" />
+                      <span>Pintar figuras arrastrando</span>
+                    </label>
+                    <span class="hint">Con Shift + arrastrar pinta siempre.</span>
+                  </div>
+                  <div class="tiles">
+                    @for (shape of visibleShapes(); track shape.id) {
+                      <button class="tile" type="button" draggable="true"
+                              [class.is-active]="palette.activeShape() === shape.id"
+                              [title]="shape.label + ' de ' + shape.materialLabel.toLowerCase() + ': arrástrala a la grilla, o haz clic y usa Colocar'"
+                              (dragstart)="view.onShapeDragStart($event, shape.id)"
+                              (click)="palette.selectShape(shape.id)">
+                        <span class="tile__art">
+                          <span class="tile__shape" [style]="thumbStyle(shape)"></span>
+                        </span>
+                        <span class="tile__name">{{ shape.label }}</span>
+                      </button>
+                    }
+                  </div>
                 }
-              </label>
-            }
-          </ng-template>
 
-          @for (event of ev.events(); track $index; let eventIndex = $index) {
-            <article class="event">
-              <div class="event__row">
-                <span class="badge badge--trigger">Cuando</span>
-                <select class="select-lone" [value]="event.trigger.type"
-                        (change)="ev.changeTrigger(eventIndex, str($event))">
-                  @for (entry of ev.triggers(); track entry.type) {
-                    <option [value]="entry.type" [selected]="event.trigger.type === entry.type">{{ entry.label }}</option>
+                @case ('personajes') {
+                  <!-- Personajes: por tipo, el basico primero y despues los
+                       configurados. Lo que colocan es una entidad con su type,
+                       su collider y su clip de animacion como los espera el
+                       motor (ver core/characters.ts). -->
+                  <div class="tiles">
+                    @for (character of characters; track character.id) {
+                      @for (preset of chars.presetsOfKind(character.id); track preset.id) {
+                        <button class="tile" type="button" draggable="true"
+                                [class.is-active]="palette.activeCharacter() === preset.id"
+                                [title]="preset.name + ' (' + character.label + '): arrástralo a la grilla, o haz clic y usa Colocar'"
+                                (dragstart)="view.onCharacterDragStart($event, preset.id)"
+                                (click)="palette.selectCharacter(preset.id)">
+                          <span class="tile__art" [appTextureThumb]="preset.texture">
+                            <!-- Con sprite, el sprite es la señal y el tipo va en texto;
+                                 sin sprite, la celda del tipo (color e icono). -->
+                            @if (chars.presetSpriteStyle(preset); as style) {
+                              <span class="tile__sprite" [style]="style"></span>
+                              <span class="tile__type">{{ character.label }}</span>
+                            } @else {
+                              <svg [hcCell]="character.type"></svg>
+                            }
+                          </span>
+                          <span class="tile__name">{{ preset.name }}</span>
+                          <span class="tile__stats">
+                            <span>Vida {{ preset.stats.health }}</span>
+                            <span>Daño {{ preset.stats.damage }}</span>
+                          </span>
+                        </button>
+                      }
+                    }
+                    <button class="tile tile--new" type="button" (click)="chars.openCharacterEditor()"
+                            title="Configurar un personaje nuevo: arte, tamaño y características">
+                      <svg hcIcon="plus"></svg>
+                      <span class="tile__name">Nuevo</span>
+                    </button>
+                  </div>
+                }
+
+                @case ('objetos') {
+                  <!-- Objetos de la biblioteca del proyecto (items.json): armas,
+                       curaciones y monedas. Arrastrar uno a la grilla lo deja
+                       para juntarlo, y copia su definicion al nivel. -->
+                  <div class="tiles">
+                    @for (item of itemLibrary.items(); track item.id) {
+                      <button class="tile" type="button" draggable="true"
+                              [class.is-active]="palette.activeItem() === item.id"
+                              [title]="item.name + ': arrástralo a la grilla, o haz clic y usa Colocar'"
+                              (dragstart)="items.onItemDragStart($event, item.id)"
+                              (click)="palette.selectItem(item.id)">
+                        <span class="tile__art" [appTextureThumb]="item.texture">
+                          @if (items.itemSpriteStyle(item); as style) {
+                            <span class="tile__sprite" [style]="style"></span>
+                            <span class="tile__type">{{ items.itemKindLabel(item) }}</span>
+                          } @else {
+                            <svg class="tile__glyph" [hcIcon]="items.itemIcon(item)"></svg>
+                            <span class="tile__kind" [style.--kind]="items.itemColor(item)" [title]="items.itemKindLabel(item)">
+                              <svg [hcIcon]="items.itemIcon(item)"></svg>
+                            </span>
+                          }
+                        </span>
+                        <span class="tile__name">{{ item.name }}</span>
+                        <span class="tile__stats">{{ items.itemStat(item) }}</span>
+                      </button>
+                    } @empty {
+                      <div class="empty">
+                        <p class="empty__title">Todavía no hay objetos</p>
+                        <p>Con <b>Objetos y armas…</b> creas armas, curaciones y monedas para colocar.</p>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @case ('texturas') {
+                  <!-- Texturas del proyecto. "Importar imágenes…" abre el
+                       convertidor y las copia a assets/textures/. Cada una se
+                       arrastra sobre una entidad para cambiarle el arte, o sobre
+                       una celda vacia para crear una entidad nueva con ella. -->
+                  <div class="tiles">
+                    @for (texture of tex.textures(); track texture) {
+                      <button class="tile" type="button" draggable="true"
+                              [class.is-active]="palette.activeTexture() === texture"
+                              [title]="texture + ': arrástrala sobre una entidad para cambiarle la textura'"
+                              (dragstart)="tex.onTextureDragStart($event, texture)"
+                              (click)="palette.selectTexture(texture)">
+                        <span class="tile__art tile__art--checker" [appTextureThumb]="texture">
+                          @if (tex.textureAssets()[texture]; as asset) {
+                            <img class="tile__img" [src]="asset.dataUrl" [alt]="texture" />
+                          }
+                        </span>
+                        <span class="tile__name">{{ texture }}</span>
+                      </button>
+                    } @empty {
+                      <div class="empty">
+                        <p class="empty__title">assets/textures/ está vacía</p>
+                        <p>Con <b>Importar imágenes…</b> traes PNG, JPG o JPEG al proyecto.</p>
+                      </div>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+
+        @case ('eventos') {
+          <div class="dock__body pad">
+            <!-- Los controles de los parametros de un paso (trigger, condicion o
+                 accion) se escriben una sola vez aca y se reusan en las tres
+                 filas: el control sale del tipo que declara el catalogo.
+                 entity_ref, level_ref, zone_ref e item_ref se eligen de una lista
+                 para no escribir a mano algo que no existe. -->
+            <ng-template #stepParams let-step let-stepKind="stepKind" let-eventIndex="eventIndex"
+                         let-stepIndex="stepIndex">
+              @for (row of ev.paramRows(ev.catalogKindOf(stepKind), step.type); track row.key) {
+                <label class="field field--inline" [title]="row.def.description ?? ''">
+                  <span>{{ row.key }}</span>
+                  @switch (row.def.type) {
+                    @case ('entity_ref') {
+                      <select class="select-lone"
+                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                        <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— entidad —</option>
+                        @for (id of entityIds(); track id) {
+                          <option [value]="id" [selected]="ev.paramValue(step, row.key) === id">{{ id }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('level_ref') {
+                      <select class="select-lone"
+                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                        <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— nivel —</option>
+                        @for (file of proj.levelFiles(); track file) {
+                          <option [value]="file" [selected]="ev.paramValue(step, row.key) === file">{{ file }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('zone_ref') {
+                      <select class="select-lone"
+                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                        <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— sala o zona —</option>
+                        @for (id of map.zoneIds(); track id) {
+                          <option [value]="id" [selected]="ev.paramValue(step, row.key) === id">{{ id }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('item_ref') {
+                      <select class="select-lone"
+                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                        <option value="" [selected]="ev.paramValue(step, row.key) === ''">— cualquiera —</option>
+                        @for (item of combat.options(); track item.id) {
+                          <option [value]="item.id" [selected]="ev.paramValue(step, row.key) === item.id">{{ item.name }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('boolean') {
+                      <input type="checkbox" [checked]="step.params[row.key] === true"
+                             (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, checked($event))" />
+                    }
+                    @default {
+                      <input class="select-lone" [type]="row.def.type === 'number' ? 'number' : 'text'"
+                             [value]="ev.paramValue(step, row.key)"
+                             (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))" />
+                    }
                   }
-                </select>
-                <ng-container
-                  *ngTemplateOutlet="stepParams; context: { $implicit: event.trigger, stepKind: 'trigger', eventIndex: eventIndex, stepIndex: 0 }" />
+                </label>
+              }
+            </ng-template>
 
-                <div class="event__spacer"></div>
-                <button class="btn btn--small btn--danger" (click)="ev.removeEvent(eventIndex)">Quitar</button>
-              </div>
-
-              @for (condition of event.conditions ?? []; track $index; let conditionIndex = $index) {
-                <div class="event__row event__row--child">
-                  <span class="badge badge--condition">Si</span>
-                  <select class="select-lone" [value]="condition.type"
-                          (change)="ev.changeCondition(eventIndex, conditionIndex, str($event))">
-                    @for (entry of ev.conditions(); track entry.type) {
-                      <option [value]="entry.type" [selected]="condition.type === entry.type">{{ entry.label }}</option>
+            @for (event of ev.events(); track $index; let eventIndex = $index) {
+              <article class="event">
+                <div class="event__row">
+                  <span class="badge badge--trigger"><svg hcIcon="zap"></svg>Cuando</span>
+                  <select class="select-lone" [value]="event.trigger.type" aria-label="Disparador"
+                          (change)="ev.changeTrigger(eventIndex, str($event))">
+                    @for (entry of ev.triggers(); track entry.type) {
+                      <option [value]="entry.type" [selected]="event.trigger.type === entry.type">{{ entry.label }}</option>
                     }
                   </select>
                   <ng-container
-                    *ngTemplateOutlet="stepParams; context: { $implicit: condition, stepKind: 'condition', eventIndex: eventIndex, stepIndex: conditionIndex }" />
+                    *ngTemplateOutlet="stepParams; context: { $implicit: event.trigger, stepKind: 'trigger', eventIndex: eventIndex, stepIndex: 0 }" />
 
                   <div class="event__spacer"></div>
-                  <button class="btn btn--small" (click)="ev.removeCondition(eventIndex, conditionIndex)">×</button>
+                  <button class="ibtn ibtn--danger" type="button" (click)="ev.removeEvent(eventIndex)"
+                          title="Quitar el evento" aria-label="Quitar el evento">
+                    <svg hcIcon="trash-2"></svg>
+                  </button>
                 </div>
-              }
 
-              @for (action of event.actions; track $index; let actionIndex = $index) {
-                <div class="event__row event__row--child">
-                  <span class="badge badge--action">Entonces</span>
-                  <select class="select-lone" [value]="action.type"
-                          (change)="ev.changeAction(eventIndex, actionIndex, str($event))">
-                    @for (entry of ev.actions(); track entry.type) {
-                      <option [value]="entry.type" [selected]="action.type === entry.type">{{ entry.label }}</option>
-                    }
-                  </select>
-                  <ng-container
-                    *ngTemplateOutlet="stepParams; context: { $implicit: action, stepKind: 'action', eventIndex: eventIndex, stepIndex: actionIndex }" />
+                @for (condition of event.conditions ?? []; track $index; let conditionIndex = $index) {
+                  <div class="event__row event__row--child">
+                    <span class="badge badge--condition"><svg hcIcon="circle-dot"></svg>Si</span>
+                    <select class="select-lone" [value]="condition.type" aria-label="Condición"
+                            (change)="ev.changeCondition(eventIndex, conditionIndex, str($event))">
+                      @for (entry of ev.conditions(); track entry.type) {
+                        <option [value]="entry.type" [selected]="condition.type === entry.type">{{ entry.label }}</option>
+                      }
+                    </select>
+                    <ng-container
+                      *ngTemplateOutlet="stepParams; context: { $implicit: condition, stepKind: 'condition', eventIndex: eventIndex, stepIndex: conditionIndex }" />
 
-                  <div class="event__spacer"></div>
-                  <button class="btn btn--small" (click)="ev.removeAction(eventIndex, actionIndex)">×</button>
-                </div>
-              }
-
-              <div class="event__row event__row--child">
-                <button class="btn btn--small" (click)="ev.addCondition(eventIndex)">+ Condición</button>
-                <button class="btn btn--small" (click)="ev.addAction(eventIndex)">+ Accion</button>
-              </div>
-            </article>
-          } @empty {
-            <p class="empty">
-              Sin eventos. El catalogo declara {{ ev.triggers().length }} triggers,
-              {{ ev.conditions().length }} condiciones y {{ ev.actions().length }} acciones.
-            </p>
-          }
-        } @else if (workspace() === 'archivo') {
-          <!-- Visor de solo lectura. El proceso principal decide por extension
-               si el archivo llega como texto, como imagen o si no se puede
-               mostrar; aca solo se elige con que caja dibujarlo. -->
-          @if (explorer.openFile(); as file) {
-            @switch (file.data.kind) {
-              @case ('text') {
-                @if (file.data.truncated) {
-                  <p class="hint hint--warn">
-                    Archivo grande: se muestran solo los primeros 400 KB.
-                  </p>
+                    <div class="event__spacer"></div>
+                    <button class="ibtn" type="button" (click)="ev.removeCondition(eventIndex, conditionIndex)"
+                            title="Quitar la condición" aria-label="Quitar la condición">
+                      <svg hcIcon="x"></svg>
+                    </button>
+                  </div>
                 }
-                <pre class="fileview">{{ file.data.text }}</pre>
-              }
-              @case ('image') {
-                <div class="fileview fileview--image">
-                  <img [src]="file.data.dataUrl" [alt]="file.path" />
+
+                @for (action of event.actions; track $index; let actionIndex = $index) {
+                  <div class="event__row event__row--child">
+                    <span class="badge badge--action"><svg hcIcon="play"></svg>Entonces</span>
+                    <select class="select-lone" [value]="action.type" aria-label="Acción"
+                            (change)="ev.changeAction(eventIndex, actionIndex, str($event))">
+                      @for (entry of ev.actions(); track entry.type) {
+                        <option [value]="entry.type" [selected]="action.type === entry.type">{{ entry.label }}</option>
+                      }
+                    </select>
+                    <ng-container
+                      *ngTemplateOutlet="stepParams; context: { $implicit: action, stepKind: 'action', eventIndex: eventIndex, stepIndex: actionIndex }" />
+
+                    <div class="event__spacer"></div>
+                    <button class="ibtn" type="button" (click)="ev.removeAction(eventIndex, actionIndex)"
+                            title="Quitar la acción" aria-label="Quitar la acción">
+                      <svg hcIcon="x"></svg>
+                    </button>
+                  </div>
+                }
+
+                <div class="event__row event__row--child event__row--add">
+                  <button class="btn btn--small" type="button" (click)="ev.addCondition(eventIndex)">
+                    <svg hcIcon="plus"></svg>Condición
+                  </button>
+                  <button class="btn btn--small" type="button" (click)="ev.addAction(eventIndex)">
+                    <svg hcIcon="plus"></svg>Acción
+                  </button>
                 </div>
-              }
-              @default {
-                <p class="empty">
-                  @if (explorer.isTooLargeToPreview(file)) {
-                    {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }}: es una imagen, pero demasiado
-                    pesada para previsualizarla aca.
-                  } @else {
-                    {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }} y no es texto ni imagen:
-                    el editor no puede mostrarlo.
-                  }
-                </p>
-              }
-            }
-          } @else {
-            <p class="empty">
-              Ningun archivo abierto. Elegi uno en el explorador (pestana “Proyecto” de la barra
-              lateral) para verlo aca.
-            </p>
-          }
-        } @else {
-          <div class="console">
-            @for (line of log(); track $index) {
-              <div class="console__line">{{ line }}</div>
+              </article>
             } @empty {
-              <p class="empty">Sin mensajes todavia.</p>
+              <div class="empty">
+                <p class="empty__title">Este nivel todavía no tiene eventos</p>
+                <p>
+                  Un evento es “Cuando pasa algo, Si se cumple esto, Entonces haz aquello”. Crea uno con
+                  <b>+ Evento</b>: hay {{ ev.triggers().length }} disparadores, {{ ev.conditions().length }}
+                  condiciones y {{ ev.actions().length }} acciones para elegir.
+                </p>
+              </div>
             }
           </div>
         }
-      </div>
-    </section>
-  }
+
+        @case ('archivo') {
+          <div class="dock__body pad">
+            <!-- Visor de solo lectura. El proceso principal decide por extension
+                 si el archivo llega como texto, como imagen o si no se puede
+                 mostrar; aca solo se elige con que caja dibujarlo. -->
+            @if (explorer.openFile(); as file) {
+              @switch (file.data.kind) {
+                @case ('text') {
+                  @if (file.data.truncated) {
+                    <p class="hint hint--warn">
+                      <svg hcIcon="triangle-alert"></svg>Archivo grande: se muestran solo los primeros 400 KB.
+                    </p>
+                  }
+                  <pre class="fileview">{{ file.data.text }}</pre>
+                }
+                @case ('image') {
+                  <div class="fileview fileview--image">
+                    <img [src]="file.data.dataUrl" [alt]="file.path" />
+                  </div>
+                }
+                @default {
+                  <p class="empty">
+                    @if (explorer.isTooLargeToPreview(file)) {
+                      {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }}: es una imagen, pero demasiado
+                      pesada para previsualizarla aquí.
+                    } @else {
+                      {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }} y no es texto ni imagen:
+                      el editor no puede mostrarlo.
+                    }
+                  </p>
+                }
+              }
+            } @else {
+              <div class="empty">
+                <p class="empty__title">Ningún archivo abierto</p>
+                <p>Elige uno en la pestaña <b>Proyecto</b> de la columna izquierda para verlo aquí.</p>
+              </div>
+            }
+          </div>
+        }
+
+        @case ('json') {
+          <div class="dock__body pad">
+            <!-- El nivel en vivo, tal como lo escribe Guardar y lo lee el motor.
+                 Solo lectura: ver debug/json-view.controller.ts. -->
+            @if (json.text() === null) {
+              <div class="empty">
+                <p class="empty__title">No hay nada seleccionado</p>
+                <p>Elige una o varias entidades para ver solo su parte, o vuelve a <b>Nivel</b>.</p>
+              </div>
+            } @else if (json.html(); as html) {
+              <pre class="fileview jsonview" [innerHTML]="html"></pre>
+            } @else {
+              <p class="hint">Nivel grande: se muestra sin colores para no frenar el editor.</p>
+              <pre class="fileview jsonview">{{ json.text() }}</pre>
+            }
+          </div>
+        }
+
+        @default {
+          <div class="dock__body pad">
+            <div class="console" role="log" aria-live="polite">
+              @for (line of log(); track $index) {
+                <div class="console__line">{{ line }}</div>
+              } @empty {
+                <p class="empty">Sin mensajes todavía.</p>
+              }
+            </div>
+          </div>
+        }
+      }
+    }
+  </section>
 
   <!-- ===================== BARRA DE ESTADO =====================
-       Como la de Blender: pistas de raton y teclado a la izquierda, ultimo
-       mensaje en el medio, estadisticas de la escena a la derecha. El contador
-       de entidades se pone en ambar al pasar ENTITY_WARN_THRESHOLD (app.ts):
-       avisa antes de que la escena empiece a comprometer los FPS del runtime. -->
+       Pistas de raton y teclado a la izquierda, ultimo mensaje en el medio,
+       estadisticas de la escena a la derecha. Las pistas menos usadas se
+       esconden en pantallas angostas (ver .keyhint--extra). El contador de
+       entidades avisa al pasar ENTITY_WARN_THRESHOLD (app.ts): antes de que la
+       escena empiece a comprometer los FPS del runtime. -->
   <footer class="statusbar">
-    <span class="keyhint"><b>Rueda</b> Zoom</span>
-    <span class="keyhint"><b>Derecho / Medio</b> Desplazar</span>
-    <span class="keyhint"><b>Shift+clic</b> Sumar</span>
-    <span class="keyhint"><b>Ctrl+arrastrar</b> Mover</span>
-    <span class="keyhint"><b>Clic derecho</b> Configurar</span>
-    <span class="keyhint"><b>Shift+D</b> Duplicar</span>
-    <span class="keyhint"><b>X</b> Eliminar</span>
-    <span class="keyhint"><b>Ctrl+B</b> Barra lateral</span>
+    @if (centerMode() === 'sprites') {
+      <span class="keyhint"><kbd>Rueda</kbd>Zoom</span>
+      <span class="keyhint"><kbd>Medio / Espacio</kbd>Desplazar</span>
+      <span class="keyhint"><kbd>Clic derecho</kbd>Color secundario</span>
+      <span class="keyhint keyhint--extra"><kbd>Alt+clic</kbd>Gotero</span>
+      <span class="keyhint keyhint--extra"><kbd>X</kbd>Intercambiar colores</span>
+      <span class="keyhint keyhint--extra"><kbd>Ctrl+Z</kbd>Deshacer</span>
+      <span class="keyhint keyhint--extra"><kbd>Ctrl+S</kbd>Guardar sprite</span>
+    } @else {
+      <span class="keyhint"><kbd>Rueda</kbd>Zoom</span>
+      <span class="keyhint"><kbd>Derecho / Medio</kbd>Desplazar</span>
+      <span class="keyhint"><kbd>Shift+clic</kbd>Sumar</span>
+      <span class="keyhint keyhint--extra"><kbd>Arrastrar</kbd>Mover</span>
+      <span class="keyhint keyhint--extra"><kbd>Clic derecho</kbd>Configurar</span>
+      <span class="keyhint keyhint--extra"><kbd>Shift+D</kbd>Duplicar</span>
+      <span class="keyhint keyhint--extra"><kbd>X</kbd>Eliminar</span>
+      <span class="keyhint keyhint--extra"><kbd>Ctrl+Z</kbd>Deshacer</span>
+    }
 
-    <div class="statusbar__spacer"></div>
+    <span class="statusbar__msg" [title]="status()">{{ status() }}</span>
 
-    <span class="statusbar__msg">{{ status() }}</span>
-
-    <div class="statusbar__spacer"></div>
-
-    <span class="statusbar__stat" [class.statusbar__stat--warn]="overBudget()">
+    <span class="statusbar__stat" [class.statusbar__stat--warn]="overBudget()"
+          [title]="overBudget() ? 'Muchas entidades: el motor puede bajar de FPS' : 'Entidades en el nivel'">
+      @if (overBudget()) {
+        <svg hcIcon="triangle-alert"></svg>
+      }
       Entidades {{ entities().length }}
     </span>
     <span class="statusbar__stat">Eventos {{ ev.events().length }}</span>
-    <span class="statusbar__stat">{{ view.zoomLabel() }}</span>
   </footer>
 </div>

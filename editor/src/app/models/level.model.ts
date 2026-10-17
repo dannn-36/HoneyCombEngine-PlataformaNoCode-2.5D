@@ -158,7 +158,12 @@ export interface MapTunnel {
   fromSide?: RoomSide;
   /** Lado por el que entra a "to". Ausente = hasta el centro de la sala. */
   toSide?: RoomSide;
-  /** Puntos de paso trazados a mano, en orden. Ausente = en L automatica. */
+  /**
+   * Puntos de paso trazados a mano, en orden. Ausente = en L automatica. Si el
+   * primero cae adentro de "from" (o el ultimo adentro de "to"), el tunel
+   * arranca (o llega) justo ahi y el lado de ese extremo no cuenta: es como
+   * guarda el viewport un tunel trazado a mano.
+   */
   path?: GridPosition[];
 }
 

@@ -305,7 +305,7 @@
         "toSide": { "$ref": "#/definitions/roomSide", "description": "Lado por el que entra a 'to'. Ausente = hasta su centro." },
         "path": {
           "type": "array",
-          "description": "Puntos de paso trazados a mano, en orden. Entre dos puntos el pasillo va en L. Ausente = en L directa de un extremo al otro.",
+          "description": "Puntos de paso trazados a mano, en orden. Entre dos puntos el pasillo va en L. Ausente = en L directa de un extremo al otro. Si el primero cae dentro de 'from' (o el ultimo dentro de 'to'), el pasillo arranca (o llega) ahi y 'fromSide' ('toSide') no cuenta.",
           "items": {
             "type": "object",
             "required": ["col", "row"],

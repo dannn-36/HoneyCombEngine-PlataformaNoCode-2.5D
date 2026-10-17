@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
-project(honeycomb_engine CXX)
+# La version sale en el panel F3 de la compilacion Debug (ver game/DevTools.hpp).
+project(honeycomb_engine VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -29,9 +30,21 @@ add_executable(engine main.cpp core/GraphicsDevice.cpp core/ResourceManager.cpp
     systems/input/InputSystem.cpp loader/AssetResolver.cpp loader/EventLoader.cpp
     loader/LevelLoader.cpp loader/ItemLoader.cpp game/Movement.cpp game/Combat.cpp
     game/Inventory.cpp game/Mobility.cpp game/Loot.cpp game/Zones.cpp game/CombatView.cpp
-    systems/camera/CameraSystem.cpp game/EventBindings.cpp game/GameSession.cpp)
+    systems/camera/CameraSystem.cpp game/EventBindings.cpp game/GameSession.cpp
+    game/DevTools.cpp)
 target_link_libraries(engine PRIVATE raylib SDL2::SDL2 nlohmann_json::nlohmann_json)
 target_include_directories(engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Las dos compilaciones del motor, que el editor deja elegir (Ejecutar > Motor):
+#   Debug    la version de desarrollo: sin optimizar, para el depurador, y con
+#            las herramientas de administrador (F3) -> HONEYCOMB_DEV_TOOLS
+#   Release  la que se juega: optimizada (-O3) y sin herramientas
+# Van en carpetas distintas (engine/build y engine/build-release) para tener
+# las dos listas a la vez; ver editor/ipc/engine-build.js.
+target_compile_definitions(engine PRIVATE
+    HONEYCOMB_VERSION="${PROJECT_VERSION}"
+    HONEYCOMB_BUILD_TYPE="$<IF:$<CONFIG:Debug>,Debug,Release>"
+    $<$<CONFIG:Debug>:HONEYCOMB_DEV_TOOLS>)
 
 if(TARGET SDL2::SDL2)
     add_custom_command(TARGET engine POST_BUILD

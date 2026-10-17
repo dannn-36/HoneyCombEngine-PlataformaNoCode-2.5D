@@ -2,16 +2,17 @@ import { Level, MapRoom, MapTile } from '../models/level.model';
 import {
   buildLayout,
   cellState,
+  elbowRoute,
   implicitRoom,
   legacyEdits,
   nextFreeId,
   placeBeside,
   rectBetween,
   roomAt,
+  routeFloor,
   sanitizeRoom,
   shiftLevel,
   sideAnchor,
-  sideFacing,
   tunnelAt,
   tunnelFloor,
   tunnelRoute,
@@ -179,10 +180,28 @@ describe('tuneles con lados y trazado a mano', () => {
     expect(has(cells, 6, 2)).toBe(false);
   });
 
-  it('el lado que mira hacia un punto', () => {
-    expect(sideFacing(a, { col: 8, row: 2 })).toBe('right');
-    expect(sideFacing(a, { col: 2, row: -3 })).toBe('top');
-    expect(sideFacing(a, { col: 2, row: 3 })).toBe('bottom');
+  it('un trazado a mano sale y llega en las celdas del clic, como se vio al trazarlo', () => {
+    // Clic en a (3,1), un punto en (6,1), y clic en b (10,3).
+    const path = [{ col: 3, row: 1 }, { col: 6, row: 1 }, { col: 10, row: 3 }];
+    expect(tunnelRoute(a, b, { path })).toEqual(elbowRoute(path));
+  });
+
+  it('en un trazado a mano los lados no mueven el tunel', () => {
+    const path = [{ col: 3, row: 1 }, { col: 6, row: 1 }, { col: 10, row: 3 }];
+    // Antes salia del punto medio del lado (4,2) y no por la fila del clic.
+    expect(tunnelRoute(a, b, { path, fromSide: 'right', toSide: 'top' })).toEqual(elbowRoute(path));
+  });
+
+  it('un trazado que solo arranca adentro sigue usando el lado de llegada', () => {
+    const path = [{ col: 3, row: 1 }, { col: 6, row: 1 }];
+    const route = tunnelRoute(a, b, { path, toSide: 'left' });
+    expect(route[0]).toEqual({ col: 3, row: 1 });
+    expect(route[route.length - 1]).toEqual(sideAnchor(b, 'left'));
+  });
+
+  it('el piso de la vista previa es el mismo que el del tunel', () => {
+    const path = [{ col: 3, row: 1 }, { col: 6, row: 5 }, { col: 10, row: 3 }];
+    expect(routeFloor(elbowRoute(path), 3)).toEqual(tunnelFloor(a, b, { width: 3, path }));
   });
 
   it('encuentra la grilla y el tunel bajo una celda', () => {

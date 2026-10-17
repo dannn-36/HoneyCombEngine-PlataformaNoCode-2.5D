@@ -4,6 +4,7 @@ import { safeName } from '../core/file-names';
 import type { ProjectFileData, ProjectNode } from '../electron-api';
 import { LevelService } from '../services/level.service';
 import { ProjectService } from '../services/project.service';
+import type { IconName } from '../ui/icons.generated';
 import type { NamePromptRequest } from '../ui/name-prompt.controller';
 
 /**
@@ -203,21 +204,21 @@ export class ExplorerController {
   }
 
   /**
-   * Glifo de la fila: la flecha de plegado si es carpeta, o un icono segun la
-   * extension si es archivo. Los niveles y las imagenes llevan uno propio
-   * porque son los dos tipos que el editor hace algo mas que mostrar.
+   * Icono de la fila: carpeta abierta o cerrada, o uno segun la extension si es
+   * archivo. Los niveles y las imagenes llevan uno propio porque son los dos
+   * tipos que el editor hace algo mas que mostrar.
    */
-  treeGlyph(node: ProjectNode): string {
+  treeIcon(node: ProjectNode): IconName {
     if (node.kind === 'dir') {
-      return this.isDirExpanded(node.path) ? '▾' : '▸';
+      return this.isDirExpanded(node.path) ? 'folder-open' : 'folder';
     }
     if (/\.json$/i.test(node.name)) {
-      return '◈';
+      return 'file-json';
     }
     if (/\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(node.name)) {
-      return '▦';
+      return 'image';
     }
-    return '·';
+    return 'file';
   }
 
   /**

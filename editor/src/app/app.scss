@@ -1,274 +1,582 @@
-/* Estilos del editor (componente App). La base global -- fondo y tipografia de
-   la pagina -- esta en src/styles.scss; todo lo demas es esto.
+/* Estilos del editor (componente App). La base global -- fuente y fondo de la
+   pagina -- esta en src/styles.scss; todo lo demas es esto.
 
    NO estan encapsulados (ViewEncapsulation.None en app.ts): los usan tambien
    los dialogos de dialogs/, que son componentes aparte. Por eso la raiz se
    llama "app-root" y no ":host", y la regla universal de abajo deja afuera a
    la barra de menus, que tiene sus propios estilos.
 
-   Tema calcado del oscuro de Blender. Las tres decisiones que lo definen, y de
-   las que sale casi todo lo demas:
+   Tema: un motor de juegos con identidad propia. Tres decisiones de las que
+   sale casi todo lo demas:
 
-     1. GRIS NEUTRO, sin tinte. Blender no mete ni una gota de azul en sus
-        grises; un #1e222a (azulado) es lo que hace que una interfaz oscura se
-        vea "de plantilla web" en vez de "de herramienta 3D".
+     1. GRISES DE FONDO. Paneles, lienzo y grilla van en grises neutros, para
+        que el pixel art del viewport sea lo mas vivo de la ventana. Hay dos
+        temas (services/theme.service.ts), que cambian por [data-theme]:
+        honeycomb (oscuro, el de entrada) y pastel (claro).
 
-     2. AREAS CUADRADAS, WIDGETS REDONDEADOS. Los editores se pegan entre si
-        separados por un surco oscuro de 2px y no tienen esquinas redondeadas;
-        los controles de adentro si, con 4px. Ese contraste es la firma visual
-        de Blender.
+     2. EL AMARILLO ES UN DETALLE. La miel (#f2b33d) va como linea, icono,
+        borde o anillo, nunca como fondo. Solo rellena el boton Ejecutar y el
+        primario de los dialogos. En todos los temas marca la herramienta
+        activa, la seleccion, el foco de teclado, la marca y lo encendido
+        (pestaña al frente, capas, categoria, ficha y opcion elegidas,
+        casillas): eso son las variables --detail*. En el tema claro la miel
+        de lineas e iconos se oscurece a dorado para leerse sobre el crema.
 
-     3. UN SOLO AZUL DE ACENTO (#4772b3) para "esto esta activo/seleccionado", y
-        el naranja solo para el objeto activo en el viewport. Blender no reparte
-        color por decoracion: cada uno significa una cosa.
+     3. LA CELDA. Cada tipo de entidad es un hexagono de su color con su icono
+        adentro (ui/icon.ts). El color nunca va solo: el icono dice lo mismo,
+        para que se lea con daltonismo. El objeto activo lleva un anillo de miel.
 
-   Dos convenciones que se repiten en todo el archivo:
+   Todos los textos pasan 4.5:1 (WCAG AA) contra el fondo donde van, y ninguno
+   que haya que leer baja de 11px.
 
-     - Nomenclatura BEM con anidado de Sass: .bloque, &__elemento, &--variante.
-       Un ".panel__head" es la cabecera de un ".panel", y un ".btn--primary" es
-       la variante destacada de un ".btn".
-
-     - "is-active" marca el estado encendido de un control (herramienta elegida,
-       pestana abierta, entidad seleccionada). La clase la pone la plantilla con
-       [class.is-active], nunca el CSS. */
+   Convenciones: nomenclatura BEM con anidado de Sass (.bloque, &__elemento,
+   &--variante), e "is-active" para el estado encendido de un control, que la
+   plantilla pone con [class.is-active], nunca el CSS. */
 app-root {
-  /* Fondos, del mas oscuro al mas claro. Son los valores del tema Dark de
-     Blender: la ventana y el surco entre areas son lo mas oscuro, el cuerpo de
-     cada editor queda un escalon arriba, y los paneles otro mas. La profundidad
-     se lee por el escalon de gris, sin una sola sombra. */
-  --bg-window: #1d1d1d;     /* topbar, barra de estado y surco entre areas */
-  --bg-header: #2b2b2b;     /* cabecera de cada editor */
-  --bg-editor: #303030;     /* cuerpo de un editor (outliner, propiedades) */
-  --bg-panel: #383838;      /* panel desplegable dentro de propiedades */
-  --bg-panel-head: #424242; /* cabecera de ese panel */
-  --bg-viewport: #393939;   /* lienzo isometrico (lo repinta el canvas) */
+  /* Tema HoneyComb, el de entrada. Los otros dos (abajo) solo redefinen estas
+     variables. */
 
-  /* Widgets. En Blender un boton es un gris claro sobre fondo oscuro -- al
-     reves de lo habitual en la web -- y los campos de texto son los unicos que
-     se hunden hasta el negro. */
-  --widget: #545454;
-  --widget-hover: #656565;
-  --widget-sunken: #1d1d1d;
+  /* Superficies, de la mas oscura a la mas clara. Grises neutros. */
+  --ground: #181818;     /* suelo de la ventana: barra de menus, estado, uniones */
+  --surface-1: #1f1f1f;  /* cuerpo de los paneles */
+  --surface-2: #252526;  /* barras: herramientas, pestañas, tarjetas */
+  --surface-3: #313131;  /* controles en reposo, fila seleccionada */
+  --surface-4: #3c3c3c;  /* controles al pasar el mouse y encendidos */
+  --surface-cool: #2a2d32; /* formas de ataque a distancia */
+  --viewport: #1e1e1e;   /* lienzo isometrico (lo repinta el canvas) */
+  --line: #3c3c3c;       /* borde de controles */
+  --line-strong: #555555;
+  --line-soft: #2b2b2b;  /* separacion dentro de un panel */
 
-  --border: #101010;      /* surco entre areas (casi negro) */
-  --border-soft: #3d3d3d; /* separacion suave dentro de un editor */
+  /* Texto: el normal y el secundario. El secundario da 4.5:1 o mas sobre
+     todas las superficies, tambien sobre la fila seleccionada. */
+  --text: #d4d4d4;
+  --text-2: #ababab;
 
-  /* Tres niveles de texto: el normal, el atenuado para etiquetas y datos
-     secundarios, y el brillante para lo que tiene el foco. */
-  --text: #e5e5e5;
-  --text-dim: #989898;
-  --text-bright: #ffffff;
+  /* Pastillas sobre el lienzo y tablero de transparencia. */
+  --vp-pill-bg: rgba(24, 24, 24, 0.88);
+  --vp-pill-line: rgba(60, 60, 60, 0.9);
+  --checker-a: #2b2b2b;
+  --checker-b: #1e1e1e;
 
-  --accent: #4772b3;      /* azul de seleccion de Blender: pestana y fila activa */
-  --accent-hi: #5c8ad0;
-  --active: #ff8b1f;      /* naranja del objeto activo: solo eso */
-  --danger: #a33c3c;
-  --ok: #6b9e3f;
+  /* Insignias Cuando / Si / Entonces: fondo y texto. */
+  --badge-trigger-bg: #3a2c12;
+  --badge-trigger: #f5c25a;
+  --badge-condition-bg: #22301a;
+  --badge-condition: #a9d27e;
+  --badge-action-bg: #1d2a3d;
+  --badge-action: #8fb8ec;
 
-  --radius: 4px;          /* redondez de widget de Blender (roundness 0.4) */
+  /* Miel, la del boton Ejecutar. La tinta oscura va SOBRE la miel (9.7:1);
+     --honey-text es la miel para letras e iconos sobre gris (5.9:1 o mas). */
+  --honey: #f2b33d;
+  --honey-hi: #f7c766;
+  --honey-ink: #1f1504;
+  --honey-text: #f2b33d;
+  --honey-wash: rgba(242, 179, 61, 0.16);
+  --honey-line: rgba(242, 179, 61, 0.6);
+  /* La miel como linea fina (foco, marca, anillo, borde de la fila elegida).
+     En el tema claro se oscurece para dar 3:1 contra el fondo. */
+  --accent-line: var(--honey);
+
+  /* Detalles de lo encendido: --detail para iconos y letras, --detail-line
+     para bordes y lineas, --detail-accent para casillas y controles nativos. */
+  --detail: var(--honey-text);
+  --detail-line: var(--honey);
+  --detail-accent: var(--honey);
+
+  --warn: #f0905a;
+  --ok: #8fc46a;
+  --danger: #f58e86;
+  --danger-fill: #a8423b;
+
+  --radius: 6px;
+  --mono: "Cascadia Mono", ui-monospace, Consolas, monospace;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Casillas en el color de detalle; el cursor de texto, en el del texto. */
+  accent-color: var(--detail-accent);
+  caret-color: var(--text);
 
   display: block;
   height: 100vh;
   overflow: hidden;
   color: var(--text);
-  /* Inter es la tipografia que Blender usa desde la 4.0. */
-  font: 12px/1.4 Inter, "Segoe UI", system-ui, sans-serif;
-  background: var(--bg-window);
+  font: 13px/1.4 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  background: var(--ground);
+  /* Controles nativos (desplegables, casillas, barras) en su version oscura. */
+  color-scheme: dark;
 }
 
-/* border-box en todo: los anchos fijos de los docks incluyen su borde y su
-   padding, asi que las cuentas del layout cierran sin restar a mano.
+/* Pastel: claro, grises calidos de una sola gama (de #060606 a #fdf0da, en
+   pasos parejos), con miel mantequilla. Las superficies son los tonos mas
+   claros, uno por escalon; el texto, los mas oscuros. La miel para texto se
+   oscurece para pasar 4.5:1 sobre el crema. */
+app-root[data-theme='pastel'] {
+  --ground: #d2c8b6;
+  --surface-1: #f4e8d3;
+  --surface-2: #ece0cc;
+  --surface-3: #e3d8c4;
+  --surface-4: #dbd0bd;
+  --surface-cool: #d9dce3;
+  --viewport: #e3d8c4;
+  --line: #c1b8a7;
+  --line-strong: #a8a091;
+  --line-soft: #dbd0bd;
 
-   "Todo" es el editor sin el interior de la barra de menus: es exactamente lo
-   que alcanzaba esta regla cuando los estilos estaban encapsulados, y la barra
-   tiene medidas pensadas sin ella. */
+  /* 10.0:1 y 4.9:1 o mas sobre todas las superficies, el suelo incluido. */
+  --text: #201e1c;
+  --text-2: #534f48;
+
+  --honey: #f3c969;
+  --honey-hi: #f7d688;
+  --honey-ink: #171614;
+  --honey-text: #734a00;
+  --honey-wash: rgba(243, 201, 105, 0.38);
+  --honey-line: rgba(160, 112, 20, 0.6);
+  --accent-line: #8a5a00;
+
+  /* Dorado: lo mas amarillo que da 3:1 sobre el crema. */
+  --detail: #8a5a00;
+  --detail-line: #a06e00;
+  --detail-accent: #a06e00;
+
+  --warn: #8a3810;
+  --ok: #2b5a17;
+  --danger: #9c2923;
+
+  --vp-pill-bg: rgba(244, 232, 211, 0.92);
+  --vp-pill-line: rgba(168, 160, 145, 0.9);
+  --checker-a: #d2c8b6;
+  --checker-b: #e3d8c4;
+
+  --badge-trigger-bg: #f6e2b8;
+  --badge-trigger: #6b4500;
+  --badge-condition-bg: #dcebcf;
+  --badge-condition: #2f5a17;
+  --badge-action-bg: #d7e3f3;
+  --badge-action: #24497a;
+
+  color-scheme: light;
+}
+
+
+/* border-box en todo: los anchos fijos de los paneles incluyen su borde y su
+   padding, asi que las cuentas del layout cierran sin restar a mano. La barra
+   de menus tiene medidas pensadas sin esta regla. */
 app-root *:not(app-menu-bar *) {
   box-sizing: border-box;
 }
 
-/* Esqueleto de la ventana, de arriba abajo:
-
-     26px  topbar (menus + pestanas de workspace)
-     1fr   cuerpo -- se queda con todo el alto sobrante
-     auto  editor inferior (eventos / salida), solo en esas workspaces
-     22px  barra de estado
-
-   El "gap" de 2px con el fondo de la ventana detras es el surco que Blender
-   deja entre areas: no es un borde de cada panel, es el fondo que se ve. */
-.shell {
-  display: grid;
-  grid-template-rows: 26px 1fr auto 22px;
-  gap: 2px;
-  height: 100%;
-  background: var(--bg-window);
+/* Chakra Petch viene empaquetada hasta 600: sin esto, una <b> pide 700 y el
+   navegador la engorda a mano. */
+app-root b,
+app-root strong {
+  font-weight: 600;
 }
 
-/* ---------- Topbar ---------- */
-.topbar {
+app-root ::selection {
+  background: color-mix(in srgb, var(--text) 22%, transparent);
+  color: var(--text);
+}
+
+/* Foco de teclado: un anillo de miel en todo lo que se puede accionar. Solo con
+   teclado (:focus-visible), no al hacer clic. */
+app-root :focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 1px;
+}
+
+/* ---------- Iconos ---------- */
+/* svg[hcIcon] (ui/icon.ts). Trazo de Lucide, que toma el color del texto. */
+.icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* svg[hcCell]: el hexagono del tipo de entidad con su icono. */
+.cell {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+
+  .cell__hex {
+    fill: var(--cell);
+  }
+
+  /* Tinta oscura sobre el color del tipo: 5:1 o mas con todos. */
+  .cell__glyph {
+    fill: none;
+    stroke: #14120f;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Objeto activo: el anillo de miel alrededor de la celda. */
+  &.is-active .cell__hex {
+    stroke: var(--accent-line);
+    stroke-width: 2.6;
+    paint-order: stroke;
+  }
+}
+
+/* ---------- Esqueleto de la ventana ----------
+   Cinco filas: menus, herramientas, cuerpo, dock y estado. Las escribe la
+   plantilla (el alto del dock cambia al arrastrarlo o plegarlo). El "gap" de
+   1px con el suelo detras es la union entre paneles. */
+.shell {
+  display: grid;
+  grid-template-rows: 30px 40px minmax(0, 1fr) 200px 24px;
+  gap: 1px;
+  height: 100%;
+  background: var(--ground);
+
+  > .menubar { grid-row: 1; }
+  > .toolbar { grid-row: 2; }
+  > .body { grid-row: 3; }
+  > .dock { grid-row: 4; }
+  > .statusbar { grid-row: 5; }
+}
+
+/* Los dialogos de dialogs/ se montan dentro de .shell. Su elemento host no es
+   una zona de la ventana: sin esto, el grid lo trataba como una fila mas y,
+   despues de abrir un dialogo por primera vez, aplastaba el cuerpo. */
+app-room-dialog,
+app-tunnel-dialog,
+app-characters-dialog,
+app-item-editor-dialog,
+app-transition-dialog,
+app-converter-dialog,
+app-puzzle-dialog {
+  display: contents;
+}
+
+/* ---------- Barra de menus ---------- */
+.menubar {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 0 6px;
-  background: var(--bg-window);
+  gap: 4px;
+  min-width: 0;
+  padding: 0 8px 0 10px;
+  background: var(--ground);
+
+  &__spacer {
+    flex: 1;
+  }
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 10px 0 2px;
+  gap: 7px;
+  padding-right: 10px;
 
   &__mark {
-    color: var(--active);
-    font-size: 13px;
+    width: 16px;
+    height: 16px;
+    fill: var(--accent-line);
   }
+
   &__name {
-    color: var(--text);
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
 }
 
-/* Aviso de cambios sin guardar, a la derecha del topbar. Ambar y chico: tiene
-   que verse de reojo, pero no competir con el verde de Ejecutar. */
-.topbar__dirty {
-  padding: 0 8px;
-  color: #d9a441;
-  font-size: 11px;
+/* Cambios sin guardar: punto y texto, para que no dependa del color. */
+.dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 }
 
-/* Botones sueltos del topbar (Ejecutar y los interruptores de paneles). Los
-   menus desplegables tienen su propio componente, menu-bar. Planos hasta que
-   se los pasa por encima, como los de Blender. */
-.menu {
-  height: 20px;
+/* Selector del nivel abierto. */
+.levelpick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  max-width: 240px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--line-strong);
+  }
+
+  .icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  &__select {
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  &:focus-within {
+    border-color: var(--line-strong);
+  }
+}
+
+/* ---------- Barra de herramientas ----------
+   Tres columnas: la grilla a la izquierda, Ejecutar centrado de verdad (las
+   dos columnas de los costados miden lo mismo) y la vista a la derecha. */
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   padding: 0 8px;
+  background: var(--surface-2);
+
+  &__side {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+
+    &--end {
+      justify-content: flex-end;
+    }
+  }
+
+  &__sep {
+    flex: none;
+    width: 1px;
+    height: 20px;
+    background: var(--line);
+  }
+}
+
+/* Grupo de botones de la barra: una bandeja hundida con los botones adentro. */
+.tgroup {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.tbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
   border: 0;
   border-radius: var(--radius);
   background: transparent;
-  color: var(--text);
+  color: var(--text-2);
   font: inherit;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.12s var(--ease-out), color 0.12s var(--ease-out);
 
   &:hover {
-    background: var(--widget);
-  }
-
-  /* El unico menu que es un interruptor (mostrar la barra lateral): se hunde
-     cuando esta encendido, para que se lea como tal y no como un boton mas. */
-  &.is-active {
-    background: var(--widget);
-  }
-
-  /* Ejecutar: el unico boton del topbar con color propio. Es la accion que
-     saca el nivel del editor y lo pone a correr, y conviene encontrarla sin
-     leer. Verde y no el azul de acento, que en este tema significa
-     "seleccionado" y no "ejecutar". */
-  &--run {
-    margin-left: 6px;
-    background: #3f6b32;
-    color: #e8f5e2;
-    font-weight: 500;
-
-    &:hover {
-      background: #4d8340;
-    }
-  }
-}
-
-/* Pestanas de workspace. Van pegadas al borde inferior del topbar y la activa
-   se funde con el fondo del cuerpo: es asi como Blender indica cual esta
-   abierta, sin subrayados ni bordes de color. */
-.wstabs {
-  display: flex;
-  align-items: flex-end;
-  gap: 1px;
-  height: 100%;
-  margin-left: 10px;
-  padding-left: 10px;
-  border-left: 1px solid var(--border-soft);
-}
-
-.wstab {
-  height: 20px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: transparent;
-  color: var(--text-dim);
-  font: inherit;
-  cursor: pointer;
-
-  &:hover {
+    background: var(--surface-3);
     color: var(--text);
   }
+
+  /* Encendido (capas, paneles): un gris mas claro, el texto en blanco y el
+     icono en el color de detalle del tema. */
   &.is-active {
-    background: var(--bg-header);
-    color: var(--text-bright);
+    background: var(--surface-4);
+    color: var(--text);
+
+    .icon {
+      color: var(--detail);
+    }
+  }
+
+  /* La herramienta activa lleva la miel en el icono en todos los temas. */
+  &--tool.is-active .icon {
+    color: var(--honey-text);
+  }
+
+  &--label {
+    padding: 0 9px 0 7px;
   }
 }
 
-.topbar__spacer,
-.head__spacer,
-.statusbar__spacer,
-.event__spacer {
-  flex: 1;
+/* Ejecutar: el boton mas visible de la ventana. Guarda y lanza el nivel en el
+   motor, que es lo que cierra el ciclo editar, probar, corregir. */
+/* Con que motor ejecuta: Debug o Release. Primero del lado derecho y empujando
+   el resto: queda pegado a Ejecutar. */
+.runmode {
+  flex: none;
+  margin-right: auto;
+
+  > .tool {
+    height: 26px;
+    padding: 0 9px;
+  }
+
+  /* El motor que todavia no esta compilado: un punto, no un color, para que no
+     dependa de distinguir tonos. */
+  &__missing {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+  }
 }
 
-/* ---------- Cuerpo: tres areas ---------- */
-/* Outliner + viewport + propiedades. Los laterales son fijos y el viewport se
-   queda con el resto.
+/* Ventana angosta: Grilla y Colisiones se quedan con el icono (el nombre sigue
+   en su title) antes que pasar por debajo de Ejecutar. */
+@media (max-width: 1400px) {
+  .toolbar .tbtn--label > span {
+    display: none;
+  }
+}
+
+/* Mas angosta todavia (la ventana se puede achicar por debajo de los 1280 con
+   que arranca): sin separadores y con los grupos mas juntos. */
+@media (max-width: 1100px) {
+  .toolbar__side {
+    gap: 4px;
+  }
+
+  .toolbar__sep {
+    display: none;
+  }
+}
+
+.run {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--honey);
+  color: var(--honey-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 236, 190, 0.35) inset, 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: background-color 0.12s var(--ease-out), transform 0.08s var(--ease-out);
+
+  .icon {
+    width: 15px;
+    height: 15px;
+    fill: currentColor;
+  }
+
+  kbd {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(31, 21, 4, 0.14);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  &:hover {
+    background: var(--honey-hi);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline-offset: 2px;
+  }
+
+  /* Compilando el motor: se ve igual, pero no responde hasta que termine. */
+  &:disabled {
+    cursor: progress;
+    opacity: 0.75;
+    transform: none;
+  }
+}
+
+/* Un valor entre botones dentro de una bandeja (el pincel de Sprites). */
+.tgroup > .zoom__value {
+  align-self: center;
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  &__value {
+    min-width: 44px;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+  }
+}
+
+/* ---------- Cuerpo: escena, viewport, inspector ---------- */
+/* Las columnas las escribe la plantilla con bodyColumns(). Lo de aca es solo el
+   valor de arranque.
 
    El "min-height: 0" que aparece aca y en casi todos los contenedores de abajo
    NO es decorativo: por defecto un hijo de grid o flex no achica por debajo de
    su contenido, asi que sin esto un panel con muchas entidades estira la
    ventana en vez de mostrar su propia barra de scroll. */
-/* Las columnas las escribe la plantilla con bodyColumns(), porque el ancho de
-   la barra lateral se arrastra y puede esconderse entera. Lo de aca es solo el
-   valor de arranque, para que el primer render no aparezca sin columnas. */
 .body {
   display: grid;
-  grid-template-columns: 230px 1fr 290px;
-  gap: 2px;
+  grid-template-columns: 220px minmax(0, 1fr) 280px;
+  gap: 1px;
   min-height: 0;
+  background: var(--ground);
 }
 
-/* Un "area" es un editor de Blender: cabecera propia arriba y cuerpo debajo.
-   Todas las zonas de la ventana usan esta misma caja. */
-.area {
+/* Columna lateral: pestañas arriba, contenido abajo. "relative" y z-index para
+   el borde arrastrable, que sobresale unos pixeles sobre el viewport. */
+.dock-col {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   min-width: 0;
-  background: var(--bg-editor);
-
-  &__head {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex: 0 0 26px;
-    padding: 0 6px;
-    background: var(--bg-header);
-  }
-
-  /* Icono de tipo de editor: el boton cuadrado que en Blender abre el
-     desplegable para cambiar que editor ocupa el area. Aca es solo la
-     etiqueta, pero es lo primero que se lee de cada cabecera. */
-  &__kind {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 18px;
-    border-radius: 3px;
-    background: var(--widget);
-    color: var(--text);
-    font-size: 11px;
-  }
-
-  &__title {
-    color: var(--text-dim);
-    font-size: 11px;
-  }
+  min-height: 0;
+  background: var(--surface-1);
 
   &__body {
     flex: 1;
@@ -277,101 +585,22 @@ app-root *:not(app-menu-bar *) {
   }
 }
 
-/* Boton de plegar de las secciones de la barra izquierda. Reemplaza al icono
-   de tipo, que antes era solo una etiqueta: como en VS Code, un clic deja la
-   seccion en su cabecera sola y le devuelve el alto a las demas. La flechita
-   se gira para decir en que estado esta sin tener que probar. */
-.area__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  height: 18px;
-  padding: 0 5px;
-  border: 0;
-  border-radius: 3px;
-  background: var(--widget);
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--widget-hover);
-  }
-
-  /* Plegada se hunde en la cabecera: se lee como "aca hay algo guardado". */
-  &.is-collapsed {
-    background: transparent;
-    color: var(--text-dim);
-
-    &:hover {
-      background: var(--widget);
-    }
-  }
-}
-
-.area__chevron {
-  display: inline-block;
-  font-size: 8px;
-  transition: transform 0.1s ease-out;
-
-  .is-collapsed > & {
-    transform: rotate(-90deg);
-  }
-}
-
-/* Un boton de cabecera apagado mientras trabaja (Importar durante una
-   importacion): se ve y se lee, pero no se puede lanzar otra vez. */
-.tool:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-/* La columna izquierda apila cuatro editores. Solo el primero (escena o
-   explorador) es elastico; las tres paletas ocupan lo que necesitan y se
-   quedan abajo.
-
-   "relative" es para el borde arrastrable, que se posiciona contra esta caja
-   en vez de ocupar una columna propia del grid del cuerpo. El z-index lo
-   acompana: el borde sobresale unos pixeles hacia el viewport, y sin un
-   contexto de apilado por encima quedaria tapado por el contenedor del canvas
-   (que tambien esta posicionado y viene despues en el DOM). */
-.stack {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  /* Valor de arranque: las filas reales las escribe sidebarRows(), porque
-     dependen de que secciones esten plegadas. */
-  grid-template-rows: 1fr auto auto auto;
-  /* Con todo plegado no queda ninguna fila elastica, y sin esto el navegador
-     estiraria las cabeceras para repartir el alto sobrante. */
-  align-content: start;
-  gap: 2px;
-  min-height: 0;
-}
-
-/* El panel de propiedades necesita las mismas dos cosas que la barra
-   izquierda: ser el ancla de su borde arrastrable, y quedar por encima del
-   contenedor del canvas para que ese borde no aparezca tapado. */
-.inspector {
-  position: relative;
-  z-index: 2;
-}
-
-/* Borde arrastrable de un panel lateral, como el de VS Code: una tira invisible
-   un poco mas ancha que el surco, para poder agarrarla sin apuntar al pixel. Se
-   pinta sola al pasar por encima o mientras se arrastra. Cada variante se pega
-   al canto que da al viewport. */
+/* Borde arrastrable de un panel, como el de VS Code: una tira invisible un poco
+   mas ancha que la union, que se pinta de miel al agarrarla. */
 .grip {
   position: absolute;
-  top: 0;
   z-index: 5;
-  width: 6px;
-  height: 100%;
-  cursor: col-resize;
   /* Sin esto, el navegador cancela el arrastre y empieza a seleccionar texto. */
   touch-action: none;
+  transition: background-color 0.12s var(--ease-out);
 
+  &--right,
+  &--left {
+    top: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+  }
   &--right {
     right: -3px;
   }
@@ -379,24 +608,179 @@ app-root *:not(app-menu-bar *) {
     left: -3px;
   }
 
+  &--top {
+    top: -3px;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    cursor: row-resize;
+  }
+
   &:hover,
   &.is-active {
-    background: var(--accent);
+    background: var(--line-strong);
   }
 }
 
-/* ---------- Outliner (arbol de escena) ---------- */
+/* ---------- Pestañas ----------
+   La fila de pestañas de cada panel. La que esta al frente se funde con el
+   cuerpo y lleva una linea de miel arriba. */
+.tabs {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  gap: 0;
+  height: 34px;
+  min-width: 0;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-2);
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__end {
+    align-self: center;
+    margin-left: auto;
+  }
+
+  &__info {
+    overflow: hidden;
+    color: var(--text-2);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* El dock lleva acciones a la derecha de sus pestañas. */
+  &--dock {
+    align-items: stretch;
+    gap: 0;
+    padding-right: 8px;
+
+    > .btn,
+    > .ibtn,
+    > .seg,
+    > .tabs__info {
+      align-self: center;
+      margin-left: 6px;
+    }
+
+    > .seg > .tool {
+      height: 24px;
+    }
+  }
+
+  /* En una columna angosta las pestañas se achican antes de salirse de ella:
+     el nombre se corta con "…" y el icono y el contador quedan enteros. */
+  &--fit {
+    overflow: hidden;
+
+    > .tab {
+      flex: 0 1 auto;
+      min-width: 0;
+      /* Mas juntas que las del dock: asi al ancho de arranque (220px) entran
+         enteras, y solo se cortan si la columna se angosta mas. */
+      gap: 5px;
+      padding: 0 8px;
+    }
+
+    .tab__label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon,
+    .tab__count {
+      flex: none;
+    }
+  }
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: -1px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.12s var(--ease-out);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.is-active {
+    background: var(--surface-1);
+    color: var(--text);
+    box-shadow: inset 0 2px 0 var(--detail-line);
+
+    .icon {
+      color: var(--detail);
+    }
+  }
+
+  &__count {
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background: var(--surface-3);
+    color: var(--text-2);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 17px;
+    text-align: center;
+  }
+}
+
+/* Boton de solo icono (refrescar, cerrar, quitar). */
+.ibtn,
+.icon-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color 0.12s var(--ease-out), color 0.12s var(--ease-out);
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+}
+
+.ibtn--danger:hover {
+  background: var(--danger-fill);
+  color: #fff;
+}
+
+/* ---------- Escena (arbol de entidades) ---------- */
 .tree {
-  padding: 2px 0;
+  padding: 4px 0 8px;
 }
 
 .tree__item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  height: 20px;
-  padding: 0 8px;
+  height: 28px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: var(--text);
@@ -405,49 +789,40 @@ app-root *:not(app-menu-bar *) {
   cursor: pointer;
 
   &:hover {
-    background: #3a3a3a;
+    background: var(--surface-3);
   }
 
-  /* Fila seleccionada: el azul de Blender ocupa la fila entera. Con una
-     seleccion de varias, todas se pintan igual. */
+  /* Seleccionada: fila en gris y una linea de miel a la izquierda. Con
+     varias, todas igual. */
   &.is-active {
-    background: var(--accent);
-    color: var(--text-bright);
+    background: var(--surface-3);
+    box-shadow: inset 2px 0 0 var(--accent-line);
   }
 
-  /* El objeto ACTIVO dentro de la seleccion: el unico que muestra el
-     inspector. Lo marca una barra naranja a la izquierda, el mismo color con
-     el que el viewport lo contornea. */
-  &.is-current {
-    box-shadow: inset 3px 0 0 var(--active);
+  /* La activa (la que muestra el inspector) se marca con el anillo de miel
+     de su celda; aca solo sube el peso del nombre. */
+  &.is-current .tree__label {
+    font-weight: 600;
   }
 
   &--root {
-    font-weight: 500;
+    font-weight: 600;
   }
 
-  /* Sangria de los hijos + la guia vertical que Blender dibuja bajo el padre. */
   &--child {
     padding-left: 22px;
   }
 }
 
-.tree__icon {
-  color: #7aa2d8;
-  font-size: 10px;
-
-  &--player {
-    color: var(--active);
-  }
-  &--obstacle {
-    color: #d06a6a;
-  }
-  &--item {
-    color: #8ac25a;
-  }
+.tree__brand {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: var(--detail-line);
 }
 
 .tree__label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -455,605 +830,89 @@ app-root *:not(app-menu-bar *) {
 
 .tree__meta {
   margin-left: auto;
-  color: var(--text-dim);
-  font-family: ui-monospace, "Cascadia Mono", monospace;
-  font-size: 10px;
-
-  /* Sobre la fila azul el gris atenuado no se lee. */
-  .tree__item.is-active & {
-    color: #d6e2f5;
-  }
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 11px;
 }
 
-/* ---------- Organizador de archivos del proyecto ---------- */
+/* ---------- Proyecto (archivos) ---------- */
 .filetree {
-  padding-bottom: 2px;
+  padding-bottom: 8px;
 }
 
-/* Los dos botones de entrada del panel, pegados arriba y separados del arbol
-   por la misma linea suave que divide el resto del editor. */
 .filetools {
   display: flex;
-  gap: 4px;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border-soft);
+  /* Con la columna angosta, los iconos bajan a otra fila en vez de salirse. */
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
 
   > .btn {
     flex: 1;
-    /* Los nombres no se cortan a la mitad en un dock de 230px. */
     white-space: nowrap;
+  }
+
+  &__icons {
+    display: flex;
+    flex: none;
+    gap: 2px;
+    margin-left: auto;
   }
 }
 
-/* Fila del arbol de archivos: el mismo aspecto que una fila del outliner. Lo
-   unico propio es que la sangria la calcula la plantilla segun la profundidad,
-   porque aca los niveles no son dos fijos como alla. */
 .filerow {
   /* Valor de arranque; lo pisa el [style.padding-left.px] de la plantilla. */
-  padding-left: 8px;
-
-  /* Una carpeta es estructura, no contenido: se lee un escalon por debajo de
-     los archivos que uno realmente va a abrir. */
-  &--dir .tree__label {
-    color: var(--text-dim);
-  }
-
-  &--dir .tree__icon {
-    color: var(--text-dim);
-  }
-}
-
-/* ---------- Paleta de recursos (asset browser) ---------- */
-.assets {
-  /* auto-fill con minimo de 64px: entran tantas miniaturas por fila como
-     permita el ancho del area, sin fijar el numero de columnas a mano. El alto
-     se topea para que la paleta no se coma el arbol de escena. */
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  align-content: start;
-  gap: 4px;
-  padding: 6px;
-  max-height: 176px;
-
-  /* Con la escena plegada, Recursos hereda el alto libre de la barra: el tope
-     ya no hace falta, y es justo el caso de una carpeta con 150 imagenes. */
-  &--fill {
-    max-height: none;
-  }
-}
-
-.asset {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 2px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  color: var(--text-dim);
-  font: inherit;
-  cursor: pointer;
-
-  &:hover {
-    background: #444;
-  }
-  &.is-active {
-    border-color: var(--accent-hi);
-    background: #3f4a5e;
-    color: var(--text-bright);
-  }
-
-  &__thumb {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 2px;
-    overflow: hidden;
-    /* Tablero de ajedrez: el fondo canonico de transparencia en pixel art. */
-    background-image:
-      linear-gradient(45deg, #4a4a4a 25%, transparent 25%),
-      linear-gradient(-45deg, #4a4a4a 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #4a4a4a 75%),
-      linear-gradient(-45deg, transparent 75%, #4a4a4a 75%);
-    background-color: #2e2e2e;
-    background-size: 8px 8px;
-    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
-    image-rendering: pixelated;
-  }
-
-  /* La imagen real de la textura, sobre el tablero de transparencia. Va
-     contenida y no estirada: un sprite ancho no tiene por que deformarse solo
-     para llenar un cuadrado de 32px. */
-  &__img {
-    max-width: 100%;
-    max-height: 100%;
-    image-rendering: pixelated;
-    /* El fantasma que arrastra el navegador sale del boton, no de la imagen. */
-    pointer-events: none;
-  }
-
-  &__name {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 9px;
-  }
-}
-
-/* ---------- Paleta de figuras (primitivas de bloqueo) ---------- */
-/* Cuatro por fila fijas, no auto-fill como los recursos: son ocho y siempre
-   las mismas, asi que conviene una retícula estable que se aprenda de memoria
-   antes que una que se reacomode con el ancho del panel. */
-.shapes {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 3px;
-  padding: 6px;
-}
-
-.shape {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 3px 1px 4px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  color: var(--text-dim);
-  font: inherit;
-  /* "grab" anuncia que el gesto principal es arrastrar, no clickear. */
-  cursor: grab;
-
-  &:active {
-    cursor: grabbing;
-  }
-  &:hover {
-    background: #444;
-    color: var(--text);
-  }
-  &.is-active {
-    border-color: var(--accent-hi);
-    background: #3f4a5e;
-    color: var(--text-bright);
-  }
-
-  /* El tamano, el recorte y la escala los pone thumbStyle() en app.ts: son un
-     recorte del spritesheet real, no un icono aparte. Aca solo queda lo que no
-     depende de la figura. */
-  &__icon {
-    background-repeat: no-repeat;
-    /* Es pixel art: escalado sin interpolar o se ve pastoso. */
-    image-rendering: pixelated;
-    /* El fantasma que el navegador arrastra sale de este elemento; sin esto
-       arrastraria tambien el fondo del boton. */
-    pointer-events: none;
-  }
-
-  &__name {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 9px;
-  }
-}
-
-/* Icono de un arquetipo de personaje. A diferencia del de las figuras no es un
-   recorte del spritesheet: un personaje puede tener cualquier arte, asi que lo
-   que lo identifica en la paleta es su color -- el mismo con el que el viewport
-   dibuja sus entidades, para que paleta y escena se lean juntas. */
-.character__icon {
-  display: grid;
-  place-items: center;
-  width: 26px;
+  padding-left: 10px;
   height: 26px;
-  border-radius: 3px;
-  color: #101010;
-  font-size: 14px;
-  line-height: 1;
-}
 
-/* Entidades agarradas con Ctrl: mano cerrada mientras se arrastran. Con dos
-   clases para ganarle al cursor de la herramienta activa, que se declara mas
-   abajo con la misma especificidad. */
-.canvas.canvas--moving {
-  cursor: grabbing;
-}
+  .icon {
+    color: var(--text-2);
+  }
 
-/* ---------- Dialogos anchos ---------- */
-/* El de grilla y el de tunel tienen varios campos por fila (los cuatro lados,
-   columna/fila/ancho/alto): en 400px se apilaban y el dialogo quedaba mas alto
-   que la ventana. Mas ancho, entran en pocas filas. */
-/* Con DOS clases a proposito: .modal declara su ancho de 400px mas abajo en
-   este archivo, y con una sola clase empataba en especificidad y ganaba por
-   venir despues. Por eso estos dialogos nunca llegaron a ensancharse. */
-.modal.modal--wide {
-  width: min(640px, calc(100vw - 40px));
-}
-
-.modal.modal--xl {
-  width: min(960px, calc(100vw - 40px));
-}
-
-.modal--wide,
-.modal--xl {
-  .field-row > .field {
-    flex: 1;
-    min-width: 0;
+  /* Una carpeta es estructura: se lee un escalon por debajo de los archivos. */
+  &--dir .tree__label {
+    color: var(--text-2);
   }
 }
 
-/* ---------- Configurar personajes ---------- */
-.chareditor {
-  display: grid;
-  grid-template-columns: 210px 1fr;
-  border-top: 1px solid var(--border-soft);
-  border-bottom: 1px solid var(--border-soft);
-
-  /* Cada columna se desplaza por su cuenta: la lista puede crecer mucho sin
-     llevarse el formulario hacia abajo. */
-  &__list,
-  &__form {
-    max-height: 64vh;
-    overflow: auto;
-  }
-
-  &__list {
-    padding: 6px 0;
-    border-right: 1px solid var(--border-soft);
-    background: var(--bg-header);
-  }
-
-  &__group {
-    padding-bottom: 6px;
-  }
-
-  &__grouphead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 8px;
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  &__empty {
-    margin: 0;
-    padding: 2px 12px;
-    color: var(--text-dim);
-    font-size: 11px;
-    font-style: italic;
-  }
-
-  &__form {
-    padding: 10px 12px;
-  }
-
-  &__section {
-    margin: 14px 0 4px;
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  &__asset {
-    display: grid;
-    grid-template-columns: 112px 1fr;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-
-  /* Tablero de transparencia detras del sprite, como en Recursos. */
-  &__preview {
-    display: grid;
-    place-items: center;
-    height: 112px;
-    border-radius: var(--radius);
-    background-image:
-      linear-gradient(45deg, #4a4a4a 25%, transparent 25%),
-      linear-gradient(-45deg, #4a4a4a 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #4a4a4a 75%),
-      linear-gradient(-45deg, transparent 75%, #4a4a4a 75%);
-    background-color: #2e2e2e;
-    background-size: 12px 12px;
-    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
-  }
-
-  &__sprite {
-    display: block;
-    background-repeat: no-repeat;
-    image-rendering: pixelated;
-  }
-
-  &__nopreview {
-    color: var(--text-dim);
-    font-size: 10px;
-  }
-
-  /* Los dos numeros, la casilla y el boton en una sola fila, alineados abajo
-     con los campos. */
-  &__collider {
-    align-items: flex-end;
-  }
-}
-
-/* Selector de asset: las texturas del proyecto como miniaturas. */
-.texpicker {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-  align-content: start;
-  gap: 3px;
-  max-height: 112px;
-  overflow: auto;
-
-  /* El aviso de "sin texturas" ocupa todo el ancho: como una celda mas de la
-     grilla de 40px se partia en una palabra por renglon. */
-  .hint {
-    grid-column: 1 / -1;
-    margin: 0;
-  }
-
-  &__item {
-    display: grid;
-    place-items: center;
-    height: 40px;
-    padding: 2px;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    background: var(--bg-panel);
-    cursor: pointer;
-
-    img {
-      max-width: 100%;
-      max-height: 100%;
-      image-rendering: pixelated;
-    }
-
-    &:hover {
-      background: #444;
-    }
-    &.is-active {
-      border-color: var(--accent-hi);
-      background: #3f4a5e;
-    }
-  }
-}
-
-/* ---------- Paleta: personajes configurados de un tipo ---------- */
-.presetlist {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 6px 6px;
-
-  &__item {
-    display: grid;
-    grid-template-columns: 26px 1fr auto;
-    align-items: center;
-    gap: 6px;
-    height: 30px;
-    padding: 0 6px;
-    border: 1px solid transparent;
-    border-radius: var(--radius);
-    background: var(--bg-panel);
-    color: var(--text);
-    font: inherit;
-    text-align: left;
-    /* "grab": el gesto principal es arrastrarlo a la grilla. */
-    cursor: grab;
-
-    &:hover {
-      background: #444;
-    }
-    &.is-active {
-      border-color: var(--accent-hi);
-      background: #3f4a5e;
-    }
-  }
-
-  &__thumb {
-    display: grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    overflow: hidden;
-    border-radius: 3px;
-  }
-
-  &__sprite {
-    display: block;
-    background-repeat: no-repeat;
-    image-rendering: pixelated;
-    pointer-events: none;
-  }
-
-  &__name {
-    overflow: hidden;
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__stats {
-    color: var(--text-dim);
-    font-size: 10px;
-    white-space: nowrap;
-  }
-
-  &__new {
-    margin-top: 2px;
-  }
-}
-
-/* Grupo de botones que puede bajar de linea (los cuatro lados de una grilla
-   en un dialogo angosto). Separados y todos redondeados: pegados en varias
-   filas, las esquinas de .seg dejarian formas raras. */
-.seg.seg--wrap {
-  flex-wrap: wrap;
-  gap: 3px;
-
-  > * {
-    border-radius: var(--radius);
-  }
-}
-
-/* ---------- Panel Mapa: grillas y tuneles ---------- */
-.maprow__actions {
-  display: flex;
-  gap: 3px;
-}
-/* Cada grilla es un bloque: nombre con su boton de quitar, y debajo sus cuatro
-   numeros en una fila. La linea suave de abajo separa una grilla de la
-   siguiente sin llegar a ser un panel dentro del panel. */
-.maprow {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-soft);
-
-  &__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-
-  &__name {
-    overflow: hidden;
-    font-family: ui-monospace, "Cascadia Mono", monospace;
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Un tunel entra en una sola linea: "de -> a", su ancho y quitar. */
-  &--inline {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    .maprow__name {
-      flex: 1;
-    }
-  }
-
-  &__num {
-    width: 54px;
-  }
-}
-
-.maplist__title {
-  margin: 10px 0 2px;
-  color: var(--text-dim);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-/* ---------- Visor de archivos ---------- */
-/* Solo lectura: el editor muestra el archivo, no lo edita. Es la diferencia
-   entre poder revisar el proyecto sin salir de la ventana y tener que abrir
-   otro programa para mirar un .cpp o un .md. */
-.fileview {
+/* ---------- Estados vacios ---------- */
+.empty {
+  grid-column: 1 / -1;
   margin: 0;
-  padding: 8px 10px;
-  color: var(--text);
-  font-family: ui-monospace, "Cascadia Mono", monospace;
-  font-size: 11px;
+  padding: 16px 14px;
+  color: var(--text-2);
+  font-size: 13px;
   line-height: 1.5;
-  /* Se respetan los saltos del archivo pero las lineas largas bajan solas: una
-     barra horizontal en un panel de 200px de alto es incomodisima. */
-  white-space: pre-wrap;
-  word-break: break-word;
 
-  &--image {
-    display: grid;
-    place-items: center;
-    padding: 12px;
+  p {
+    margin: 0;
+  }
 
-    img {
-      max-width: 100%;
-      max-height: 240px;
-      /* Casi todo lo que se mira aca es pixel art. */
-      image-rendering: pixelated;
-    }
+  b {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  &__title {
+    margin-bottom: 4px !important;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
   }
 }
 
 /* ---------- Viewport ---------- */
 .viewport {
-  background: var(--bg-viewport);
-}
-
-/* Grupo de botones pegados entre si: solo el primero y el ultimo llevan
-   esquinas redondeadas, como las filas de toggles del header de Blender. */
-.seg {
   display: flex;
-
-  > * {
-    border-radius: 0;
-
-    &:first-child {
-      border-radius: var(--radius) 0 0 var(--radius);
-    }
-    &:last-child {
-      border-radius: 0 var(--radius) var(--radius) 0;
-    }
-    &:only-child {
-      border-radius: var(--radius);
-    }
-  }
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--viewport);
 }
 
-.head__sep {
-  width: 1px;
-  height: 16px;
-  margin: 0 4px;
-  background: var(--border-soft);
-}
-
-.head__label {
-  color: var(--text-dim);
-  font-size: 10px;
-}
-
-/* Boton de header: el widget base de Blender. Gris claro, plano, redondeado, y
-   azul cuando esta encendido. */
-.tool {
-  display: inline-grid;
-  place-items: center;
-  min-width: 24px;
-  height: 18px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--widget);
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--widget-hover);
-  }
-  &.is-active {
-    background: var(--accent);
-    color: var(--text-bright);
-  }
-  &--zoom {
-    font-family: ui-monospace, "Cascadia Mono", monospace;
-    font-size: 10px;
-  }
-}
-
-/* Contenedor del canvas. Es "relative" para que los overlays se posicionen
-   contra el, y "overflow: hidden" para que el canvas no desborde al ampliar.
+/* Contenedor del canvas. "relative" para los overlays y "overflow: hidden"
+   para que el canvas no desborde al ampliar.
 
    Es tambien el elemento que mide el ResizeObserver de app.ts: el canvas no
    tiene tamano propio, lo toma de aca. Por eso se observa este div y no el
@@ -1071,63 +930,95 @@ app-root *:not(app-menu-bar *) {
   height: 100%;
   /* Sin suavizado: el pixel art se ve a bordes duros aun al ampliar. */
   image-rendering: pixelated;
-  /* Flecha normal para seleccionar y cruz solo al colocar, como Blender:
-     el cursor dice que va a hacer el click. */
   cursor: default;
 
   &--place {
     cursor: crosshair;
   }
 
-  /* Va ultimo a proposito: durante un arrastre de camara el cursor de mano
-     cerrada gana sobre el de la herramienta activa, porque en ese momento el
-     gesto es desplazar, no colocar. */
+  /* Va despues a proposito: durante un arrastre de camara la mano cerrada le
+     gana al cursor de la herramienta, porque el gesto es desplazar. */
   &--panning {
     cursor: grabbing;
   }
 }
 
-/* Texto de la esquina superior izquierda del viewport: en Blender es la
-   coleccion y el objeto activo. Aca, el nivel y la entidad seleccionada.
+/* Entidades agarradas con Ctrl: mano cerrada mientras se arrastran. */
+.canvas.canvas--moving {
+  cursor: grabbing;
+}
 
-   "pointer-events: none" es imprescindible en los dos overlays: sin eso se
-   comen los clicks y no se podria colocar una entidad debajo de ellos. */
+/* Pastillas sobre el lienzo: fondo de grafito casi opaco, asi el texto se lee
+   aunque debajo haya una textura clara.
+
+   "pointer-events: none" es imprescindible en los overlays: sin eso se comen
+   los clics y no se podria colocar una entidad debajo de ellos. */
+%vp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  padding: 3px 8px;
+  border: 1px solid var(--vp-pill-line);
+  border-radius: var(--radius);
+  background: var(--vp-pill-bg);
+  color: var(--text);
+  font-size: 12px;
+}
+
 .vp-info {
   position: absolute;
-  top: 8px;
-  left: 10px;
-  color: rgba(230, 230, 230, 0.55);
-  font-size: 11px;
+  top: 10px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   pointer-events: none;
 
+  &__level {
+    @extend %vp-pill;
+    font-weight: 600;
+  }
+
   &__active {
-    color: rgba(255, 255, 255, 0.85);
+    @extend %vp-pill;
+
+    .cell {
+      width: 15px;
+      height: 15px;
+    }
   }
 }
 
-/* Encima/Debajo bajo el nombre del nivel. .vp-info no recibe el puntero (para
-   no tapar el canvas), asi que los botones lo reactivan solo para ellos. */
+/* Encima/Debajo bajo el nombre del nivel. .vp-info no recibe el puntero, asi
+   que los botones lo reactivan solo para ellos. */
 .vp-gridpos {
   display: flex;
   flex-direction: column;
-  margin-top: 4px;
-  pointer-events: auto;
   width: max-content;
+  overflow: hidden;
+  border: 1px solid var(--vp-pill-line);
+  border-radius: var(--radius);
+  pointer-events: auto;
 
   button {
     display: grid;
     place-items: center;
-    width: 24px;
-    height: 20px;
+    width: 28px;
+    height: 26px;
     padding: 0;
     border: 0;
-    background: rgba(20, 20, 20, 0.6);
-    color: rgba(230, 230, 230, 0.7);
+    background: var(--vp-pill-bg);
+    color: var(--text-2);
     cursor: pointer;
 
+    + button {
+      border-top: 1px solid var(--vp-pill-line);
+    }
+
     svg {
-      width: 14px;
-      height: 14px;
+      width: 15px;
+      height: 15px;
       fill: none;
       stroke: currentColor;
       stroke-width: 1.3;
@@ -1140,22 +1031,16 @@ app-root *:not(app-menu-bar *) {
     .slash {
       stroke-width: 1.6;
       paint-order: stroke;
-      filter: drop-shadow(0 0 1px rgba(20, 20, 20, 0.9));
+      filter: drop-shadow(0 0 1px var(--vp-pill-bg));
     }
 
-    /* Apilados en vertical: se redondea arriba el primero y abajo el ultimo. */
-    &:first-child {
-      border-radius: var(--radius) var(--radius) 0 0;
-    }
-    &:last-child {
-      border-radius: 0 0 var(--radius) var(--radius);
-    }
     &:hover {
-      background: rgba(60, 60, 60, 0.8);
+      background: var(--surface-3);
+      color: var(--text);
     }
     &.is-active {
-      background: var(--accent);
-      color: var(--text-bright);
+      background: var(--surface-4);
+      color: var(--detail);
     }
   }
 }
@@ -1163,323 +1048,528 @@ app-root *:not(app-menu-bar *) {
 /* Chips de la esquina inferior izquierda (celda bajo el cursor, herramienta). */
 .vp-chips {
   position: absolute;
-  left: 10px;
-  bottom: 8px;
+  left: 12px;
+  bottom: 10px;
   display: flex;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: calc(100% - 24px);
   pointer-events: none;
 
   span {
-    padding: 1px 7px;
-    border-radius: var(--radius);
-    background: rgba(20, 20, 20, 0.6);
-    color: rgba(230, 230, 230, 0.7);
-    font-family: ui-monospace, "Cascadia Mono", monospace;
-    font-size: 10px;
+    @extend %vp-pill;
   }
 }
 
-/* ---------- Editor de propiedades ---------- */
-/* Columna de iconos a la izquierda + contenido a la derecha, igual que el
-   editor de propiedades de Blender. */
+/* ---------- Inspector ---------- */
 .props {
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  min-height: 0;
-}
-
-.ptabs {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px 0 0 3px;
-  background: var(--bg-header);
-}
-
-.ptab {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border: 0;
-  border-radius: var(--radius) 0 0 var(--radius);
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 13px;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--text);
-  }
-  /* La pestana activa se funde con el fondo del contenido, sin subrayado. */
-  &.is-active {
-    background: var(--bg-editor);
-    color: var(--text-bright);
-  }
 }
 
 .props__body {
   min-height: 0;
-  overflow: auto;
-  padding: 4px;
 }
 
-/* Panel plegable. Cabecera con triangulo y cuerpo debajo, los dos con el mismo
-   redondeo: es la unidad con la que Blender organiza todo el inspector. */
+/* Quien es la entidad: celda grande, id y tipo. */
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line-soft);
+
+  .cell {
+    width: 32px;
+    height: 32px;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__name {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__kind {
+    color: var(--text-2);
+    font-size: 12px;
+  }
+}
+
+.inspector > .props > .props__body > .hint--warn {
+  margin: 10px 12px 0;
+}
+
+/* Panel plegable: una cabecera con flecha y su contenido. Separados por una
+   linea, sin cajas: el inspector es una sola superficie. */
 .panel {
-  margin-bottom: 4px;
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  overflow: hidden;
+  border-bottom: 1px solid var(--line-soft);
 
   &__head {
     display: flex;
     align-items: center;
     gap: 6px;
     width: 100%;
-    height: 24px;
-    padding: 0 8px;
+    height: 34px;
+    padding: 0 12px;
     border: 0;
-    background: var(--bg-panel-head);
+    background: transparent;
     color: var(--text);
     font: inherit;
-    font-weight: 500;
+    font-weight: 600;
     text-align: left;
     cursor: pointer;
 
     &:hover {
-      background: #4b4b4b;
+      background: var(--surface-2);
     }
   }
 
-  /* El triangulo gira en vez de cambiar de caracter: un solo glifo, y la
-     transicion deja claro que es el mismo panel abriendose. */
+  /* La flecha gira en vez de cambiar de icono: la transicion deja claro que
+     es el mismo panel abriendose. */
   &__arrow {
-    display: inline-block;
-    color: var(--text-dim);
-    font-size: 9px;
-    transition: transform 0.12s ease;
-    transform: rotate(90deg);
+    width: 14px;
+    height: 14px;
+    color: var(--text-2);
+    transition: transform 0.16s var(--ease-out);
 
     &--collapsed {
-      transform: rotate(0deg);
+      transform: rotate(-90deg);
     }
   }
 
   &__count {
     margin-left: auto;
-    color: var(--text-dim);
-    font-size: 10px;
+    color: var(--text-2);
+    font-size: 12px;
   }
 
   &__body {
-    padding: 6px 8px 8px;
+    padding: 2px 12px 14px;
   }
 
   &--flat {
-    background: transparent;
+    border-bottom: 0;
 
     > .panel__body {
-      padding: 6px 0;
+      padding-top: 12px;
     }
   }
 }
 
 /* ---------- Campos ----------
-   El campo de Blender: una pastilla redondeada con la etiqueta adentro a la
-   izquierda y el valor a la derecha, sin borde ni fondo separados. Es el
-   control mas caracteristico de su interfaz, y el que mas cambia la lectura
-   de todo el inspector.
-
-   Las flechas ◀ ▶ aparecen al pasar por encima, igual que las suyas. */
+   Etiqueta a la izquierda y control a la derecha, como el panel de detalles de
+   un motor. En una fila de varios campos (X/Y, ancho/alto) la etiqueta pasa
+   arriba, porque al costado no entra. */
 .field {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(72px, 40%) minmax(0, 1fr);
   align-items: center;
-  height: 20px;
-  margin-bottom: 3px;
-  padding: 0 8px;
-  border-radius: var(--radius);
-  background: var(--widget);
-  overflow: hidden;
-
-  &:hover {
-    background: var(--widget-hover);
-  }
-  &:focus-within {
-    background: var(--widget-sunken);
-    box-shadow: inset 0 0 0 1px var(--accent-hi);
-  }
+  gap: 8px;
+  min-height: 28px;
+  margin-bottom: 6px;
 
   > span {
-    flex: 0 0 auto;
-    max-width: 46%;
     overflow: hidden;
+    color: var(--text-2);
+    font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--text);
-    font-size: 11px;
   }
 
-  /* Las flechas se reservan su hueco siempre (visibility, no display) para que
-     el valor no se corra un pixel al pasar el mouse. */
-  &::before,
-  &::after {
-    color: var(--text-dim);
-    font-size: 8px;
-    visibility: hidden;
-  }
-  &::before {
-    content: "◀";
-    margin-right: 2px;
-  }
-  &::after {
-    content: "▶";
-    margin-left: 2px;
-  }
-  &:hover::before,
-  &:hover::after {
-    visibility: visible;
-  }
-  /* Con el campo en edicion las flechas estorban: se van del todo. */
-  &:focus-within::before,
-  &:focus-within::after {
-    visibility: hidden;
-  }
-
-  /* Variante suelta para barras y filas de eventos: ahi el control va sin
-     pastilla, porque ya vive dentro de una fila con su propio fondo. */
+  /* Variante suelta para las filas de eventos: etiqueta y control en linea. */
   &--inline {
-    height: auto;
+    display: inline-flex;
+    gap: 6px;
+    min-height: 0;
     margin-bottom: 0;
-    padding: 0;
-    background: transparent;
-    overflow: visible;
-
-    &:hover,
-    &:focus-within {
-      background: transparent;
-      box-shadow: none;
-    }
-    &::before,
-    &::after {
-      content: none;
-    }
 
     > span {
-      margin-right: 6px;
-      color: var(--text-dim);
-      font-size: 10px;
+      font-size: 12px;
     }
   }
 }
 
-/* Dos campos por fila (X/Y, ancho/alto). */
 .field-row {
   display: flex;
-  gap: 3px;
+  gap: 8px;
 
-  .field {
+  > .field {
     flex: 1;
-    /* Sin esto los dos campos no bajan del ancho natural del input y el
-       segundo se sale del area. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+    /* Sin esto los campos no bajan del ancho natural del input. */
     min-width: 0;
+  }
+
+  > .btn {
+    flex: 1;
   }
 }
 
-.input {
-  flex: 1;
+/* Campos de un ataque: hasta siete, en grilla. */
+.field-row--wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.input,
+.select-lone {
+  width: 100%;
   min-width: 0;
-  height: 100%;
-  padding: 0 0 0 8px;
-  border: 0;
-  background: transparent;
-  color: var(--text-bright);
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ground);
+  color: var(--text);
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
+  transition: border-color 0.12s var(--ease-out);
+
+  &:hover {
+    border-color: var(--line-strong);
+  }
 
   &:focus {
+    border-color: var(--line-strong);
     outline: none;
   }
 
-  /* El valor numerico alineado a la derecha y la etiqueta a la izquierda: es lo
-     que hace legible una columna de campos de un vistazo. El texto libre
-     (nombres, rutas) se queda a la izquierda, que se lee mejor. */
-  &[type="number"] {
-    text-align: right;
-    padding-right: 0;
-    /* Las flechitas nativas de Chromium rompen la pastilla. */
-    -moz-appearance: textfield;
-    appearance: textfield;
-
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      appearance: none;
-      margin: 0;
-    }
+  /* Apagado: que se note que no se puede cambiar (un lado de tunel que ya
+     decide el trazado, por ejemplo). */
+  &:disabled {
+    border-color: var(--line-soft);
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
-  /* Un <select> dentro de una pastilla se funde con ella: es un control mas
-     del campo, no una caja aparte. Su desplegable si necesita fondo propio,
-     porque Chromium no se lo hereda. */
-  &:is(select) {
-    padding-left: 6px;
-    cursor: pointer;
+  &::placeholder {
+    color: var(--text-2);
+  }
 
-    option {
-      background: var(--bg-header);
-      color: var(--text);
-    }
+  /* Los numeros a la derecha y con cifras de igual ancho: una columna de
+     valores se lee de un vistazo. */
+  &[type="number"] {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &:is(select) {
+    padding-right: 4px;
+    cursor: pointer;
+  }
+
+  option {
+    background: var(--surface-2);
+    color: var(--text);
   }
 }
 
-/* Un select solo (sin pastilla alrededor) en las barras. */
+/* Un control suelto en una barra (las filas de eventos). */
 .select-lone {
-  height: 18px;
-  min-width: 130px;
-  padding: 0 4px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--widget);
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--widget-hover);
-  }
-  option {
-    background: var(--bg-header);
-  }
+  width: auto;
+  min-width: 140px;
+  height: 26px;
+  font-size: 13px;
 }
 
 .check {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-height: 26px;
   cursor: pointer;
 
   input {
-    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
     margin: 0;
+    accent-color: var(--detail-accent);
   }
 }
 
-/* ---------- Selector de color (panel Fondo y colores) ---------- */
+/* Un control que no es un solo valor (una fila de botones, un texto con
+   botones debajo): etiqueta arriba y contenido abajo. */
+.fieldblock {
+  margin-bottom: 10px;
+
+  &__label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  .hint {
+    margin: 0 0 6px;
+  }
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.45;
+
+  .icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 5px;
+    vertical-align: -2px;
+  }
+
+  &--warn {
+    color: var(--warn);
+  }
+}
+
+/* Ayuda de un campo del inspector: pegada al control de arriba y con aire
+   hasta el siguiente, para que se lea como suya y no como del que sigue. */
+.hint--field {
+  margin: -2px 0 10px;
+}
+
+/* Aviso de seleccion multiple, arriba del inspector, fuera de los paneles. */
+.hint--banner {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Campo con la etiqueta arriba y el control a todo el ancho: para lo que no
+   entra en la mitad derecha (la fila de Apariencia). */
+.field--stack {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+/* Apariencia: miniatura, nombre de la imagen y el boton que abre el selector. */
+.appearance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  &__thumb {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    overflow: hidden;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__picker {
+    margin-bottom: 6px;
+  }
+}
+
+/* El primer subtitulo de un panel no necesita el aire de separacion de arriba. */
+.panel__body > .subhead:first-child {
+  margin-top: 2px;
+}
+
+/* El selector de color completo se abre debajo de la fila Hex. */
+.picker__row + .picker {
+  margin-top: 8px;
+}
+
+.picker__row + .hint--field {
+  margin-top: 6px;
+}
+
+.picker__hex {
+  flex: 1;
+  min-width: 0;
+}
+
+.empty__action {
+  margin-top: 12px;
+}
+
+/* Titulo de una seccion dentro de un panel o un dialogo (Inventario, Movilidad...). */
+.subhead {
+  margin: 16px 0 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-3);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+
+  .icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-4);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    border-color: var(--honey);
+    background: var(--honey);
+    color: var(--honey-ink);
+    font-weight: 600;
+
+    &:hover {
+      border-color: var(--honey-hi);
+      background: var(--honey-hi);
+    }
+  }
+
+  &--danger:hover {
+    border-color: var(--danger-fill);
+    background: var(--danger-fill);
+    color: #fff;
+  }
+
+  &--small {
+    height: 26px;
+    padding: 0 9px;
+    font-size: 12px;
+
+    .icon {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+/* Boton de grupo segmentado (el tamaño de una figura, los lados de una
+   grilla). Encendido, con la miel lavada. */
+.tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-3);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-4);
+  }
+  &.is-active {
+    border-color: var(--detail-line);
+    background: var(--surface-4);
+    color: var(--text);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: progress;
+  }
+}
+
+/* Botones pegados: solo el primero y el ultimo redondeados. */
+.seg {
+  display: flex;
+
+  > * {
+    border-radius: 0;
+
+    + * {
+      margin-left: -1px;
+    }
+
+    &:first-child {
+      border-radius: var(--radius) 0 0 var(--radius);
+    }
+    &:last-child {
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    &:only-child {
+      border-radius: var(--radius);
+    }
+  }
+
+  /* El que esta encendido queda encima, para que su borde de miel se vea entero. */
+  > .is-active {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.seg.seg--wrap {
+  flex-wrap: wrap;
+  gap: 4px;
+
+  > * {
+    margin-left: 0;
+    border-radius: var(--radius);
+  }
+}
+
+/* ---------- Selector de color (Escena > Fondo y colores) ---------- */
 .picker {
   display: flex;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 8px;
 
-  /* Las dos capas (blanco a la izquierda, negro abajo) van encima del color
-     puro del tono, que se pinta desde el template. */
   &__square {
     position: relative;
     flex: 1;
-    height: 170px;
+    height: 160px;
     border-radius: var(--radius);
     background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent);
-    box-shadow: inset 0 0 0 1px var(--border);
+    box-shadow: inset 0 0 0 1px var(--line);
     cursor: crosshair;
     touch-action: none;
   }
@@ -1497,10 +1587,10 @@ app-root *:not(app-menu-bar *) {
 
   &__hue {
     position: relative;
-    flex: 0 0 14px;
+    flex: 0 0 16px;
     border-radius: var(--radius);
     background: linear-gradient(to bottom, #f00 0%, #ff0 16.67%, #0f0 33.33%, #0ff 50%, #00f 66.67%, #f0f 83.33%, #f00 100%);
-    box-shadow: inset 0 0 0 1px var(--border);
+    box-shadow: inset 0 0 0 1px var(--line);
     cursor: ns-resize;
     touch-action: none;
   }
@@ -1519,420 +1609,874 @@ app-root *:not(app-menu-bar *) {
 
   &__row {
     display: flex;
-    gap: 3px;
+    align-items: center;
+    gap: 8px;
 
     > .field {
       flex: 1;
       min-width: 0;
+      margin-bottom: 0;
     }
   }
 
   &__swatch {
     flex: 0 0 40px;
-    height: 20px;
+    height: 28px;
     border-radius: var(--radius);
-    box-shadow: inset 0 0 0 1px var(--border);
+    box-shadow: inset 0 0 0 1px var(--line);
   }
 }
 
-.hint {
-  margin: 5px 0 0;
-  color: var(--text-dim);
-  font-size: 10px;
-  line-height: 1.4;
-
-  &--warn {
-    color: #c9a24a;
-  }
-}
-
-/* Un control que no es un solo valor -- una fila de botones, o un texto con
-   botones debajo --: etiqueta arriba y contenido abajo. Adentro de la pastilla
-   de 20px de .field quedaba aplastado y cortado, que es lo que pasaba con "De
-   que lado" y "Trazado". */
-.fieldblock {
-  margin-bottom: 6px;
-
-  &__label {
-    display: block;
-    margin-bottom: 3px;
-    color: var(--text-dim);
-    font-size: 10px;
-  }
-
-  .hint {
-    margin: 0 0 4px;
-  }
-}
-
-/* ---------- Dialogo de nivel nuevo ---------- */
-/* Fondo oscurecido del dialogo. "inset: 0" lo estira sobre toda la ventana y
-   "place-items: center" centra el dialogo sin cuentas. Ademas de oscurecer,
-   bloquea el resto de la interfaz: un click aca cierra el dialogo (ver el
-   (click) del backdrop en app.html). */
-.modal-backdrop {
-  position: fixed;
-  z-index: 10;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.55);
-}
-
-/* Los popups de Blender si tienen esquinas redondeadas y una sombra marcada:
-   son lo unico que flota sobre la interfaz. */
-.modal {
-  width: min(400px, 100%);
-  /* Nunca mas alto que la ventana: un dialogo con muchos campos se desplaza
-     por dentro en vez de dejar los botones de abajo fuera de la pantalla. */
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
-  border-radius: 6px;
-  background: var(--bg-editor);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  /* Sin "overflow: hidden" aca: pisaba el overflow-y de arriba y un dialogo
-     alto quedaba recortado en vez de desplazarse. El auto ya recorta las
-     esquinas redondeadas igual. */
+/* ---------- Mapa: grillas, tuneles y zonas ---------- */
+.maprow {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
 
   &__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 26px;
-    padding: 0 6px 0 10px;
-    background: var(--bg-header);
-
-    h2 {
-      margin: 0;
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 500;
-    }
+    margin-bottom: 6px;
   }
 
-  &__body {
-    padding: 10px;
+  &__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    .icon {
+      width: 14px;
+      height: 14px;
+      color: var(--text-2);
+    }
   }
 
   &__actions {
     display: flex;
     gap: 4px;
-    padding: 4px 10px 10px;
-
-    /* Los botones de confirmacion de Blender ocupan el ancho completo y a
-       partes iguales. */
-    .btn {
-      flex: 1;
-      height: 24px;
-    }
   }
-}
 
-.icon-button {
-  width: 20px;
-  height: 20px;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--widget);
-    color: var(--text);
-  }
-}
-
-/* ---------- Editor de eventos / consola ---------- */
-.bottom {
-  height: 200px;
-}
-
-.event {
-  margin-bottom: 4px;
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  overflow: hidden;
-
-  &__row {
+  /* Un tunel, una entrada de botin o de tienda: todo en una sola linea. */
+  &--inline {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 8px;
 
-    &--child {
-      padding-left: 24px;
-      border-top: 1px solid #2e2e2e;
+    .maprow__name {
+      flex: 1;
+    }
+  }
+
+  &__num {
+    width: 64px;
+    flex: none;
+  }
+
+  &__select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__unit {
+    display: inline-grid;
+    place-items: center;
+    color: var(--text-2);
+    font-size: 12px;
+
+    .icon {
+      width: 14px;
+      height: 14px;
     }
   }
 }
 
-/* Etiquetas "Cuando" / "Entonces" de cada fila de evento. Los dos colores no
-   son decorativos: separan de un vistazo la causa del efecto, que es la
-   lectura basica de un evento NoCode. */
-.badge {
-  padding: 1px 7px;
-  border-radius: var(--radius);
-  font-size: 10px;
-  font-weight: 500;
-
-  &--trigger {
-    background: #5c4520;
-    color: #f0c07a;
-  }
-  &--action {
-    background: #2c4468;
-    color: #9dc0ee;
-  }
+.maplist__title {
+  margin: 16px 0 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
 }
 
-/* Consola de la workspace Salida: el log que llena note() en app.ts.
-   Monoespaciada porque casi siempre muestra rutas y nombres de archivo. */
-.console {
-  font-family: ui-monospace, "Cascadia Mono", monospace;
-  font-size: 11px;
+/* ---------- Dock inferior ---------- */
+.dock {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface-1);
 
-  &__line {
-    padding: 1px 0;
-    color: var(--text-dim);
+  /* Plegado solo queda la fila de pestañas, sin linea de abajo. */
+  &.is-collapsed > .tabs {
+    border-bottom: 0;
+  }
 
-    /* El prompt va por CSS y no en el texto del mensaje: asi el log guardado en
-       app.ts queda limpio, sin caracteres de presentacion. */
-    &::before {
-      content: "› ";
-      color: var(--accent-hi);
-    }
+  &.is-collapsed > .grip {
+    display: none;
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
   }
 }
 
 .pad {
-  padding: 6px;
+  padding: 10px 12px;
 }
 
-/* ---------- Barra de estado ----------
-   La de Blender: pistas de teclado y raton a la izquierda, estadisticas de la
-   escena a la derecha, y ni un borde. */
+/* Explorador de recursos: categorias a la izquierda, fichas a la derecha. */
+.browser {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 172px minmax(0, 1fr);
+  min-height: 0;
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px;
+    border-right: 1px solid var(--line-soft);
+    overflow: auto;
+  }
+
+  &__cat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 8px 0 10px;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    &.is-active {
+      background: var(--surface-3);
+      color: var(--text);
+
+      .icon {
+        color: var(--detail);
+      }
+    }
+  }
+
+  &__count {
+    margin-left: auto;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  &__body {
+    min-height: 0;
+    padding: 10px 12px 14px;
+    overflow: auto;
+  }
+
+  /* Opciones de la categoria, en una fila arriba de sus fichas (material y
+     Pintar, en Figuras). */
+  &__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+    margin-bottom: 10px;
+
+    .hint {
+      margin: 0;
+    }
+  }
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  align-content: start;
+  gap: 8px;
+}
+
+/* Ficha de algo para colocar. "grab": el gesto principal es arrastrarla. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 6px 6px 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: grab;
+  transition: background-color 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+
+  &:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-3);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  /* Elegida para colocar: borde doble en el color de detalle. */
+  &.is-active {
+    border-color: var(--detail-line);
+    box-shadow: inset 0 0 0 1px var(--detail-line);
+  }
+
+  &__art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 56px;
+    overflow: hidden;
+    border-radius: var(--radius);
+    background: var(--ground);
+    image-rendering: pixelated;
+
+    > .cell {
+      width: 28px;
+      height: 28px;
+    }
+
+    /* Tablero de transparencia: el fondo de siempre para ver un sprite con
+       huecos. */
+    &--checker {
+      background-image:
+        linear-gradient(45deg, var(--checker-a) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--checker-a) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--checker-a) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--checker-a) 75%);
+      background-color: var(--checker-b);
+      background-size: 10px 10px;
+      background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+    }
+  }
+
+  /* El tamaño y el recorte de la figura los pone thumbStyle() en app.ts. */
+  &__shape,
+  &__sprite {
+    display: block;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    /* El fantasma que arrastra el navegador sale de la ficha, no de esto. */
+    pointer-events: none;
+  }
+
+  &__img {
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+
+  &__glyph {
+    width: 26px;
+    height: 26px;
+    color: var(--text-2);
+  }
+
+  /* La celda del tipo en la esquina: dice que es aunque el sprite no lo diga. */
+  /* El tipo en texto, cuando el sprite ya es la señal: una etiqueta chica
+     en la esquina del arte, legible con daltonismo porque es una palabra. */
+  &__type {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+    color: var(--text-2);
+    font-size: 11px;
+    line-height: 16px;
+    pointer-events: none;
+  }
+
+  /* El tipo de objeto (arma, curacion, moneda) en la esquina, en la misma
+     celda hexagonal que los tipos de entidad. */
+  &__kind {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 20px;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    background: var(--kind);
+    color: #14120f;
+
+    .icon {
+      width: 11px;
+      height: 11px;
+      stroke-width: 2.4;
+    }
+  }
+
+  &__name {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__stats {
+    display: flex;
+    gap: 6px;
+    color: var(--text-2);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  /* "Nuevo": la misma ficha, punteada y sin arte. */
+  &--new {
+    justify-content: center;
+    gap: 4px;
+    min-height: 92px;
+    border-style: dashed;
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+
+    .icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
+/* ---------- Eventos ---------- */
+.event {
+  margin-bottom: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+
+    &--child {
+      padding-left: 28px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    &--add {
+      gap: 6px;
+    }
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+}
+
+/* Cuando / Si / Entonces. El color separa la causa del efecto de un vistazo, y
+   el icono y la palabra lo dicen sin color. */
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px 0 7px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+
+  .icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  &--trigger {
+    background: var(--badge-trigger-bg);
+    color: var(--badge-trigger);
+  }
+  &--condition {
+    background: var(--badge-condition-bg);
+    color: var(--badge-condition);
+  }
+  &--action {
+    background: var(--badge-action-bg);
+    color: var(--badge-action);
+  }
+}
+
+/* Consola: el log que llena note() en app.ts. Monoespaciada porque casi
+   siempre muestra rutas y nombres de archivo. */
+.console {
+  font-family: var(--mono);
+  font-size: 12px;
+
+  &__line {
+    padding: 2px 0;
+    color: var(--text-2);
+
+    /* El prompt va por CSS y no en el texto: el log queda limpio. */
+    &::before {
+      content: "› ";
+      color: var(--detail);
+    }
+  }
+}
+
+/* Visor de archivos: solo lectura. */
+.fileview {
+  margin: 0;
+  padding: 4px 2px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  /* El JSON del nivel (pestaña JSON): los colores de cada token salen del tema. */
+  &.jsonview {
+    white-space: pre;
+    word-break: normal;
+    overflow-x: auto;
+
+    .j-key {
+      color: var(--detail);
+    }
+    .j-str {
+      color: var(--ok);
+    }
+    .j-num {
+      color: var(--badge-action);
+    }
+    .j-lit {
+      color: var(--warn);
+    }
+  }
+
+  &--image {
+    display: grid;
+    place-items: center;
+    padding: 12px;
+
+    img {
+      max-width: 100%;
+      max-height: 240px;
+      image-rendering: pixelated;
+    }
+  }
+}
+
+/* ---------- Barra de estado ---------- */
 .statusbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 10px;
-  background: var(--bg-window);
-  color: var(--text-dim);
-  font-size: 11px;
+  gap: 16px;
+  min-width: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--text-2);
+  font-size: 12px;
 
   &__msg {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
+    text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   &__stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     white-space: nowrap;
 
+    .icon {
+      width: 14px;
+      height: 14px;
+    }
+
     &--warn {
-      color: #d8a13c;
+      color: var(--warn);
     }
   }
 }
 
-/* Pista de raton/teclado: la tecla en una capsula y su accion al lado. */
+/* Pista de teclado: la tecla en una capsula y su accion al lado. */
 .keyhint {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
 
-  b {
-    padding: 0 4px;
-    border-radius: 3px;
-    background: #333;
+  kbd {
+    padding: 0 5px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface-2);
     color: var(--text);
-    font-weight: 500;
-    font-size: 10px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 16px;
   }
 }
 
-/* ---------- Botones ----------
-   .btn es el boton de dialogos y barras generales; .tool, mas arriba, es el de
-   las cabeceras de area. Comparten fondo y redondez: en Blender son el mismo
-   widget con distinto alto. */
-.btn {
-  height: 20px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--widget);
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--widget-hover);
+/* En pantallas de 1366 entran las tres pistas basicas y el mensaje: las demas
+   siguen en los menus y en los tooltips. */
+@media (max-width: 1500px) {
+  .keyhint--extra {
+    display: none;
   }
+}
 
-  &--primary {
-    background: var(--accent);
-    color: var(--text-bright);
+/* ---------- Dialogos ---------- */
+/* Fondo oscurecido. Ademas de oscurecer, bloquea el resto de la interfaz: un
+   clic aca cierra el dialogo (ver el (click) del backdrop en app.html). */
+.modal-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 7, 5, 0.62);
+}
 
-    &:hover {
-      background: var(--accent-hi);
+/* Lo unico que flota sobre la ventana: por eso es lo unico con sombra. */
+.modal {
+  width: min(420px, 100%);
+  /* Nunca mas alto que la ventana: un dialogo con muchos campos se desplaza
+     por dentro en vez de dejar los botones fuera de la pantalla. */
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+
+  &__head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 46px;
+    padding: 0 8px 0 16px;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--surface-2);
+
+    h2 {
+      margin: 0;
+      overflow: hidden;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
-  &--danger:hover {
-    background: var(--danger);
-    color: var(--text-bright);
+  &__body {
+    padding: 14px 16px;
   }
 
-  &--small {
-    height: 18px;
-    padding: 0 8px;
-    font-size: 10px;
+  /* Confirmar a la derecha, como en cualquier dialogo de escritorio. */
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px 16px;
+
+    .btn {
+      min-width: 96px;
+      height: 30px;
+    }
   }
 }
 
-.empty {
-  margin: 0;
-  padding: 10px;
-  color: var(--text-dim);
-  font-size: 11px;
-  line-height: 1.5;
-  /* En la paleta de recursos el contenedor es un grid de columnas angostas:
-     sin esto el mensaje cae dentro de una columna de 64px y se parte letra
-     a letra. */
-  grid-column: 1 / -1;
+/* Dialogos anchos (grilla, tunel, objetos). Con DOS clases a proposito: .modal
+   declara su ancho arriba, y con una sola empataba en especificidad. */
+.modal.modal--wide {
+  width: min(640px, calc(100vw - 40px));
 }
 
-/* ---------- Scrollbars ----------
-   Finas y sin pista visible, como las de Blender. Esto es propietario de
-   WebKit/Chromium, lo que aca alcanza: el editor corre siempre sobre Electron. */
-::-webkit-scrollbar {
-  width: 11px;
-  height: 11px;
+.modal.modal--xl {
+  width: min(960px, calc(100vw - 40px));
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 6px;
-  background: #545454;
-  background-clip: content-box;
 
-  &:hover {
-    background: #6b6b6b;
-    background-clip: content-box;
+/* ---------- Configurar personajes ---------- */
+.chareditor {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+
+  /* Cada columna se desplaza por su cuenta. */
+  &__list,
+  &__form {
+    max-height: 64vh;
+    overflow: auto;
+  }
+
+  &__list {
+    padding: 8px 0;
+    border-right: 1px solid var(--line-soft);
+    background: var(--surface-1);
+  }
+
+  &__group {
+    padding-bottom: 8px;
+  }
+
+  &__grouphead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 8px 2px 12px;
+    font-weight: 600;
+  }
+
+  &__kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    .icon {
+      color: var(--text-2);
+    }
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 2px 12px 4px 38px;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  /* Miniatura del personaje en la lista: su sprite, o la celda si no tiene. */
+  &__thumb {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    overflow: hidden;
+
+    .cell {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &__form {
+    padding: 12px 16px;
+  }
+
+  &__section {
+    margin: 16px 0 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  &__asset {
+    display: grid;
+    grid-template-columns: 112px 1fr;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  &__preview {
+    display: grid;
+    place-items: center;
+    height: 112px;
+    border-radius: var(--radius);
+    background-image:
+      linear-gradient(45deg, var(--checker-a) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--checker-a) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--checker-a) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--checker-a) 75%);
+    background-color: var(--checker-b);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  }
+
+  &__sprite {
+    display: block;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+  }
+
+  &__nopreview {
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  &__collider {
+    align-items: flex-end;
+  }
+
+  .tree__item {
+    padding-left: 38px;
+  }
+}
+
+/* Selector de asset: las texturas del proyecto como miniaturas. */
+.texpicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  align-content: start;
+  gap: 4px;
+  max-height: 112px;
+  overflow: auto;
+
+  .hint {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  &__item {
+    display: grid;
+    place-items: center;
+    height: 44px;
+    padding: 3px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    cursor: pointer;
+
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+    }
+
+    &:hover {
+      border-color: var(--line-strong);
+    }
+    &.is-active {
+      border-color: var(--detail-line);
+      box-shadow: inset 0 0 0 1px var(--detail-line);
+    }
   }
 }
 
 /* ---------- Objetos y armas ---------- */
-/* Las seis formas de ataque como botones: las de cuerpo a cuerpo en gris, las
-   de distancia en gris azulado, para que la categoria se lea sin etiqueta. */
+/* Las seis formas de ataque. Las de distancia llevan un fondo un poco mas frio
+   y su icono, para que la categoria se lea sin etiqueta. */
 .patterns {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  margin-bottom: 4px;
+  gap: 6px;
+  margin-bottom: 6px;
 
   &__item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    height: 28px;
-    padding: 0 8px;
-    border: 1px solid transparent;
+    gap: 8px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--widget);
+    background: var(--surface-3);
     color: var(--text);
     font: inherit;
-    font-size: 11px;
+    font-size: 13px;
     cursor: pointer;
 
     &:hover {
-      background: var(--widget-hover);
+      background: var(--surface-4);
     }
     &.is-active {
-      border-color: var(--accent-hi);
-      background: var(--accent);
-      color: var(--text-bright);
+      border-color: var(--detail-line);
+      background: var(--surface-4);
+      color: var(--text);
     }
   }
 
   &__item--ranged:not(.is-active) {
-    background: #4a5261;
+    background: var(--surface-cool);
   }
 
   &__glyph {
-    width: 14px;
-    text-align: center;
+    width: 16px;
+    height: 16px;
   }
 }
 
-/* Formulario a la izquierda, vista previa a la derecha. */
+/* Formulario a la izquierda, vista previa del ataque a la derecha. */
 .attackform {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
-  gap: 10px;
+  gap: 12px;
   align-items: start;
 
   &__preview {
     width: 260px;
     height: 160px;
-    border: 1px solid var(--border-soft);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
   }
 }
 
-/* Los campos de un ataque van en grilla y no en una fila flex: son hasta
-   siete, y en una sola fila se comprimian hasta cortar etiquetas y valores. */
-.field-row--wrap {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 4px;
-
-  > .field {
-    min-width: 0;
-  }
-}
-
-/* Titulo chico dentro de un panel del inspector o de un dialogo. */
-.subhead {
-  margin: 10px 0 4px;
-  color: var(--text-dim);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-/* ---------- Convertidor de imagenes (Herramientas) ---------- */
+/* ---------- Convertidor de imagenes ---------- */
 .converter {
   &__intro {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
   }
 
   &__add {
     display: flex;
-    gap: 4px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 10px;
 
     .btn {
       flex: 1;
-      height: 24px;
+      height: 30px;
     }
   }
 
-  /* Con muchas imagenes la lista se desplaza por dentro: los botones de
-     Convertir tienen que seguir a la vista. */
   &__list {
     display: grid;
-    gap: 2px;
+    gap: 4px;
     max-height: 280px;
-    margin: 8px 0 0;
+    margin: 10px 0 0;
     padding: 0;
     overflow: auto;
     list-style: none;
@@ -1941,27 +2485,28 @@ app-root *:not(app-menu-bar *) {
   &__row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 6px;
+    gap: 10px;
+    padding: 6px 8px;
+    border: 1px solid var(--line-soft);
     border-radius: var(--radius);
-    background: var(--bg-panel);
+    background: var(--surface-1);
 
     &.is-done .converter__meta {
-      color: #8fbf6a;
+      color: var(--ok);
     }
 
     &.is-failed .converter__meta {
-      color: #d9705f;
+      color: var(--danger);
     }
   }
 
   &__thumb {
     display: grid;
-    flex: 0 0 32px;
+    flex: 0 0 34px;
     place-items: center;
-    height: 32px;
-    border-radius: 3px;
-    background: var(--widget-sunken);
+    height: 34px;
+    border-radius: 4px;
+    background: var(--ground);
 
     img {
       max-width: 100%;
@@ -1970,8 +2515,6 @@ app-root *:not(app-menu-bar *) {
     }
   }
 
-  /* min-width: 0 deja que los nombres largos se corten con "…" en vez de
-     empujar el boton de quitar fuera de la fila. */
   &__info {
     flex: 1;
     min-width: 0;
@@ -1980,27 +2523,36 @@ app-root *:not(app-menu-bar *) {
   &__names {
     overflow: hidden;
     color: var(--text);
-    font-size: 11px;
+    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   &__arrow {
     margin: 0 4px;
-    color: var(--text-dim);
+    color: var(--text-2);
   }
 
   &__renamed {
-    color: #c9a24a;
+    color: var(--warn);
   }
 
   &__meta {
-    color: var(--text-dim);
-    font-size: 10px;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  /* Listo o fallo: el icono acompaña al color del texto. */
+  &__status {
+    width: 13px;
+    height: 13px;
+    margin-right: 4px;
+    vertical-align: -2px;
+    stroke-width: 2.4;
   }
 
   &__empty {
-    padding: 10px 0;
+    padding: 12px 0;
     text-align: center;
   }
 }
@@ -2009,29 +2561,65 @@ app-root *:not(app-menu-bar *) {
 .checklist {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 2px 10px;
+  gap: 2px 12px;
   max-height: 160px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   overflow: auto;
 
   small {
     margin-left: 4px;
-    color: var(--text-dim);
+    color: var(--text-2);
+    font-size: 12px;
   }
 }
 
-.maprow__select {
-  flex: 1;
+/* ---------- Herramienta de sprites ----------
+   Ocupa la celda del viewport cuando el area central esta en Sprites. El
+   viewport se esconde con .is-hidden y no se destruye; la herramienta, una vez
+   cargada, tampoco: se esconde por su host. El resto de sus estilos baja con
+   ella, en sprites/sprite-editor.scss. */
+.viewport.is-hidden,
+.spritehost.is-hidden {
+  display: none;
+}
+
+.spritehost {
+  display: flex;
   min-width: 0;
+  min-height: 0;
+  background: var(--viewport);
 }
 
-.maprow__unit {
-  color: var(--text-dim);
-  font-size: 11px;
+/* ---------- Barras de desplazamiento ---------- */
+/* Finas y sin pista visible. Esto es de WebKit/Chromium, lo que alcanza: el
+   editor corre siempre sobre Electron. */
+app-root ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+app-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+app-root ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--line);
+  background-clip: content-box;
+
+  &:hover {
+    background: var(--line-strong);
+    background-clip: content-box;
+  }
+}
+app-root ::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
-/* "Si": la condicion va entre la causa (Cuando) y el efecto (Entonces). */
-.badge--condition {
-  background: #3d4a2a;
-  color: #b9d98a;
+/* Movimiento: quien lo pidio en el sistema, no lo recibe. */
+@media (prefers-reduced-motion: reduce) {
+  app-root *,
+  app-root *::before,
+  app-root *::after {
+    transition-duration: 0.01ms !important;
+  }
 }
