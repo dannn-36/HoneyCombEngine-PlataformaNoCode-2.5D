@@ -1,6 +1,6 @@
 import { computed, inject } from '@angular/core';
 
-import { itemKindDef, missingItemIds } from '../core/items';
+import { missingItemIds } from '../core/items';
 import {
   DashConfig,
   DefenseConfig,
@@ -80,10 +80,10 @@ export class CombatInspectorController {
     return 'other';
   }
 
-  /** "⚔ Espada", o el id crudo si no esta definido en ningun lado. */
+  /** "Espada", o el id crudo si no esta definido en ningun lado. */
   itemLabel(id: string): string {
     const item = this.options().find((option) => option.id === id);
-    return item ? itemKindDef(item.kind).glyph + ' ' + item.name : id + ' (sin definir)';
+    return item ? item.name : id + ' (sin definir)';
   }
 
   private patch(entity: LevelEntity, changes: Partial<LevelEntity>): void {

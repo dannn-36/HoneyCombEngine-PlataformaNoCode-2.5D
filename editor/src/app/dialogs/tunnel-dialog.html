@@ -7,9 +7,9 @@
              (click)="$event.stopPropagation()">
       <div class="modal__head">
         <h2 id="tunnel-dialog-title">
-          {{ draft.editId ? 'Túnel “' + draft.editId + '”' : 'Conectar grillas con un túnel' }}
+          {{ draft.editId ? 'Túnel “' + draft.editId + '”' : 'Conectar salas con un túnel' }}
         </h2>
-        <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelTunnelDialog()">×</button>
+        <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="map.cancelTunnelDialog()"><svg hcIcon="x"></svg></button>
       </div>
 
       <div class="modal__body">

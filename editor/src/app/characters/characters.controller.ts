@@ -100,7 +100,12 @@ export class CharactersController {
   }
 
   kindColor(kind: CharacterId): string {
-    return characterDef(kind)?.color ?? '#4772b3';
+    return characterDef(kind)?.color ?? '#8f8a80';
+  }
+
+  /** El "type" que el tipo le pone a la entidad: es lo que lee la celda (ver ui/icon.ts). */
+  kindType(kind: CharacterId): string {
+    return characterDef(kind)?.type ?? kind;
   }
 
   kindHint(kind: CharacterId): string {

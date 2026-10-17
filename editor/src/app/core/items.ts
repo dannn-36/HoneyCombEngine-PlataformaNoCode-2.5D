@@ -20,6 +20,7 @@ import {
   WeaponCategory,
 } from '../models/item.model';
 import { EventDefinition, GridPosition, Level, LevelEntity } from '../models/level.model';
+import type { IconName } from '../ui/icons.generated';
 import { nextFreeId } from './dungeon-layout';
 
 /** Campo de un ataque que el formulario puede mostrar, ademas de dano y pausa. */
@@ -30,7 +31,7 @@ export interface PatternDef {
   label: string;
   /** La categoria donde tiene sentido primero. Cualquier arma puede usar cualquiera. */
   category: WeaponCategory;
-  glyph: string;
+  icon: IconName;
   hint: string;
   /** Los campos que usa esta forma: los demas no se muestran ni se guardan. */
   fields: readonly AttackField[];
@@ -41,7 +42,7 @@ export const ATTACK_PATTERNS: readonly PatternDef[] = [
     id: 'line',
     label: 'Lineal',
     category: 'melee',
-    glyph: '━',
+    icon: 'move-right',
     hint: 'Golpe en línea recta hacia donde apunta el mouse.',
     fields: ['range', 'width'],
   },
@@ -49,7 +50,7 @@ export const ATTACK_PATTERNS: readonly PatternDef[] = [
     id: 'area',
     label: 'Área',
     category: 'melee',
-    glyph: '◎',
+    icon: 'circle-dot',
     hint: 'Golpea todo alrededor del personaje, en cualquier dirección.',
     fields: ['range', 'heal'],
   },
@@ -57,7 +58,7 @@ export const ATTACK_PATTERNS: readonly PatternDef[] = [
     id: 'cone',
     label: 'Reloj',
     category: 'melee',
-    glyph: '◔',
+    icon: 'radar',
     hint: 'Sector de reloj abierto hacia donde apunta el mouse.',
     fields: ['range', 'angle'],
   },
@@ -65,7 +66,7 @@ export const ATTACK_PATTERNS: readonly PatternDef[] = [
     id: 'projectile',
     label: 'Proyectil',
     category: 'ranged',
-    glyph: '➶',
+    icon: 'arrow-up-right',
     hint: 'Sale hacia el mouse en línea recta y golpea al primero que toca (o atraviesa).',
     fields: ['range', 'speed', 'width', 'pierce'],
   },
@@ -73,7 +74,7 @@ export const ATTACK_PATTERNS: readonly PatternDef[] = [
     id: 'remote_area',
     label: 'Área remota',
     category: 'ranged',
-    glyph: '⊚',
+    icon: 'crosshair',
     hint: 'Cae en el punto del mouse, hasta el alcance máximo, tras una demora marcada en el piso.',
     fields: ['range', 'radius', 'delay', 'heal'],
   },
@@ -81,7 +82,7 @@ export const ATTACK_PATTERNS: readonly PatternDef[] = [
     id: 'explosive',
     label: 'Explosivo',
     category: 'ranged',
-    glyph: '✹',
+    icon: 'bomb',
     hint: 'Proyectil que explota con daño de área al chocar o al llegar a su distancia máxima.',
     fields: ['range', 'speed', 'width', 'radius', 'heal'],
   },
@@ -171,15 +172,16 @@ export function defaultAbility(category: WeaponCategory): AbilityDef {
 export interface ItemKindDef {
   id: ItemKind;
   label: string;
-  glyph: string;
+  /** Icono del sprite (ver ui/icons.generated.ts). Distingue el tipo sin depender del color. */
+  icon: IconName;
   color: string;
   hint: string;
 }
 
 export const ITEM_KINDS: readonly ItemKindDef[] = [
-  { id: 'weapon', label: 'Arma', glyph: '⚔', color: '#b07a3c', hint: 'Va al inventario del jugador; se elige con las teclas 1 a 9.' },
-  { id: 'healing', label: 'Curación', glyph: '✚', color: '#5f9e4a', hint: 'Cura al juntarla. Con la vida llena se queda en el piso.' },
-  { id: 'coin', label: 'Moneda', glyph: '●', color: '#c9a227', hint: 'Suma monedas para comprarle a los NPC con tienda.' },
+  { id: 'weapon', label: 'Arma', icon: 'sword', color: '#d39b5c', hint: 'Va al inventario del jugador; se elige con las teclas 1 a 9.' },
+  { id: 'healing', label: 'Curación', icon: 'heart-plus', color: '#79b84a', hint: 'Cura al juntarla. Con la vida llena se queda en el piso.' },
+  { id: 'coin', label: 'Moneda', icon: 'coins', color: '#d9b84a', hint: 'Suma monedas para comprarle a los NPC con tienda.' },
 ];
 
 export function itemKindDef(kind: ItemKind): ItemKindDef {

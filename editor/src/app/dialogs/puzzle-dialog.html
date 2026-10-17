@@ -7,7 +7,7 @@
              (click)="$event.stopPropagation()">
       <div class="modal__head">
         <h2 id="puzzle-title">Puzzle de sala</h2>
-        <button class="icon-button" type="button" title="Cerrar" (click)="puzzle.cancel()">×</button>
+        <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="puzzle.cancel()"><svg hcIcon="x"></svg></button>
       </div>
 
       <div class="modal__body">
@@ -38,7 +38,7 @@
             <select class="input" (change)="puzzle.patch({ boss: str($event) })">
               <option value="" disabled [selected]="draft.boss === ''">— enemigo —</option>
               @for (enemy of puzzle.enemies(); track enemy.id) {
-                <option [value]="enemy.id" [selected]="draft.boss === enemy.id">{{ enemy.id }}{{ enemy.boss ? ' ♛' : '' }}</option>
+                <option [value]="enemy.id" [selected]="draft.boss === enemy.id">{{ enemy.id }}{{ enemy.boss ? ' (jefe)' : '' }}</option>
               }
             </select>
           </label>
@@ -51,7 +51,7 @@
               <select class="input" (change)="puzzle.patch({ item: str($event) })">
                 <option value="" [selected]="draft.item === ''">— cualquiera —</option>
                 @for (item of combat.options(); track item.id) {
-                  <option [value]="item.id" [selected]="draft.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
+                  <option [value]="item.id" [selected]="draft.item === item.id">{{ item.name }}</option>
                 }
               </select>
             </label>

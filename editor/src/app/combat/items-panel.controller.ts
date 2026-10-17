@@ -2,6 +2,7 @@ import { ItemDef, ItemKind, OnFullInventory } from '../models/item.model';
 import { ITEM_KINDS, describeAttack, itemKindDef } from '../core/items';
 import { spriteCropStyle, textureName } from '../core/sprite-style';
 import { TextureAsset } from '../core/texture-fit';
+import type { IconName } from '../ui/icons.generated';
 
 /**
  * Como se MUESTRAN los objetos en el editor: el glifo y el color de su tipo,
@@ -24,8 +25,13 @@ export class ItemsPanelController {
 
   readonly itemKinds = ITEM_KINDS;
 
-  itemGlyph(item: ItemDef): string {
-    return itemKindDef(item.kind).glyph;
+  /** Icono del tipo de objeto (espada, corazon, monedas). */
+  itemIcon(item: ItemDef): IconName {
+    return itemKindDef(item.kind).icon;
+  }
+
+  itemKindLabel(item: ItemDef): string {
+    return itemKindDef(item.kind).label;
   }
 
   itemColor(item: ItemDef): string {

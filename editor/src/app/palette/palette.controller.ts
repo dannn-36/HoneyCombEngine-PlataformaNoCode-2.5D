@@ -8,16 +8,17 @@ import { ItemLibraryService } from '../services/item-library.service';
 
 /** Herramienta activa del viewport. */
 export /** Herramienta activa del viewport: seleccionar entidades o colocarlas. */
-type Tool = 'select' | 'place' | 'floor' | 'wall' | 'room' | 'tunnel';
+type Tool = 'select' | 'marquee' | 'place' | 'floor' | 'wall' | 'room' | 'tunnel';
 
 export const TOOL_HINTS: Record<Tool, string> = {
-  select: 'Seleccionar: clic sobre una entidad para activarla.',
+  select: 'Seleccionar: clic sobre un objeto para elegirlo; arrástralo para moverlo.',
+  marquee: 'Seleccionar área: arrastra un rectángulo y se elige todo lo que toca. Shift suma; arrastra lo elegido para moverlo.',
   place: 'Colocar: elige una textura en Recursos o una figura, y clic en la grilla.',
   floor: 'Piso: clic en una celda para quitarle o devolverle el suelo.',
   wall: 'Pared: clic en una celda para levantar o quitar la pared.',
-  room: 'Grilla: arrastra sobre el vacío para dibujar una nueva, o dentro de una para moverla. Clic derecho la configura.',
+  room: 'Sala: arrastra sobre el vacío para dibujar una nueva, o dentro de una para moverla. Clic derecho la configura.',
   tunnel:
-    'Túnel: clic en una grilla, clics para marcar el camino y clic en otra grilla para terminar. Retroceso borra el último punto; Escape cancela.',
+    'Túnel: clic en una sala, clics para marcar el camino y clic en otra sala para terminar. Retroceso borra el último punto; Escape cancela.',
 };
 
 /**

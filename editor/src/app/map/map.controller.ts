@@ -266,13 +266,13 @@ export class MapController {
       this.roomDraft.set(null);
       this.markDirty();
       this.frameAll();
-      this.note('Grilla "' + draft.editId + '" actualizada.');
+      this.note('Sala "' + draft.editId + '" actualizada.');
       return;
     }
 
     const id = draft.id.trim();
     if (!id || this.connectableRooms().some((room) => room.id === id)) {
-      this.note(id ? 'Ya hay una grilla llamada "' + id + '".' : 'La grilla necesita un nombre.');
+      this.note(id ? 'Ya hay una sala llamada "' + id + '".' : 'La sala necesita un nombre.');
       return;
     }
 
@@ -295,7 +295,7 @@ export class MapController {
     // La grilla del nivel pudo haber crecido, o el mapa correrse: se encuadra.
     this.frameAll();
     this.note(
-      'Grilla "' + id + '" agregada' +
+      'Sala "' + id + '" agregada' +
         (connection
           ? ', unida a "' + connection.to + '" por un túnel de ' + connection.width + ' celdas.'
           : '.'),
@@ -306,7 +306,7 @@ export class MapController {
   openTunnelDialog(): void {
     const rooms = this.rooms();
     if (rooms.length < 2) {
-      this.note('Hacen falta al menos dos grillas para conectarlas. Agrega una desde Mapa.');
+      this.note('Hacen falta al menos dos salas para conectarlas. Agrega una desde Salas y túneles.');
       return;
     }
     this.tunnelDraft.set({
@@ -357,7 +357,7 @@ export class MapController {
       return;
     }
     if (draft.from === draft.to) {
-      this.note('Un túnel tiene que unir dos grillas distintas.');
+      this.note('Un túnel tiene que unir dos salas distintas.');
       return;
     }
     // Vacio pasa a undefined, no a '' ni a []: asi la clave desaparece del
@@ -397,7 +397,7 @@ export class MapController {
     this.tunnelDraft.set(null);
     this.setTool('tunnel');
     this.tunnelTrace.set({ from: draft.from, points: [], width: draft.width, editId: draft.editId });
-    this.note('Trazando desde "' + draft.from + '": clics para marcar el camino, y clic en la grilla de destino.');
+    this.note('Trazando desde "' + draft.from + '": clics para marcar el camino, y clic en la sala de destino.');
   }
 
   roomToolDown(event: PointerEvent, cell: GridCoord): void {
@@ -451,7 +451,7 @@ export class MapController {
         row: drag.origin.row + drag.delta.row,
       });
       this.markDirty();
-      this.note('Grilla "' + drag.id + '" movida.');
+      this.note('Sala "' + drag.id + '" movida.');
       return;
     }
 
@@ -464,7 +464,7 @@ export class MapController {
 
   tunnelToolClick(event: PointerEvent, cell: GridCoord): void {
     if (this.rooms().length < 2) {
-      this.note('Hacen falta al menos dos grillas para trazar un túnel. Agrega una desde Mapa.');
+      this.note('Hacen falta al menos dos salas para trazar un túnel. Agrega una desde Salas y túneles.');
       return;
     }
     const room = roomAt(this.rooms(), cell);
@@ -472,11 +472,11 @@ export class MapController {
 
     if (!trace) {
       if (!room) {
-        this.note('Empieza el túnel con un clic dentro de una grilla.');
+        this.note('Empieza el túnel con un clic dentro de una sala.');
         return;
       }
       this.tunnelTrace.set({ from: room.id, points: [], width: DEFAULT_TUNNEL_WIDTH, editId: null });
-      this.note('Túnel desde "' + room.id + '": clics para marcar el camino, y clic en otra grilla para terminar.');
+      this.note('Túnel desde "' + room.id + '": clics para marcar el camino, y clic en otra sala para terminar.');
       return;
     }
 
@@ -485,7 +485,7 @@ export class MapController {
       return;
     }
     if (room) {
-      this.note('Esa es la grilla de origen: termina el túnel en otra.');
+      this.note('Esa es la sala de origen: termina el túnel en otra.');
       return;
     }
     this.tunnelTrace.set({ ...trace, points: [...trace.points, cell] });
@@ -527,8 +527,8 @@ export class MapController {
     this.markDirty();
     this.note(
       this.rooms().length === 0
-        ? 'Se quitó la última grilla: el nivel vuelve a ser una sola grilla rectangular.'
-        : 'Grilla "' + id + '" quitada, con sus túneles.',
+        ? 'Se quitó la última sala: el nivel vuelve a ser una sola sala rectangular.'
+        : 'Sala "' + id + '" quitada, con sus túneles.',
     );
   }
 
@@ -546,7 +546,7 @@ export class MapController {
   clearTileEdits(): void {
     this.levels.clearTileEdits();
     this.markDirty();
-    this.note('Retoques descartados: el mapa queda como lo generan las grillas y los túneles.');
+    this.note('Retoques descartados: el mapa queda como lo generan las salas y los túneles.');
   }
 
   // --- Zonas de puzzle -----------------------------------------------------

@@ -8,7 +8,7 @@
       <div class="modal__head">
         <h2 id="converter-title">Convertidor de imágenes</h2>
         <button class="icon-button" type="button" title="Cerrar" [disabled]="converter.busy()"
-                (click)="converter.close()">×</button>
+                (click)="converter.close()"><svg hcIcon="x"></svg></button>
       </div>
 
       <div class="modal__body">
@@ -76,13 +76,13 @@
                       {{ row.format }} {{ row.width }}×{{ row.height }} → PNG {{ size.width }}×{{ size.height }}
                       @if (converter.renamed(row)) { · nombre nuevo }
                     }
-                    @case ('done') { ✓ {{ row.message }} }
-                    @case ('failed') { ✗ {{ row.message }} }
+                    @case ('done') { <svg class="converter__status" hcIcon="check"></svg>{{ row.message }} }
+                    @case ('failed') { <svg class="converter__status" hcIcon="x"></svg>{{ row.message }} }
                   }
                 </div>
               </div>
               <button class="icon-button" type="button" title="Quitar de la lista" [disabled]="converter.busy()"
-                      (click)="converter.remove(row.index)">×</button>
+                      (click)="converter.remove(row.index)"><svg hcIcon="x"></svg></button>
             </li>
           } @empty {
             <li class="hint converter__empty">

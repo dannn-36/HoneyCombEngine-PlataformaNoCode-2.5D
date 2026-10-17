@@ -10,6 +10,7 @@
     "test": "ng test",
     "electron": "electron .",
     "dev": "node scripts/dev.js",
+    "icons": "node scripts/build-icons.mjs",
     "electron:build": "ng build && electron-builder"
   },
   "private": true,
@@ -19,6 +20,7 @@
     "@angular/compiler": "^22.1.0",
     "@angular/core": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
+    "@fontsource/chakra-petch": "^5.3.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -29,6 +31,7 @@
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
     "jsdom": "^28.0.0",
+    "lucide-static": "^1.58.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
     "vitest": "^4.0.8"

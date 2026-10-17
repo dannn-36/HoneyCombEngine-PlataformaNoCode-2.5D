@@ -7,7 +7,7 @@
              (click)="$event.stopPropagation()">
       <div class="modal__head">
         <h2 id="chars-title">Configurar personajes</h2>
-        <button class="icon-button" type="button" title="Cerrar" (click)="chars.closeCharacterEditor()">×</button>
+        <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="chars.closeCharacterEditor()"><svg hcIcon="x"></svg></button>
       </div>
 
       <div class="chareditor">
@@ -15,13 +15,23 @@
           @for (kind of chars.characterKinds; track kind.id) {
             <div class="chareditor__group">
               <div class="chareditor__grouphead">
-                <span>{{ kind.glyph }} {{ kind.label }}</span>
-                <button class="btn btn--small" type="button" [title]="'Nuevo ' + kind.label.toLowerCase()"
-                        (click)="chars.newCharacterDraft(kind.id)">+</button>
+                <span class="chareditor__kind"><svg [hcCell]="kind.type"></svg>{{ kind.label }}</span>
+                <button class="ibtn" type="button" [title]="'Nuevo ' + kind.label.toLowerCase()"
+                        [attr.aria-label]="'Nuevo ' + kind.label.toLowerCase()"
+                        (click)="chars.newCharacterDraft(kind.id)"><svg hcIcon="plus"></svg></button>
               </div>
               @for (preset of chars.savedPresetsOfKind(kind.id); track preset.id) {
                 <button class="tree__item" type="button" [class.is-active]="editor.savedId === preset.id"
                         (click)="chars.editCharacterPreset(preset.id)">
+                  <!-- Con sprite, su miniatura; sin sprite, la celda del tipo. El
+                       tipo ya va escrito en la cabecera del grupo. -->
+                  <span class="chareditor__thumb" [appTextureThumb]="preset.texture">
+                    @if (chars.presetSpriteStyle(preset); as style) {
+                      <span class="tile__sprite" [style]="style"></span>
+                    } @else {
+                      <svg [hcCell]="kind.type"></svg>
+                    }
+                  </span>
                   <span class="tree__label">{{ preset.name }}</span>
                 </button>
               } @empty {

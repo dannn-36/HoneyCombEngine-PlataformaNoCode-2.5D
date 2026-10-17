@@ -24,11 +24,14 @@
 // con lo que termina dibujando el juego.
 // =============================================================================
 
+import { iconImage } from './cell-image';
 import { characterOf } from './characters';
+import { entityKindStyle } from './entity-kinds';
 import { blockCenter, entitySpan } from './entity-blocks';
 import { legacyTiles, roomCenter, rectBetween } from './dungeon-layout';
 import { GridCoord, IsoProjection } from './iso-projection';
-import { shapeOf } from './iso-shapes';
+import { usesShapeSheet } from './iso-shapes';
+import { CanvasPalette } from './themes';
 import { GridConfig, Level, LevelEntity } from '../models/level.model';
 
 /** Margen desde el borde de arriba del canvas hasta la celda (0,0), sin pan. */
@@ -72,6 +75,22 @@ export interface CanvasScene {
     | null;
   tunnelTrace(): { from: string; points: GridCoord[] } | null;
   shapeSheet(): HTMLImageElement | null;
+  /** Colores del tema actual (ver services/theme.service.ts). */
+  palette(): CanvasPalette;
+  /** Rectangulo de Seleccionar area en curso, en pixeles del canvas; null si no hay. */
+  marquee(): CanvasRect | null;
+  /** La imagen del proyecto para una textura, si ya esta cargada (ver viewport/sprite-cache.ts). */
+  sprite(texture: string): HTMLImageElement | null;
+  /** La entidad bajo el puntero, para mostrar su nombre. */
+  hoveredEntityId(): string | null;
+}
+
+/** Rectangulo entre dos esquinas cualesquiera, en pixeles del canvas. */
+export interface CanvasRect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 export class IsoCanvasRenderer {
@@ -133,6 +152,32 @@ export class IsoCanvasRenderer {
   }
 
   /**
+   * Las entidades cuyo sprite toca el rectangulo (en pixeles del canvas): lo
+   * que elige Seleccionar area. Alcanza con tocarlo, como en los editores
+   * graficos: obligar a encerrar el sprite entero hace fallar al que arrastra
+   * un rectangulo justo.
+   */
+  entitiesInRect(area: CanvasRect, scene: CanvasScene): string[] {
+    const origin = this.origin(scene.size(), scene.pan());
+    const zoom = scene.zoom();
+    const grid = scene.level().grid;
+    const iso = new IsoProjection(grid.tileWidth, grid.tileHeight);
+    // Al espacio sin zoom de spriteBox, como en entityAt.
+    const left = (Math.min(area.x0, area.x1) - origin.x) / zoom;
+    const right = (Math.max(area.x0, area.x1) - origin.x) / zoom;
+    const top = (Math.min(area.y0, area.y1) - origin.y) / zoom;
+    const bottom = (Math.max(area.y0, area.y1) - origin.y) / zoom;
+
+    return scene
+      .level()
+      .entities.filter((entity) => {
+        const box = this.spriteBox(entity, iso.gridToScreen(blockCenter(entity)), 1);
+        return box.x <= right && box.x + box.w >= left && box.y <= bottom && box.y + box.h >= top;
+      })
+      .map((entity) => entity.id);
+  }
+
+  /**
    * Donde cae el sprite de una entidad en pantalla. Es la traduccion EXACTA de
    * lo que hace engine/main.cpp al encolar una entidad:
    *
@@ -173,16 +218,16 @@ export class IsoCanvasRenderer {
    *   fondo -> grilla -> ejes -> tiles -> celda bajo el cursor
    *         -> entidades por profundidad -> gizmo y textos de overlay
    *
-   * El aspecto sigue al viewport 3D de Blender a proposito: gris neutro sin
-   * tinte, lineas de grilla apenas mas claras que el fondo, y los dos ejes del
-   * mundo en rojo y verde. Ese codigo de color es el mismo que usa Blender
-   * (X rojo, Y verde) y aca sirve igual: dice de un vistazo hacia donde crecen
-   * la columna y la fila, que en isometrico no es obvio.
+   * El aspecto es el grafito calido del resto de la ventana: lineas de grilla
+   * apenas mas claras que el piso, y los dos ejes del mundo en rojo y verde
+   * (el codigo de color de los editores 3D, X rojo e Y verde), que dicen de un
+   * vistazo hacia donde crecen la columna y la fila, algo que en isometrico no
+   * es obvio. La seleccion va en el acento del tema, como en los paneles.
    *
-   * Las entidades se dibujan como rectangulos de color y no con su textura
-   * real: el editor no carga las imagenes del proyecto todavia. El color por
-   * tipo alcanza para componer la escena, y el ancla marca donde va a apoyarse
-   * de verdad en el runtime.
+   * Las entidades con sprite se dibujan con su sprite y nada mas: el sprite
+   * es la señal, y el nombre y el tipo van en texto, en una etiqueta que solo
+   * aparece al pasar el mouse o al elegirlas. Las que no tienen sprite (o
+   * todavia no se cargo) llevan un marcador punteado con el icono de su tipo.
    */
   draw(canvas: HTMLCanvasElement, scene: CanvasScene): void {
     const size = scene.size();
@@ -209,9 +254,11 @@ export class IsoCanvasRenderer {
     const iso = new IsoProjection(grid.tileWidth, grid.tileHeight);
     const selectedId = scene.selectedId();
     const hovered = scene.hovered();
+    const palette = scene.palette();
 
-    // Fondo del viewport: el gris de Blender en modo solido, sin nada de azul.
-    ctx.fillStyle = '#393939';
+    // Fondo del viewport: el gris del tema, un escalon por debajo del piso,
+    // para que el pixel art sea lo mas vivo de la pantalla.
+    ctx.fillStyle = palette.background;
     ctx.fillRect(0, 0, size.w, size.h);
 
     const halfW = (grid.tileWidth / 2) * zoom;
@@ -300,10 +347,10 @@ export class IsoCanvasRenderer {
       // no deja pisarlo ni lo dibuja. Se pinta mas oscuro, y encima solo las
       // celdas de piso con el gris de siempre, para que la forma de las salas
       // y de los tuneles se lea de un vistazo.
-      ctx.fillStyle = level.tiles ? '#262626' : '#333333';
+      ctx.fillStyle = level.tiles ? palette.void : palette.floor;
       ctx.fill();
       if (level.tiles) {
-        ctx.fillStyle = '#333333';
+        ctx.fillStyle = palette.floor;
         for (const tile of level.tiles) {
           if (tile.floor !== false) {
             diamond(tile);
@@ -312,10 +359,10 @@ export class IsoCanvasRenderer {
         }
       }
 
-      // Debajo: un pelo mas claras que el suelo, como las de Blender. Encima se
-      // dibujan despues de las entidades (ver el final de draw()).
+      // Debajo: un pelo mas claras que el piso. Encima se dibujan despues de
+      // las entidades (ver el final de draw()).
       if (!scene.gridOnTop()) {
-        gridLines('#4a4a4a');
+        gridLines(palette.gridUnder);
       }
 
       // Los dos ejes que salen de la celda (0,0), con el color de Blender:
@@ -352,9 +399,9 @@ export class IsoCanvasRenderer {
       for (const tile of wallTiles) {
         if (tile.wall) {
           diamond(tile);
-          ctx.fillStyle = 'rgba(176, 106, 70, 0.55)';
+          ctx.fillStyle = palette.wallFill;
           ctx.fill();
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.strokeStyle = palette.wallStroke;
           ctx.stroke();
         }
       }
@@ -376,14 +423,14 @@ export class IsoCanvasRenderer {
         ctx.lineTo(corner.x, corner.y);
       }
       ctx.closePath();
-      ctx.strokeStyle = 'rgba(92, 138, 208, 0.9)';
+      ctx.strokeStyle = 'rgba(200, 190, 172, 0.85)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([5, 4]);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.font = '600 11px Inter, "Segoe UI", sans-serif';
-      ctx.fillStyle = '#a9c4ec';
+      ctx.font = '600 12px "Chakra Petch", "Segoe UI", sans-serif';
+      ctx.fillStyle = '#e2d9c9';
       ctx.textAlign = 'center';
       ctx.fillText(room.id, corners[0].x, corners[0].y + 18);
       ctx.textAlign = 'left';
@@ -404,18 +451,18 @@ export class IsoCanvasRenderer {
         ctx.lineTo(corner.x, corner.y);
       }
       ctx.closePath();
-      ctx.fillStyle = 'rgba(224, 160, 60, 0.07)';
+      ctx.fillStyle = 'rgba(111, 196, 214, 0.07)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(224, 160, 60, 0.9)';
+      ctx.strokeStyle = 'rgba(111, 196, 214, 0.9)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([2, 4]);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.font = '600 11px Inter, "Segoe UI", sans-serif';
-      ctx.fillStyle = '#f0c07a';
+      ctx.font = '600 12px "Chakra Petch", "Segoe UI", sans-serif';
+      ctx.fillStyle = '#9fdcea';
       ctx.textAlign = 'center';
-      ctx.fillText('◇ ' + zone.id, corners[0].x, corners[0].y + 32);
+      ctx.fillText('zona ' + zone.id, corners[0].x, corners[0].y + 32);
       ctx.textAlign = 'left';
     }
 
@@ -498,9 +545,9 @@ export class IsoCanvasRenderer {
     // resalta nada, que es la pista visual de que ahi no se puede colocar.
     if (hovered && iso.isValidCoord(hovered, grid.width, grid.height)) {
       diamond(hovered);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+      ctx.fillStyle = palette.hoverFill;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.strokeStyle = palette.hoverStroke;
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -512,17 +559,18 @@ export class IsoCanvasRenderer {
     );
 
     const selectedIds = scene.selectedIds();
+    const hoveredId = scene.hoveredEntityId();
+    const tags: { text: string; x: number; y: number }[] = [];
 
     for (const entity of ordered) {
       const { x, y } = project(blockCenter(entity));
-      // Dos estados distintos, como en Blender: "seleccionada" (contorno mas
-      // apagado) y "activa" (la ultima que se toco, en naranja pleno). Con una
+      // Dos estados distintos: "seleccionada" (contorno mas apagado) y
+      // "activa" (la ultima que se toco, en miel plena). Con una
       // seleccion de varias, sin esa diferencia no se sabria cual es la que
       // esta mostrando el inspector.
       const isSelected = selectedIds.has(entity.id);
       const isActive = entity.id === selectedId;
 
-      // Una primitiva de bloqueo se dibuja como solido isometrico; el resto,
       // Caja del sprite en pantalla, con la MISMA regla que main.cpp:
       // centrado en X sobre el punto de la celda, borde inferior en ese punto,
       // y groundOffset bajandolo. Antes el editor lo dibujaba con la esquina
@@ -530,143 +578,195 @@ export class IsoCanvasRenderer {
       // entidad se veia en un lugar en el editor y en otro en el juego.
       const box = this.spriteBox(entity, { x, y }, zoom);
 
-      // Si es una primitiva del sheet se dibuja el sprite REAL; asi el editor
-      // muestra exactamente los pixeles que va a mostrar el juego. Lo demas
-      // sigue siendo un rectangulo de color, porque el editor todavia no carga
-      // las texturas del proyecto desde el disco.
+      // LA REGLA: si la entidad tiene sprite, el sprite es la señal. Se dibuja
+      // solo el sprite, con los mismos pixeles que va a mostrar el juego, sin
+      // rectangulo de color ni celda encima. El tipo va en texto, en la
+      // etiqueta que aparece al pasar el mouse o al elegirla (mas abajo).
+      //
+      // Sprite es: el recorte del sheet de figuras, o la imagen del proyecto
+      // si ya se pudo cargar (ver viewport/sprite-cache.ts). Sin ninguna de
+      // las dos queda un marcador discreto: contorno punteado en el color del
+      // tipo y su icono chico, que sigue distinguiendo el tipo por la forma.
+      //
       // Oculta al empezar (una puerta de puzzle): se dibuja a medias, porque
       // en el juego no se ve hasta que un evento la muestra.
       ctx.globalAlpha = entity.hidden ? 0.4 : 1;
       const sheet = scene.shapeSheet();
-      const def = shapeOf(entity);
+      const image = usesShapeSheet(entity.texture) ? sheet : scene.sprite(entity.texture);
 
-      if (def && sheet) {
-        const src = def.sourceRect;
-        ctx.drawImage(sheet, src.x, src.y, src.width, src.height, box.x, box.y, box.w, box.h);
+      if (image) {
+        const src = entity.sourceRect;
+        ctx.drawImage(image, src.x, src.y, src.width, src.height, box.x, box.y, box.w, box.h);
       } else {
-        ctx.fillStyle = this.entityColor(entity.type);
-        ctx.fillRect(box.x, box.y, box.w, box.h);
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+        const kind = entityKindStyle(entity.type);
+        const color = this.entityColor(entity.type);
+        ctx.setLineDash([3, 3]);
         ctx.lineWidth = 1;
-        ctx.strokeRect(box.x + 0.5, box.y + 0.5, box.w - 1, box.h - 1);
+        ctx.strokeStyle = color;
+        ctx.strokeRect(Math.round(box.x) + 0.5, Math.round(box.y) + 0.5, Math.round(box.w) - 1, Math.round(box.h) - 1);
+        ctx.setLineDash([]);
+        const icon = iconImage(kind.icon, color);
+        if (icon) {
+          const side = Math.min(14, Math.max(9, Math.min(box.w, box.h) * 0.6));
+          ctx.drawImage(icon, box.x + box.w / 2 - side / 2, box.y + box.h / 2 - side / 2, side, side);
+        }
       }
       ctx.globalAlpha = 1;
       if (entity.hidden) {
         ctx.setLineDash([4, 3]);
-        ctx.strokeStyle = 'rgba(240, 192, 122, 0.9)';
+        ctx.strokeStyle = palette.hiddenOutline;
         ctx.lineWidth = 1;
         ctx.strokeRect(box.x - 1, box.y - 1, box.w + 2, box.h + 2);
         ctx.setLineDash([]);
       }
       // Corona sobre un jefe: es lo que en el juego tiene la barra de vida grande.
-      if (entity.boss) {
-        ctx.font = Math.max(11, 8 * zoom) + 'px sans-serif';
-        ctx.fillStyle = '#ffd66e';
-        ctx.textAlign = 'center';
-        ctx.fillText('♛', box.x + box.w / 2, box.y - 3);
-        ctx.textAlign = 'left';
+      const crown = entity.boss ? iconImage('crown', '#f7c766') : null;
+      if (crown) {
+        const side = Math.max(14, 7 * zoom);
+        ctx.drawImage(crown, box.x + box.w / 2 - side / 2, box.y - side - 2, side, side);
       }
 
       // Lo que bloquea, sobre el piso y en celdas (como lo mide Movement.cpp):
-      //   Pared    -> el bloque de celdas entero, relleno rojo.
-      //   Colision -> solo la huella del collider (rombo o elipse), amarillo.
+      //   Pared    -> el bloque de celdas entero, en rojo.
+      //   Colision -> solo la huella del collider (rombo o elipse), en ambar.
       //   Sensor   -> caja punteada verde: no frena, solo dispara on_collision.
-      // Son comportamientos distintos, y sin distinguirlos hay que abrir el
-      // inspector de cada entidad para saber cual es cual.
-      const { col: centerCol, row: centerRow } = blockCenter(entity);
-      const tracePath = (points: GridCoord[]) => {
-        ctx.beginPath();
-        points.map(project).forEach((point, index) =>
-          index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y),
-        );
-        ctx.closePath();
-      };
-      if (scene.showColliders() && entity.wall) {
-        const half = entitySpan(entity) / 2;
-        tracePath([
-          { col: centerCol - half, row: centerRow - half },
-          { col: centerCol + half, row: centerRow - half },
-          { col: centerCol + half, row: centerRow + half },
-          { col: centerCol - half, row: centerRow + half },
-        ]);
-        ctx.fillStyle = 'rgba(192, 80, 80, 0.28)';
-        ctx.fill();
-        ctx.strokeStyle = '#c05050';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-      if (scene.showColliders() && entity.collider) {
-        const solid = entity.collider.solid === true;
-        ctx.strokeStyle = solid ? '#e0c04a' : '#6b9e3f';
-        ctx.lineWidth = solid ? 1.5 : 1;
-
-        if (solid) {
-          const halfCols = entity.collider.width / grid.tileWidth / 2;
-          const halfRows = entity.collider.height / grid.tileHeight / 2;
-          if (entity.collider.shape === 'ellipse') {
-            const steps = 32;
-            tracePath(
-              Array.from({ length: steps }, (_, i) => {
-                const angle = (i / steps) * Math.PI * 2;
-                return { col: centerCol + Math.cos(angle) * halfCols, row: centerRow + Math.sin(angle) * halfRows };
-              }),
-            );
-          } else {
-            tracePath([
-              { col: centerCol - halfCols, row: centerRow - halfRows },
-              { col: centerCol + halfCols, row: centerRow - halfRows },
-              { col: centerCol + halfCols, row: centerRow + halfRows },
-              { col: centerCol - halfCols, row: centerRow + halfRows },
-            ]);
-          }
-          ctx.fillStyle = 'rgba(224, 192, 74, 0.2)';
+      // Se ven las de la entidad elegida, finas y apagadas; con "Colisiones"
+      // encendido, las de todas y marcadas, para revisar el nivel entero.
+      const showAll = scene.showColliders();
+      if (showAll || isSelected) {
+        const { col: centerCol, row: centerRow } = blockCenter(entity);
+        const tracePath = (points: GridCoord[]) => {
+          ctx.beginPath();
+          points.map(project).forEach((point, index) =>
+            index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y),
+          );
+          ctx.closePath();
+        };
+        ctx.globalAlpha = showAll ? 1 : 0.6;
+        if (entity.wall) {
+          const half = entitySpan(entity) / 2;
+          tracePath([
+            { col: centerCol - half, row: centerRow - half },
+            { col: centerCol + half, row: centerRow - half },
+            { col: centerCol + half, row: centerRow + half },
+            { col: centerCol - half, row: centerRow + half },
+          ]);
+          ctx.fillStyle = showAll ? 'rgba(192, 80, 80, 0.28)' : 'rgba(192, 80, 80, 0.12)';
           ctx.fill();
+          ctx.strokeStyle = '#c05050';
+          ctx.lineWidth = showAll ? 2 : 1;
           ctx.stroke();
-        } else {
-          // Un sensor no bloquea: solo dispara on_collision, y el motor lo
-          // detecta con OTRA caja, en pixeles y colgando del punto de la celda
-          // (el Submit a CollisionSystem en main.cpp). Esa es la que se dibuja.
-          ctx.setLineDash([3, 3]);
-          ctx.strokeRect(x, y, entity.collider.width * zoom, entity.collider.height * zoom);
-          ctx.setLineDash([]);
         }
+        if (entity.collider) {
+          const solid = entity.collider.solid === true;
+          ctx.strokeStyle = solid ? '#e0c04a' : '#6b9e3f';
+          ctx.lineWidth = solid && showAll ? 1.5 : 1;
+
+          if (solid) {
+            const halfCols = entity.collider.width / grid.tileWidth / 2;
+            const halfRows = entity.collider.height / grid.tileHeight / 2;
+            if (entity.collider.shape === 'ellipse') {
+              const steps = 32;
+              tracePath(
+                Array.from({ length: steps }, (_, i) => {
+                  const angle = (i / steps) * Math.PI * 2;
+                  return { col: centerCol + Math.cos(angle) * halfCols, row: centerRow + Math.sin(angle) * halfRows };
+                }),
+              );
+            } else {
+              tracePath([
+                { col: centerCol - halfCols, row: centerRow - halfRows },
+                { col: centerCol + halfCols, row: centerRow - halfRows },
+                { col: centerCol + halfCols, row: centerRow + halfRows },
+                { col: centerCol - halfCols, row: centerRow + halfRows },
+              ]);
+            }
+            ctx.fillStyle = showAll ? 'rgba(224, 192, 74, 0.2)' : 'rgba(224, 192, 74, 0.08)';
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            // Un sensor no bloquea: solo dispara on_collision, y el motor lo
+            // detecta con OTRA caja, en pixeles y colgando del punto de la celda
+            // (el Submit a CollisionSystem en main.cpp). Esa es la que se dibuja.
+            ctx.setLineDash([3, 3]);
+            ctx.strokeRect(x, y, entity.collider.width * zoom, entity.collider.height * zoom);
+            ctx.setLineDash([]);
+          }
+        }
+        ctx.globalAlpha = 1;
       }
 
-      // Contorno naranja, igual que el de Blender: un halo oscuro por fuera
-      // para que se lea sobre cualquier color de relleno, y el naranja pegado
-      // al sprite. El objeto activo lo lleva pleno; el resto de la seleccion,
-      // en un tono mas apagado.
+      // Contorno de miel: un halo oscuro por fuera para que se lea sobre
+      // cualquier sprite, y la miel pegada a el. El objeto activo lo lleva
+      // pleno; el resto de la seleccion, en un tono mas apagado.
       if (isSelected) {
         ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.strokeStyle = palette.halo;
         ctx.strokeRect(box.x - 2, box.y - 2, box.w + 4, box.h + 4);
         ctx.lineWidth = 1.5;
-        ctx.strokeStyle = isActive ? '#ff8b1f' : '#b06a26';
+        ctx.strokeStyle = isActive ? palette.active : palette.selected;
         ctx.strokeRect(box.x - 2, box.y - 2, box.w + 4, box.h + 4);
+
+        // Ancla real del runtime: el punto de la celda donde apoya. Solo en lo
+        // elegido: en todas era un punto mas de ruido.
+        ctx.fillStyle = isActive ? palette.active : palette.anchor;
+        ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
       }
 
-      // Ancla real del runtime: la punta superior del rombo (origin {0,0}).
-      ctx.fillStyle = isActive ? '#ff8b1f' : 'rgba(255, 255, 255, 0.55)';
-      ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
-
-      // El id solo desde 2x: mas chico, las etiquetas se pisan entre si y
-      // ensucian mas de lo que ayudan.
-      if (zoom >= 2) {
-        ctx.font = '10px Inter, "Segoe UI", sans-serif';
-        ctx.fillStyle = isSelected ? '#ffd0a0' : 'rgba(230, 230, 230, 0.6)';
-        ctx.fillText(entity.id, box.x, box.y - 6);
+      // Nombre y tipo: solo al pasar el mouse o con la entidad elegida. Se
+      // dibujan despues de todas las entidades, para que ninguna los tape.
+      if (isSelected || entity.id === hoveredId) {
+        tags.push({ text: entity.id + ' · ' + entityKindStyle(entity.type).label, x: box.x + box.w / 2, y: box.y });
       }
     }
 
-    // Encima: despues de las entidades, en azul claro como el acento de Godot.
-    // Opaco y con grosor que crece con el zoom: una linea de 1px se pierde
-    // entre los bordes oscuros del pixel art cuando se acerca la vista, y con
+    // Etiquetas de nombre y tipo: una pastilla chica y sobria sobre el sprite.
+    ctx.font = '11px "Chakra Petch", "Segoe UI", sans-serif';
+    ctx.textBaseline = 'middle';
+    for (const tag of tags) {
+      const width = ctx.measureText(tag.text).width + 12;
+      const height = 18;
+      const left = Math.round(tag.x - width / 2);
+      const top = Math.round(tag.y - height - 6);
+      ctx.fillStyle = palette.tagBg;
+      ctx.beginPath();
+      ctx.roundRect(left, top, width, height, 4);
+      ctx.fill();
+      ctx.strokeStyle = palette.tagLine;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = palette.tagText;
+      ctx.fillText(tag.text, left + 6, top + height / 2 + 0.5);
+    }
+    ctx.textBaseline = 'alphabetic';
+
+    // Encima: despues de las entidades, en el tono de contraste del tema. Opaco
+    // y con grosor que crece con el zoom: una linea de 1px se pierde entre los
+    // bordes oscuros del pixel art cuando se acerca la vista, y con
     // transparencia se mezclaba con el sprite.
     if (scene.showGrid() && scene.gridOnTop()) {
-      gridLines('#70bafa', Math.min(4, Math.max(2, zoom * 0.5)));
+      gridLines(palette.gridOver, Math.min(4, Math.max(2, zoom * 0.5)));
     }
 
-    this.drawAxisGizmo(ctx, size, iso, grid);
+    // Seleccionar area: el rectangulo que se esta arrastrando, encima de todo
+    // lo del nivel. Borde punteado en el acento, como el marco de un editor
+    // grafico, y un relleno apenas visible para leer el area.
+    const marquee = scene.marquee();
+    if (marquee) {
+      const x = Math.min(marquee.x0, marquee.x1);
+      const y = Math.min(marquee.y0, marquee.y1);
+      const w = Math.abs(marquee.x1 - marquee.x0);
+      const h = Math.abs(marquee.y1 - marquee.y0);
+      ctx.fillStyle = palette.marqueeFill;
+      ctx.fillRect(x, y, w, h);
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = palette.active;
+      ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(w), Math.round(h));
+      ctx.setLineDash([]);
+    }
+
+    this.drawAxisGizmo(ctx, size, iso, grid, palette);
   }
 
   /**
@@ -682,6 +782,7 @@ export class IsoCanvasRenderer {
     size: { w: number; h: number },
     iso: IsoProjection,
     grid: GridConfig,
+    palette: CanvasPalette,
   ): void {
     const radius = 30;
     const cx = size.w - radius - 18;
@@ -715,7 +816,7 @@ export class IsoCanvasRenderer {
       ctx.fill();
 
       ctx.fillStyle = '#101010';
-      ctx.font = '600 9px Inter, "Segoe UI", sans-serif';
+      ctx.font = '600 11px "Chakra Petch", "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(label, tipX, tipY + 0.5);
@@ -725,13 +826,14 @@ export class IsoCanvasRenderer {
       ctx.textBaseline = 'alphabetic';
     };
 
-    arm(colDir, '#c54f4f', 'C');
-    arm(rowDir, '#709e3c', 'F');
+    // Rojo y verde claros: la letra oscura encima da 5:1 o mas.
+    arm(colDir, '#e0605a', 'C');
+    arm(rowDir, '#79b84a', 'F');
 
     // Medidas del nivel bajo el gizmo, como el texto de estadisticas del
     // viewport de Blender.
-    ctx.font = '10px Inter, "Segoe UI", sans-serif';
-    ctx.fillStyle = 'rgba(230, 230, 230, 0.45)';
+    ctx.font = '11px "Chakra Petch", "Segoe UI", sans-serif';
+    ctx.fillStyle = palette.stats;
     ctx.textAlign = 'right';
     ctx.fillText(
       grid.width + ' x ' + grid.height + '  ·  ' + grid.tileWidth + 'x' + grid.tileHeight + ' px',
@@ -743,14 +845,14 @@ export class IsoCanvasRenderer {
 
   /**
    * Color de relleno por tipo de entidad. Los arquetipos de la paleta traen el
-   * suyo, asi que el color del viewport y el del icono del panel Personajes no
-   * pueden separarse. Los tipos son texto libre en el schema: lo que no
-   * reconoce nadie cae al azul por defecto, sin romper nada.
+   * suyo, asi que el color del viewport y el de la celda de los paneles no
+   * pueden separarse (ver core/entity-kinds.ts). Los tipos son texto libre en
+   * el schema: lo que no reconoce nadie cae a un gris neutro, sin romper nada.
    */
   entityColor(type: string): string {
     const character = characterOf({ type });
     if (character) {
       return character.color;
     }
-    return type === 'obstacle' ? '#c05050' : '#4772b3';
+    return entityKindStyle(type).color;
   }}

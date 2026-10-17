@@ -16,11 +16,12 @@
 // markup (ver dialogs/dialog-base.ts). Por eso app.scss no esta encapsulado:
 // es el tema de toda la ventana, dialogos incluidos.
 //
-// La interfaz esta modelada sobre la de Blender: areas con cabecera propia
-// separadas por un surco, pestanas de workspace que cambian que editores estan
-// abiertos, propiedades en paneles plegables, y navegacion del viewport con
-// rueda (zoom al cursor), boton medio (desplazar) e Inicio (encuadrar). El tema
-// visual vive entero en app.scss.
+// La ventana se arma como la de un motor de juegos: barra de herramientas
+// arriba con Ejecutar al centro, la escena a la izquierda, el viewport al medio,
+// el inspector a la derecha y un dock abajo con los recursos para colocar, los
+// eventos, la consola y el visor de archivos. El viewport se navega con rueda
+// (zoom al cursor), boton medio (desplazar) e Inicio (encuadrar). El tema visual
+// vive entero en app.scss; los iconos, en ui/icon.ts.
 //
 // App es el SHELL: el estado que es de la ventana entera, la superficie de
 // comandos (barra de menus y atajos) y el cableado. Lo demas vive afuera:
@@ -103,6 +104,9 @@ import { ImageConverterController } from './textures/image-converter.controller'
 import { BackgroundPickerController } from './inspector/background-picker.controller';
 import { PanelsController } from './ui/panels.controller';
 import { NamePromptController } from './ui/name-prompt.controller';
+import { Cell, Icon, IconSprite } from './ui/icon';
+import type { IconName } from './ui/icons.generated';
+import { entityKindStyle } from './core/entity-kinds';
 import { CatalogService } from './services/catalog.service';
 import { ItemLibraryService } from './services/item-library.service';
 import { LevelService } from './services/level.service';
@@ -116,14 +120,21 @@ import { ViewportController } from './viewport/viewport.controller';
 import { ProjectController } from './project/project.controller';
 import { TransitionController } from './events/transition.controller';
 import { ItemsPanelController } from './combat/items-panel.controller';
+import { ThemeService } from './services/theme.service';
+import { THEMES } from './core/themes';
+import { textureName } from './core/sprite-style';
+import { LevelEntity } from './models/level.model';
 
 /**
- * Espacio de trabajo activo, al estilo de las workspaces de Blender: la pestana
- * de arriba no cambia de pantalla, cambia QUE editores estan abiertos. En
- * "layout" el viewport se queda con todo el alto; las otras dos abren el editor
- * de abajo con eventos o con la consola.
+ * Pestaña del dock de abajo, como el cajón de contenido de un motor: "layout"
+ * son los recursos para colocar (figuras, personajes, objetos, texturas), y las
+ * otras tres el editor de eventos, la consola y el visor de archivos. El nombre
+ * interno "layout" quedo de cuando esa pestaña dejaba el viewport a todo alto.
  */
 type Workspace = 'layout' | 'eventos' | 'salida' | 'archivo';
+
+/** Categoria del explorador de recursos del dock. */
+type AssetTab = 'figuras' | 'personajes' | 'objetos' | 'texturas';
 
 /**
  * Pestana del editor de propiedades (la columna de iconos a su izquierda, como
@@ -148,20 +159,54 @@ const ENTITY_WARN_THRESHOLD = 150;
 /** Nombre de cada herramienta en el menu Editar > Herramienta. */
 const TOOL_LABELS: Record<Tool, string> = {
   select: 'Seleccionar',
+  marquee: 'Seleccionar área',
   place: 'Colocar entidad',
   floor: 'Alternar piso',
   wall: 'Alternar pared',
-  room: 'Dibujar grilla',
+  room: 'Dibujar sala',
   tunnel: 'Trazar túnel',
 };
 
-/** Nombre de cada espacio de trabajo en el menu Ver > Espacio de trabajo. */
+/** Nombre de cada pestaña del dock, en el dock y en el menu Ver > Panel inferior. */
 const WORKSPACE_LABELS: Record<Workspace, string> = {
-  layout: 'Layout',
+  layout: 'Recursos',
   eventos: 'Eventos',
-  salida: 'Salida',
-  archivo: 'Archivo',
+  salida: 'Consola',
+  // No "Archivo": se confundia con el menu Archivo. Muestra el archivo elegido
+  // en Proyecto, sin editarlo.
+  archivo: 'Vista previa',
 };
+
+/**
+ * Icono, atajo y explicacion de cada herramienta de la barra. Los atajos son
+ * los numeros 1 a 7, en el mismo orden en que se ven: no chocan con ningun otro
+ * atajo del editor (X borra, Shift+D duplica, los demas llevan Ctrl).
+ */
+const TOOL_BUTTONS: readonly { id: Tool; icon: IconName; key: string; hint: string }[] = [
+  { id: 'select', icon: 'mouse-pointer-2', key: '1', hint: 'Seleccionar: clic para elegir, arrastrar para mover' },
+  { id: 'marquee', icon: 'mouse-pointer-square-dashed', key: '2', hint: 'Seleccionar área: arrastra un rectángulo para elegir varios a la vez' },
+  { id: 'place', icon: 'stamp', key: '3', hint: 'Colocar: pone lo elegido en Recursos (figura, personaje, objeto o textura)' },
+  { id: 'floor', icon: 'grid-2x2', key: '4', hint: 'Piso: una celda sin suelo no se puede pisar' },
+  { id: 'wall', icon: 'brick-wall', key: '5', hint: 'Pared: bloquea el paso en esa celda' },
+  { id: 'room', icon: 'square-dashed', key: '6', hint: 'Sala: arrastra sobre el vacío para dibujar una nueva, o dentro de una para moverla' },
+  { id: 'tunnel', icon: 'route', key: '7', hint: 'Túnel: trázalo a mano, de una sala a otra' },
+];
+
+/** Categorias del explorador de recursos, en el orden en que se usan al armar un nivel. */
+const ASSET_TABS: readonly { id: AssetTab; label: string; icon: IconName }[] = [
+  { id: 'figuras', label: 'Figuras', icon: 'cuboid' },
+  { id: 'personajes', label: 'Personajes', icon: 'users' },
+  { id: 'objetos', label: 'Objetos', icon: 'package' },
+  { id: 'texturas', label: 'Texturas', icon: 'image' },
+];
+
+/** Pestañas del dock con su icono. */
+const DOCK_TABS: readonly { id: Workspace; icon: IconName }[] = [
+  { id: 'layout', icon: 'shapes' },
+  { id: 'eventos', icon: 'zap' },
+  { id: 'salida', icon: 'terminal' },
+  { id: 'archivo', icon: 'file-text' },
+];
 
 /** Cuanto mueve cada flecha del teclado, en celdas de la grilla. */
 const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
@@ -178,6 +223,9 @@ const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
   imports: [
     MenuBar,
     NgTemplateOutlet,
+    Icon,
+    Cell,
+    IconSprite,
     TextureThumbDirective,
     RoomDialog,
     TunnelDialog,
@@ -200,12 +248,15 @@ const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
   // Los atajos se escuchan en window y no en el canvas: en Blender funcionan
   // con el puntero sobre cualquier editor, no solo sobre el viewport, y ademas
   // el canvas no tiene foco propio (habria que darle tabindex y pedirlo a mano).
-  host: { '(window:keydown)': 'onKeyDown($event)' },
+  // El tema va como atributo en app-root: app.scss redefine los colores por
+  // [data-theme], y los dialogos, que se dibujan adentro, lo heredan.
+  host: { '(window:keydown)': 'onKeyDown($event)', '[attr.data-theme]': 'theme.theme()' },
 })
 export class App {
   // --- Servicios ------------------------------------------------------------
 
   readonly project = inject(ProjectService);
+  readonly theme = inject(ThemeService);
 
   readonly levels = inject(LevelService);
 
@@ -237,6 +288,8 @@ export class App {
   readonly log = signal<string[]>([]);
 
   readonly workspace = signal<Workspace>('layout');
+
+  readonly assetTab = signal<AssetTab>('figuras');
 
   readonly inspectorTab = signal<InspectorTab>('objeto');
 
@@ -300,7 +353,7 @@ export class App {
     (error) => this.describe(error),
     (node) => this.openProjectLevel(node),
     (name) => this.palette.selectTexture(name),
-    () => this.workspace.set('archivo'),
+    () => this.showDock('archivo'),
     (request) => this.prompt.ask(request),
   );
 
@@ -316,7 +369,7 @@ export class App {
   /** La biblioteca de texturas del proyecto. Ver textures/textures.controller.ts. */
   readonly tex: TexturesController = new TexturesController(
     (path) => this.explorer.reloadDir(path),
-    (id) => this.panels.expand(id),
+    () => this.showAssets('texturas'),
   );
 
   /** Herramientas > Convertidor de imagenes. Ver textures/image-converter.controller.ts. */
@@ -358,7 +411,54 @@ export class App {
   );
 
   /** Los formularios del inspector. Ver inspector/inspector.controller.ts. */
-  readonly inspector: InspectorController = new InspectorController(() => this.dirty.set(true));
+  readonly inspector: InspectorController = new InspectorController(
+    () => this.dirty.set(true),
+    (message) => this.note(message),
+  );
+
+  /** El selector de imagen de Apariencia, desplegado o no. */
+  readonly texturePickerOpen = signal(false);
+
+  /** El selector de color de fondo completo (cuadro, tono y RGB), desplegado o no. */
+  readonly colorPickerOpen = signal(false);
+
+  /**
+   * Cambia de pestaña en el inspector y vuelve arriba: las dos comparten el
+   * mismo contenedor, y sin esto la otra se abria a la altura del scroll de la
+   * anterior, con su primer panel fuera de la vista.
+   */
+  showInspectorTab(tab: InspectorTab, body: HTMLElement): void {
+    this.inspectorTab.set(tab);
+    body.scrollTop = 0;
+  }
+
+  /** Flechas izquierda y derecha entre las dos pestañas del inspector, como en cualquier lista de pestañas. */
+  onInspectorTabsKey(event: KeyboardEvent, body: HTMLElement): void {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+      return;
+    }
+    event.preventDefault();
+    const next: InspectorTab = this.inspectorTab() === 'objeto' ? 'escena' : 'objeto';
+    this.showInspectorTab(next, body);
+    document.getElementById('inspector-tab-' + next)?.focus();
+  }
+
+  /**
+   * true si la entidad apunta a una imagen que no esta en assets/textures/.
+   * Solo con el proyecto en disco: en el navegador no hay biblioteca que mirar.
+   */
+  textureMissing(entity: LevelEntity): boolean {
+    if (!this.hasFileSystem || this.inspector.usesShapeSheet(entity)) {
+      return false;
+    }
+    const name = textureName(entity.texture);
+    return !name || !this.tex.textures().includes(name);
+  }
+
+  /** Nombre de archivo de la imagen de una entidad, sin la carpeta. */
+  textureLabel(entity: LevelEntity): string {
+    return textureName(entity.texture) || 'sin imagen';
+  }
 
   readonly bg: BackgroundPickerController = new BackgroundPickerController(() => this.dirty.set(true));
 
@@ -417,7 +517,7 @@ export class App {
     (message) => this.note(message),
     () => this.dirty.set(true),
     () => this.proj.levelFiles(),
-    () => this.workspace.set('eventos'),
+    () => this.showDock('eventos'),
   );
 
   readonly combat: CombatInspectorController = new CombatInspectorController(() => this.dirty.set(true));
@@ -425,7 +525,7 @@ export class App {
   readonly puzzle: PuzzleController = new PuzzleController(
     (message) => this.note(message),
     () => this.dirty.set(true),
-    () => this.workspace.set('eventos'),
+    () => this.showDock('eventos'),
   );
 
   /**
@@ -456,7 +556,44 @@ export class App {
 
   readonly shapes = SHAPES;
 
+  /** Los materiales de las figuras, en el orden del sheet: piedra (las de siempre) primero. */
+  readonly shapeMaterials = [...new Map(SHAPES.map((shape) => [shape.material, shape.materialLabel])).entries()].map(
+    ([id, label]) => ({ id, label }),
+  );
+
+  /** Material elegido en Recursos › Figuras: la paleta muestra solo esas. */
+  readonly shapeMaterial = signal<string>('stone');
+
+  readonly visibleShapes = computed(() => SHAPES.filter((shape) => shape.material === this.shapeMaterial()));
+
   readonly characters = CHARACTERS;
+
+  readonly toolButtons = TOOL_BUTTONS;
+
+  readonly toolLabels = TOOL_LABELS;
+
+  readonly assetTabs = ASSET_TABS;
+
+  readonly dockTabs = DOCK_TABS;
+
+  readonly workspaceLabels = WORKSPACE_LABELS;
+
+  /** Nombre, icono y color del tipo de una entidad (ver core/entity-kinds.ts). */
+  readonly kindOf = entityKindStyle;
+
+  /** Cuantas cosas hay en cada categoria de recursos, para su contador. */
+  assetCount(tab: AssetTab): number {
+    switch (tab) {
+      case 'figuras':
+        return this.shapes.length;
+      case 'personajes':
+        return this.chars.allPresets().length;
+      case 'objetos':
+        return this.itemLibrary.items().length;
+      case 'texturas':
+        return this.tex.textures().length;
+    }
+  }
 
   /**
    * Estilo de una miniatura de la paleta: recorta la celda de la figura del
@@ -556,11 +693,12 @@ export class App {
             kind: 'submenu',
             label: 'Herramienta',
             emptyLabel: '',
-            items: (['select', 'place', 'floor', 'wall', 'room', 'tunnel'] as const).map((tool) => ({
+            items: TOOL_BUTTONS.map((tool) => ({
               kind: 'action' as const,
-              label: TOOL_LABELS[tool],
-              checked: this.palette.tool() === tool,
-              run: () => this.palette.setTool(tool),
+              label: TOOL_LABELS[tool.id],
+              shortcut: tool.key,
+              checked: this.palette.tool() === tool.id,
+              run: () => this.palette.setTool(tool.id),
             })),
           },
         ],
@@ -569,23 +707,36 @@ export class App {
         id: 'ver',
         label: 'Ver',
         items: [
-          { kind: 'action', label: 'Barra lateral', shortcut: 'Ctrl+B', checked: this.panels.sidebarVisible(), run: () => this.panels.toggleSidebar() },
-          { kind: 'action', label: 'Panel de propiedades', checked: this.panels.inspectorVisible(), run: () => this.panels.toggleInspector() },
+          { kind: 'action', label: 'Escena', shortcut: 'Ctrl+B', checked: this.panels.sidebarVisible(), run: () => this.panels.toggleSidebar() },
+          { kind: 'action', label: 'Inspector', checked: this.panels.inspectorVisible(), run: () => this.panels.toggleInspector() },
+          { kind: 'action', label: 'Panel inferior', shortcut: 'Ctrl+J', checked: this.panels.dockOpen(), run: () => this.panels.toggleDock() },
           {
             kind: 'submenu',
-            label: 'Espacio de trabajo',
+            label: 'Pestaña del panel inferior',
             emptyLabel: '',
             items: (['layout', 'eventos', 'salida', 'archivo'] as const).map((workspace) => ({
               kind: 'action' as const,
               label: WORKSPACE_LABELS[workspace],
               checked: this.workspace() === workspace,
-              run: () => this.workspace.set(workspace),
+              run: () => this.showDock(workspace),
             })),
           },
           separator,
           { kind: 'action', label: 'Grilla', checked: this.view.showGrid(), run: () => this.view.toggleGrid() },
           { kind: 'action', label: 'Colisiones', checked: this.view.showColliders(), run: () => this.view.toggleColliders() },
           { kind: 'action', label: 'Encuadrar todo', shortcut: 'Inicio', run: () => this.view.frameAll() },
+          separator,
+          {
+            kind: 'submenu',
+            label: 'Tema',
+            emptyLabel: '',
+            items: THEMES.map((theme) => ({
+              kind: 'action' as const,
+              label: theme.label,
+              checked: this.theme.theme() === theme.id,
+              run: () => this.theme.set(theme.id),
+            })),
+          },
           separator,
           { kind: 'action', label: 'Recargar ventana', shortcut: 'Ctrl+R', run: () => this.reloadWindow() },
           {
@@ -645,31 +796,31 @@ export class App {
             emptyLabel: 'Todavía no hay objetos en items.json',
             items: this.itemLibrary.items().map((item) => ({
               kind: 'action' as const,
-              label: this.items.itemGlyph(item) + '  ' + item.name,
+              label: item.name + '  ·  ' + this.items.itemKindLabel(item),
               run: () => this.itemEditor.open({ editId: item.id }),
             })),
           },
           separator,
           { kind: 'action', label: 'Puzzle de sala…', run: () => this.puzzle.open() },
           { kind: 'action', label: 'Agregar zona de puzzle', run: () => this.map.addZone() },
-          { kind: 'action', label: 'Ver eventos del nivel', run: () => this.workspace.set('eventos') },
+          { kind: 'action', label: 'Ver eventos del nivel', run: () => this.showDock('eventos') },
         ],
       },
       {
         id: 'mapa',
         label: 'Mapa',
         items: [
-          { kind: 'action', label: 'Agregar grilla al mapa…', run: () => this.map.openRoomDialog() },
+          { kind: 'action', label: 'Agregar sala al mapa…', run: () => this.map.openRoomDialog() },
           {
             kind: 'action',
-            label: 'Dibujar grilla en el viewport',
+            label: 'Dibujar sala en el viewport',
             checked: this.palette.tool() === 'room',
             run: () => this.palette.setTool('room'),
           },
           separator,
           {
             kind: 'action',
-            label: 'Conectar grillas con un túnel…',
+            label: 'Conectar salas con un túnel…',
             disabled: this.map.rooms().length < 2,
             run: () => this.map.openTunnelDialog(),
           },
@@ -687,7 +838,7 @@ export class App {
             run: () => this.showMapPanel(),
           },
           separator,
-          { kind: 'action', label: 'Grillas y túneles del nivel', run: () => this.showMapPanel() },
+          { kind: 'action', label: 'Salas y túneles del nivel', run: () => this.showMapPanel() },
           { kind: 'action', label: 'Propiedades de la grilla', run: () => this.showGridProperties() },
         ],
       },
@@ -696,7 +847,7 @@ export class App {
         label: 'Niveles',
         items: [
           { kind: 'action', label: 'Pasar a otro nivel…', run: () => this.transition.openTransitionDialog() },
-          { kind: 'action', label: 'Ver eventos del nivel', run: () => this.workspace.set('eventos') },
+          { kind: 'action', label: 'Ver eventos del nivel', run: () => this.showDock('eventos') },
         ],
       },
       {
@@ -706,7 +857,7 @@ export class App {
           {
             kind: 'soon',
             label: 'Generar nivel aleatorio…',
-            hint: 'Colocar paredes y grillas de forma procedural sobre el mapa.',
+            hint: 'Colocar paredes y salas de forma procedural sobre el mapa.',
           },
           {
             kind: 'soon',
@@ -874,10 +1025,16 @@ export class App {
       this.reloadWindow();
       return;
     }
-    // Ctrl+B esconde la barra lateral, el mismo atajo que en VS Code.
+    // Ctrl+B esconde la barra lateral y Ctrl+J el panel de abajo, los mismos
+    // atajos que en VS Code.
     if (event.ctrlKey && event.key.toLowerCase() === 'b') {
       event.preventDefault();
       this.panels.toggleSidebar();
+      return;
+    }
+    if (event.ctrlKey && event.key.toLowerCase() === 'j') {
+      event.preventDefault();
+      this.panels.toggleDock();
       return;
     }
     if (event.ctrlKey && event.key.toLowerCase() === 'a') {
@@ -895,6 +1052,15 @@ export class App {
       event.preventDefault();
       this.view.frameAll();
       return;
+    }
+    // 1 a 7: las herramientas de la barra, en el orden en que se ven.
+    if (!event.ctrlKey && !event.altKey && !event.metaKey) {
+      const tool = TOOL_BUTTONS.find((button) => button.key === event.key);
+      if (tool) {
+        event.preventDefault();
+        this.palette.setTool(tool.id);
+        return;
+      }
     }
     // Las flechas mueven la seleccion entera una celda. Es la unica forma de
     // mover varias entidades juntas (ver nudgeSelection).
@@ -914,6 +1080,11 @@ export class App {
     if (event.shiftKey && event.key.toLowerCase() === 'd') {
       event.preventDefault();
       this.entityOps.duplicateSelected();
+      return;
+    }
+    // Escape suelta la seleccion, como en cualquier editor.
+    if (event.key === 'Escape' && this.selectionCount() > 0) {
+      this.selection.clear();
     }
   }
 
@@ -926,6 +1097,8 @@ export class App {
   showGridProperties(): void {
     this.panels.inspectorVisible.set(true);
     this.inspectorTab.set('escena');
+    // El tamaño de casilla vive en Avanzado, plegado de entrada.
+    this.panels.expand('level-advanced');
   }
 
   /** Abre Propiedades en la pestaña de escena con el panel Mapa desplegado. */
@@ -934,10 +1107,43 @@ export class App {
     this.panels.expand('map');
   }
 
-  /** Cambia el editor del area de arriba a la izquierda, y la despliega si estaba plegada. */
+  /** Cambia lo que muestra la columna izquierda: la escena o los archivos del proyecto. */
   setLeftEditor(editor: LeftEditor): void {
     this.leftEditor.set(editor);
-    this.panels.expand('side-main');
+  }
+
+  /** Lleva el dock a una pestaña y lo despliega si estaba plegado. */
+  showDock(workspace: Workspace): void {
+    this.workspace.set(workspace);
+    this.panels.dockOpen.set(true);
+  }
+
+  /**
+   * Clic en una pestaña del dock. La que ya esta al frente pliega o despliega
+   * el dock, como en los paneles de cualquier motor; otra lo trae al frente.
+   */
+  onDockTab(workspace: Workspace): void {
+    if (this.workspace() === workspace) {
+      this.panels.toggleDock();
+    } else {
+      this.showDock(workspace);
+    }
+  }
+
+  /** Muestra una categoria de Recursos (por ejemplo, Texturas despues de importar). */
+  showAssets(tab: AssetTab): void {
+    this.assetTab.set(tab);
+    this.showDock('layout');
+  }
+
+  /** Un paso de zoom hacia adentro (+1) o hacia afuera (-1), entre los de la escala fija. */
+  stepZoom(direction: 1 | -1): void {
+    const current = this.view.zoom();
+    const steps = [...this.view.zoomSteps];
+    const next = direction > 0 ? steps.find((step) => step > current) : steps.reverse().find((step) => step < current);
+    if (next !== undefined) {
+      this.view.setZoom(next);
+    }
   }
 
   /**

@@ -54,9 +54,12 @@ export function shapeDef(type: string): ShapeDef | undefined {
  * una figura de la paleta es que apunte a este sheet.
  */
 export function shapeOf(entity: { type: string; texture: string }): ShapeDef | undefined {
-  return entity.texture === SHAPE_TEXTURE || entity.texture.endsWith('/' + SHAPE_TEXTURE)
-    ? shapeDef(entity.type)
-    : undefined;
+  return usesShapeSheet(entity.texture) ? shapeDef(entity.type) : undefined;
+}
+
+/** true si la textura es el sheet de figuras, sea cual sea el type de la entidad. */
+export function usesShapeSheet(texture: string): boolean {
+  return texture === SHAPE_TEXTURE || texture.endsWith('/' + SHAPE_TEXTURE);
 }
 
 /**

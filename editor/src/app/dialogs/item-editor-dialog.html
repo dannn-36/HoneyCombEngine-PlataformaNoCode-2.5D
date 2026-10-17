@@ -7,7 +7,7 @@
              (click)="$event.stopPropagation()">
       <div class="modal__head">
         <h2 id="items-title">Objetos y armas</h2>
-        <button class="icon-button" type="button" title="Cerrar" (click)="itemEditor.close()">×</button>
+        <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="itemEditor.close()"><svg hcIcon="x"></svg></button>
       </div>
 
       <div class="chareditor">
@@ -15,14 +15,15 @@
           @for (group of itemEditor.groups(); track group.id) {
             <div class="chareditor__group">
               <div class="chareditor__grouphead">
-                <span>{{ group.label }}</span>
-                <button class="btn btn--small" type="button" [title]="'Nuevo: ' + group.label.toLowerCase()"
-                        (click)="itemEditor.create(group.kind, group.category)">+</button>
+                <span class="chareditor__kind"><svg [hcIcon]="group.icon"></svg>{{ group.label }}</span>
+                <button class="ibtn" type="button" [title]="'Nuevo: ' + group.label.toLowerCase()"
+                        [attr.aria-label]="'Nuevo: ' + group.label.toLowerCase()"
+                        (click)="itemEditor.create(group.kind, group.category)"><svg hcIcon="plus"></svg></button>
               </div>
               @for (item of group.items; track item.id) {
                 <button class="tree__item" type="button" [class.is-active]="editor.savedId === item.id"
                         (click)="itemEditor.edit(item.id)">
-                  <span class="tree__label">{{ items.itemGlyph(item) }} {{ item.name }}</span>
+                  <span class="tree__label">{{ item.name }}</span>
                 </button>
               } @empty {
                 <p class="chareditor__empty">Ninguno guardado</p>
@@ -45,7 +46,7 @@
               <span>Tipo</span>
               <select class="input" (change)="itemEditor.setKind(str($event))">
                 @for (kind of items.itemKinds; track kind.id) {
-                  <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.glyph }} {{ kind.label }}</option>
+                  <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.label }}</option>
                 }
               </select>
             </label>
@@ -145,7 +146,7 @@
                       <button type="button" class="patterns__item" [class.is-active]="block.attack.pattern === pattern.id"
                               [class.patterns__item--ranged]="pattern.category === 'ranged'" [title]="pattern.hint"
                               (click)="itemEditor.setPattern(block.slot, pattern.id)">
-                        <span class="patterns__glyph">{{ pattern.glyph }}</span>
+                        <svg class="patterns__glyph" [hcIcon]="pattern.icon"></svg>
                         <span>{{ pattern.label }}</span>
                       </button>
                     }

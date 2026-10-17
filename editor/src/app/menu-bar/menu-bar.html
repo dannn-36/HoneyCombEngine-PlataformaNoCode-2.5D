@@ -12,7 +12,11 @@
   @if (asAction(entry); as action) {
     <button class="mb-item" type="button" role="menuitem" [disabled]="action.disabled"
             (click)="choose(action)">
-      <span class="mb-item__check">{{ action.checked ? '✓' : '' }}</span>
+      <span class="mb-item__check">
+        @if (action.checked) {
+          <svg hcIcon="check"></svg>
+        }
+      </span>
       <span class="mb-item__label">{{ action.label }}</span>
       <span class="mb-item__shortcut">{{ action.shortcut ?? '' }}</span>
     </button>
@@ -50,7 +54,7 @@
                       (click)="openSubmenu.set(sub.label)">
                 <span class="mb-item__check"></span>
                 <span class="mb-item__label">{{ sub.label }}</span>
-                <span class="mb-item__arrow">▸</span>
+                <svg class="mb-item__arrow" hcIcon="chevron-right"></svg>
               </button>
 
               @if (openSubmenu() === sub.label) {

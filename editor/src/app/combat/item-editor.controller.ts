@@ -25,6 +25,7 @@ import {
 import { ItemLibraryService } from '../services/item-library.service';
 import { LevelService } from '../services/level.service';
 import { ProjectService } from '../services/project.service';
+import type { IconName } from '../ui/icons.generated';
 
 /** Con que abrir la ventana: un objeto guardado, o uno nuevo de ese tipo. */
 export interface ItemEditorRequest {
@@ -39,6 +40,8 @@ export type AttackSlot = 'weapon' | 'ability';
 export interface ItemGroup {
   id: string;
   label: string;
+  /** Icono del grupo en la lista de la ventana (ver ui/icons.generated.ts). */
+  icon: IconName;
   kind: ItemKind;
   category?: WeaponCategory;
   items: ItemDef[];
@@ -72,6 +75,7 @@ export class ItemEditorController {
       {
         id: 'melee',
         label: 'Armas cuerpo a cuerpo',
+        icon: 'sword',
         kind: 'weapon',
         category: 'melee',
         items: weapons.filter((item) => item.weapon?.category !== 'ranged'),
@@ -79,12 +83,13 @@ export class ItemEditorController {
       {
         id: 'ranged',
         label: 'Armas a distancia',
+        icon: 'crosshair',
         kind: 'weapon',
         category: 'ranged',
         items: weapons.filter((item) => item.weapon?.category === 'ranged'),
       },
-      { id: 'healing', label: 'Curación', kind: 'healing', items: items.filter((item) => item.kind === 'healing') },
-      { id: 'coin', label: 'Monedas', kind: 'coin', items: items.filter((item) => item.kind === 'coin') },
+      { id: 'healing', label: 'Curación', icon: 'heart-plus', kind: 'healing', items: items.filter((item) => item.kind === 'healing') },
+      { id: 'coin', label: 'Monedas', icon: 'coins', kind: 'coin', items: items.filter((item) => item.kind === 'coin') },
     ];
   });
 

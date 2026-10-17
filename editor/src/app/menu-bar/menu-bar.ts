@@ -13,6 +13,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, ElementRef, inject, input, signal } from '@angular/core';
 
+import { Icon } from '../ui/icon';
+
 /** Una opcion que hace algo. */
 export interface MenuAction {
   kind: 'action';
@@ -64,7 +66,7 @@ export interface MenuDef {
 
 @Component({
   selector: 'app-menu-bar',
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, Icon],
   templateUrl: './menu-bar.html',
   styleUrl: './menu-bar.scss',
   host: {
