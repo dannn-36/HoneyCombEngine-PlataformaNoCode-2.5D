@@ -1,8 +1,10 @@
 import { computed, inject, signal } from '@angular/core';
 
+import { safeName } from '../core/file-names';
 import type { ProjectFileData, ProjectNode } from '../electron-api';
 import { LevelService } from '../services/level.service';
 import { ProjectService } from '../services/project.service';
+import type { NamePromptRequest } from '../ui/name-prompt.controller';
 
 /**
  * Una fila del explorador de archivos ya aplanada: el nodo y a que profundidad
@@ -22,7 +24,8 @@ export interface OpenFile {
 /**
  * El explorador de archivos del proyecto.
  *
- * Muestra la carpeta del proyecto entera, como el explorador de VS Code, y
+ * Muestra la carpeta del editor entera (ver ipc/project-root.js), como el
+ * explorador de VS Code, y
  * deja ABRIR lo que encuentra: un nivel se carga en el viewport, una textura
  * queda elegida para colocar, y cualquier otro archivo se muestra en el visor
  * de abajo. Eso es lo que lo separa de una lista decorativa.
@@ -59,12 +62,20 @@ export class ExplorerController {
   /** El archivo que se esta mirando en el visor (workspace "archivo"). */
   readonly openFile = signal<OpenFile | null>(null);
 
+  /**
+   * La carpeta "donde se esta parado": la ultima carpeta clickeada, o la del
+   * ultimo archivo abierto. "" es la raiz. Nueva carpeta crea adentro de esta.
+   */
+  readonly currentDir = signal('');
+
   constructor(
     private readonly note: (message: string) => void,
     private readonly describe: (error: unknown) => string,
     private readonly openLevel: (node: ProjectNode) => Promise<void>,
     private readonly selectTexture: (name: string) => void,
     private readonly showFileWorkspace: () => void,
+    /** Pide un nombre con el dialogo del editor (ver ui/name-prompt.controller.ts). */
+    private readonly askName: (request: NamePromptRequest) => Promise<string | null>,
   ) {}
 
   /**
@@ -101,7 +112,7 @@ export class ExplorerController {
    */
   async refreshTree(): Promise<void> {
     if (!this.project.projectRoot()) {
-      this.note('No hay un proyecto abierto. Elige la carpeta raiz con "Carpeta...".');
+      this.note('La carpeta del editor todavia no esta lista.');
       return;
     }
     try {
@@ -118,10 +129,49 @@ export class ExplorerController {
     }
   }
 
-  /** Carga la raiz del arbol. Se llama al abrir una carpeta de proyecto. */
+  /** Carga la raiz del arbol. Se llama al abrir (o cambiar) la carpeta del editor. */
   async loadRoot(): Promise<void> {
     this.treeChildren.set({ '': await this.project.listEntries('') });
     this.expandedDirs.set({});
+    this.currentDir.set('');
+  }
+
+  /**
+   * Crea una carpeta adentro de la carpeta actual (ver currentDir). El nombre
+   * se limpia igual que el de un nivel: una carpeta de assets con "♡" en el
+   * nombre dejaria al motor sin poder abrir lo que tenga adentro.
+   */
+  async createFolder(): Promise<void> {
+    const parent = this.currentDir();
+    const answer = await this.askName({
+      title: 'Nueva carpeta',
+      label: 'Nombre',
+      value: 'nueva_carpeta',
+      confirmLabel: 'Crear',
+      hint: 'Se crea en ' + (parent ? parent + '/' : 'la raíz') + ' de la carpeta del editor.',
+    });
+    if (answer === null) {
+      return;
+    }
+    const path = (parent ? parent + '/' : '') + safeName(answer, 'carpeta');
+    try {
+      await this.project.createDir(path);
+      // La carpeta padre se despliega y se relee, para que la nueva se vea.
+      if (parent) {
+        this.expandedDirs.update((state) => ({ ...state, [parent]: true }));
+      }
+      const children = await this.project.listEntries(parent);
+      this.treeChildren.update((state) => ({ ...state, [parent]: children }));
+      this.note('Carpeta creada: ' + path);
+    } catch (error) {
+      this.note('No se pudo crear la carpeta: ' + this.describe(error));
+    }
+  }
+
+  /** "levels" para "levels/foo.json"; "" para algo de la raiz. */
+  private parentOf(path: string): string {
+    const slash = path.lastIndexOf('/');
+    return slash < 0 ? '' : path.slice(0, slash);
   }
 
   /**
@@ -178,9 +228,11 @@ export class ExplorerController {
    */
   async openTreeEntry(node: ProjectNode): Promise<void> {
     if (node.kind === 'dir') {
+      this.currentDir.set(node.path);
       await this.toggleDir(node);
       return;
     }
+    this.currentDir.set(this.parentOf(node.path));
 
     if (/^levels\/.+\.json$/i.test(node.path)) {
       await this.openLevel(node);

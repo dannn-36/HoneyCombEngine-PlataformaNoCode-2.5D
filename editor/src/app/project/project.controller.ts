@@ -11,6 +11,9 @@ import { ViewportController } from '../viewport/viewport.controller';
 import { ExplorerController } from './explorer.controller';
 import { DEFAULT_STARTER_TEXTURE } from '../entities/entity-ops.controller';
 import { GridConfig } from '../models/level.model';
+import { levelFileName } from '../core/file-names';
+import type { LevelImport } from '../electron-api';
+import { NamePromptController } from '../ui/name-prompt.controller';
 
 /** Plantillas del dialogo "nivel nuevo": vacio, con jugador, o escena de prueba. */
 export type NewLevelTemplate = 'empty' | 'player' | 'test-scene';
@@ -27,6 +30,8 @@ export interface ProjectDeps {
   tex: TexturesController;
   view: ViewportController;
   ev: EventsController;
+  /** Pide el nombre en Guardar como, sin el dialogo del sistema. */
+  prompt: NamePromptController;
 }
 
 /**
@@ -54,6 +59,7 @@ export class ProjectController {
   private readonly tex: TexturesController;
   private readonly view: ViewportController;
   private readonly ev: EventsController;
+  private readonly prompt: NamePromptController;
 
   private readonly entities = computed(() => this.levels.level().entities);
 
@@ -66,11 +72,15 @@ export class ProjectController {
     this.tex = deps.tex;
     this.view = deps.view;
     this.ev = deps.ev;
+    this.prompt = deps.prompt;
   }
 
   readonly levelFiles = signal<string[]>([]);
 
-  /** Ultima ruta usada al guardar por dialogo; se propone en el siguiente. */
+  /**
+   * Ruta absoluta del nivel abierto cuando NO esta justo en levels/ (uno de
+   * una subcarpeta, abierto desde el explorador). Es la que usa Ejecutar.
+   */
   readonly lastSavedPath = signal<string | null>(null);
 
   readonly showNewLevelDialog = signal(false);
@@ -87,16 +97,67 @@ export class ProjectController {
 
   readonly newLevelTemplate = signal<NewLevelTemplate>('empty');
 
-  async openProject(): Promise<void> {
+  /**
+   * Abre la carpeta del editor al arrancar. Ya no hay que elegir ninguna: es
+   * siempre la misma (ver ipc/project-root.js), y la primera vez se crea con
+   * una copia de los niveles y recursos del repositorio.
+   */
+  async openWorkspace(): Promise<void> {
+    if (!this.hasFileSystem) {
+      return;
+    }
+    try {
+      const info = await this.project.workspaceInfo();
+      await this.refreshProject();
+      if (info.seeded.length > 0) {
+        this.note(
+          'Carpeta del editor creada en ' + info.root + '. Se copiaron del repositorio: ' +
+            info.seeded.join(', ') + '.',
+        );
+      }
+    } catch (error) {
+      this.note('No se pudo preparar la carpeta del editor: ' + this.describe(error));
+    }
+  }
+
+  /**
+   * Elige otra carpeta del editor. El nivel abierto se cierra: su archivo es
+   * de la carpeta anterior, y guardarlo despues escribiria en la nueva algo que
+   * apunta a texturas que alli no estan.
+   */
+  async changeWorkspace(): Promise<void> {
     if (!this.hasFileSystem) {
       this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
       return;
     }
-    const opened = await this.project.openProjectFolder();
-    if (!opened) {
+    if (this.dirty() && !window.confirm('Hay cambios sin guardar en el nivel. ¿Cambiar de carpeta igual y perderlos?')) {
       return;
     }
-    await this.refreshProject();
+    try {
+      const root = await this.project.changeWorkspace();
+      if (!root) {
+        return;
+      }
+      this.levels.createNew('nuevo_nivel');
+      this.lastSavedPath.set(null);
+      this.dirty.set(false);
+      await this.refreshProject();
+      this.view.frameAll();
+    } catch (error) {
+      this.note('No se pudo cambiar la carpeta del editor: ' + this.describe(error));
+    }
+  }
+
+  /** Abre la carpeta del editor en el explorador del sistema. */
+  async revealWorkspace(): Promise<void> {
+    if (!this.hasFileSystem) {
+      return;
+    }
+    try {
+      await this.project.revealWorkspace();
+    } catch (error) {
+      this.note('No se pudo abrir la carpeta: ' + this.describe(error));
+    }
   }
 
   /**
@@ -109,12 +170,13 @@ export class ProjectController {
     try {
       this.levelFiles.set(await this.project.listLevels());
       this.tex.textures.set(await this.project.listTextures());
-      // Sin await: las miniaturas van apareciendo solas, y abrir el proyecto no
-      // tiene por que esperar a que se procese una carpeta de 150 imagenes.
-      void this.tex.loadTextureThumbnails();
+      // Las miniaturas no se cargan aca: cada una se pide cuando aparece en
+      // pantalla (ver TextureThumbDirective). Solo se descarta lo que hubiera
+      // de antes, que puede ser de otra carpeta.
+      this.tex.invalidate();
       // El explorador arranca con la raiz y nada desplegado, como VS Code.
       await this.explorer.loadRoot();
-      this.note('Proyecto abierto: ' + this.project.projectRoot());
+      this.note('Carpeta del editor: ' + this.project.projectRoot());
     } catch (error) {
       this.note('No se pudo leer el proyecto: ' + this.describe(error));
     }
@@ -147,9 +209,10 @@ export class ProjectController {
   /**
    * Abre un nivel eligiendo el archivo con el dialogo del sistema.
    *
-   * A diferencia del desplegable de niveles, esto no exige tener un proyecto
-   * abierto ni que el archivo viva en levels/: se puede abrir un .json de
-   * donde sea y verlo dibujado.
+   * El dialogo arranca en levels/. Un .json de fuera de la carpeta del editor
+   * se IMPORTA: el proceso principal lo copia a levels/ con sus texturas y
+   * sonidos, y lo que se abre es la copia. Asi todo lo que se guarde despues
+   * queda en la carpeta del editor, y el original no se toca.
    */
   async openLevelFile(): Promise<void> {
     if (!this.hasFileSystem) {
@@ -162,17 +225,46 @@ export class ProjectController {
         return; // el usuario cancelo el dialogo
       }
 
-      // Si resulta estar dentro de levels/ del proyecto abierto, se adopta con
-      // su nombre: aparece en el desplegable y guardar no vuelve a preguntar.
-      const inLevels = this.levelsFolderFile(opened.path);
-      this.levels.adopt(opened.level, inLevels);
-      this.lastSavedPath.set(opened.path);
+      // Uno que esta justo en levels/ se adopta con su nombre: aparece en el
+      // desplegable y guardar no vuelve a preguntar. Uno de una subcarpeta se
+      // abre igual, pero Guardar pide nombre y lo escribe en levels/.
+      const direct = /^levels\/[^/]+$/i.test(opened.relativePath)
+        ? opened.relativePath.slice('levels/'.length)
+        : null;
+      this.levels.adopt(opened.level, direct);
+      this.lastSavedPath.set(this.absolutePath(opened.relativePath));
       this.dirty.set(false);
       this.view.frameAll();
-      this.note('Abierto ' + opened.path + ' (' + this.entities().length + ' entidades).');
+
+      if (opened.imported) {
+        await this.afterImport(opened.imported);
+      } else {
+        this.note('Abierto ' + opened.relativePath + ' (' + this.entities().length + ' entidades).');
+      }
     } catch (error) {
       this.note('No se pudo abrir: ' + this.describe(error));
     }
+  }
+
+  /** Deja al dia la lista de niveles y las texturas despues de importar un nivel, y cuenta que paso. */
+  private async afterImport(imported: LevelImport): Promise<void> {
+    this.levelFiles.set(await this.project.listLevels());
+    await this.explorer.reloadDir('levels');
+    if (imported.copied > 0) {
+      await this.tex.reloadLibrary();
+    }
+    const parts = ['Nivel importado a levels/' + imported.fileName + ' (el original no se tocó)'];
+    if (imported.copied > 0) {
+      parts.push(imported.copied + ' recursos copiados');
+    }
+    if (imported.kept > 0) {
+      parts.push(imported.kept + ' ya estaban en la carpeta del editor');
+    }
+    if (imported.missing.length > 0) {
+      const names = imported.missing.slice(0, 3).join(', ') + (imported.missing.length > 3 ? '…' : '');
+      parts.push(imported.missing.length + ' no se encontraron (' + names + ')');
+    }
+    this.note(parts.join('; ') + '.');
   }
 
   /** Abre un nivel del proyecto y recentra la camara sobre el. */
@@ -227,6 +319,8 @@ export class ProjectController {
     };
 
     this.levels.createNew(name, grid);
+    // Un nivel nuevo no tiene archivo: Ejecutar no puede caer en el anterior.
+    this.lastSavedPath.set(null);
     this.addStarterEntities(this.newLevelTemplate(), grid);
     this.showNewLevelDialog.set(false);
     this.dirty.set(true);
@@ -278,45 +372,30 @@ export class ProjectController {
     }
   }
 
-  /** Guarda el nivel en levels/ y refresca el listado (puede ser uno nuevo). */
   /**
-   * Guarda el nivel. Se comporta como el Guardar de cualquier programa: si ya
-   * se sabe donde va el archivo, lo escribe sin preguntar; si todavia no, abre
-   * el dialogo de Guardar como.
-   *
-   * Antes exigia tener una carpeta de proyecto abierta y, si no la habia, no
-   * hacia nada mas que avisar: no habia forma de guardar un nivel recien
-   * creado sin montar antes un proyecto entero.
+   * Guarda el nivel en levels/ de la carpeta del editor. Si ya tiene archivo lo
+   * escribe sin preguntar; si no (uno nuevo, o uno abierto de una subcarpeta),
+   * pide el nombre con Guardar como.
    */
   async save(): Promise<void> {
     if (!this.hasFileSystem) {
       this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
       return;
     }
-
-    // Sin proyecto abierto, o con un nivel que nunca se guardo, no hay ruta
-    // conocida: hay que preguntarla.
-    if (!this.project.projectRoot() || !this.levels.fileName()) {
+    if (!this.levels.fileName()) {
       await this.saveAs();
       return;
     }
-
-    try {
-      await this.levels.save();
-      this.dirty.set(false);
-      this.levelFiles.set(await this.project.listLevels());
-      await this.explorer.reloadDir('levels');
-      this.note('Guardado en levels/' + this.levels.fileName());
-    } catch (error) {
-      this.note('Error al guardar: ' + this.describe(error));
-    }
+    await this.writeLevel();
   }
 
   /**
-   * Guardar como: abre el dialogo del sistema para elegir carpeta y nombre.
+   * Guardar como: pide un nombre y guarda en levels/ de la carpeta del editor.
    *
-   * Se puede usar sin proyecto abierto, que es el punto: un nivel suelto se
-   * guarda donde uno quiera, igual que un documento.
+   * Antes abria el dialogo del sistema, que dejaba guardar en cualquier parte
+   * (Descargas, el escritorio...) y un nivel guardado afuera perdia sus
+   * texturas en el runtime, que las busca relativas al nivel. Ahora el nivel
+   * siempre queda junto a sus assets.
    */
   async saveAs(): Promise<void> {
     if (!this.hasFileSystem) {
@@ -324,80 +403,62 @@ export class ProjectController {
       return;
     }
 
-    // Se propone la ultima ruta usada; si no hay, el nombre del nivel.
-    const suggested = this.lastSavedPath() ?? this.levels.level().name + '.json';
+    const current = this.levels.fileName();
+    const answer = await this.prompt.ask({
+      title: 'Guardar nivel como',
+      label: 'Nombre',
+      value: (current ?? this.levels.level().name).replace(/\.json$/i, ''),
+      confirmLabel: 'Guardar',
+      hint: 'Se guarda en levels/ de la carpeta del editor.',
+    });
+    if (answer === null) {
+      return; // se cancelo
+    }
 
-    try {
-      const path = await this.project.saveLevelAs(suggested, this.levels.level());
-      if (!path) {
-        return; // el usuario cancelo el dialogo
-      }
-      await this.afterSavedTo(path);
-    } catch (error) {
-      this.note('Error al guardar: ' + this.describe(error));
+    const fileName = levelFileName(answer);
+    const taken = this.levelFiles().some((file) => file.toLowerCase() === fileName.toLowerCase());
+    const isSame = current?.toLowerCase() === fileName.toLowerCase();
+    if (taken && !isSame && !window.confirm('Ya existe levels/' + fileName + '. ¿Reemplazarlo?')) {
+      return;
+    }
+
+    this.levels.fileName.set(fileName);
+    if (!(await this.writeLevel())) {
+      // No se escribio: el nivel sigue siendo el de antes, no el del nombre nuevo.
+      this.levels.fileName.set(current);
     }
   }
 
-  /**
-   * Deja el editor al dia despues de guardar por dialogo.
-   *
-   * Si el archivo cayo dentro de levels/ del proyecto abierto, se adopta como
-   * el nivel actual: aparece en el desplegable y los guardados siguientes ya no
-   * vuelven a preguntar. Si cayo fuera, se recuerda la ruta para proponerla la
-   * proxima vez, pero se sigue preguntando -- escribir fuera del proyecto sin
-   * dialogo requeriria abrirle al editor todo el disco, y no vale la pena.
-   */
-  private async afterSavedTo(path: string): Promise<void> {
-    this.dirty.set(false);
-    this.lastSavedPath.set(path);
-
-    const inLevels = this.levelsFolderFile(path);
-    if (inLevels) {
-      this.levels.fileName.set(inLevels);
+  /** Escribe el nivel en levels/<fileName> y deja el editor al dia. Devuelve si se pudo. */
+  private async writeLevel(): Promise<boolean> {
+    try {
+      await this.levels.save();
+      this.dirty.set(false);
+      this.lastSavedPath.set(null);
       this.levelFiles.set(await this.project.listLevels());
       await this.explorer.reloadDir('levels');
+      this.note('Guardado en levels/' + this.levels.fileName());
+      return true;
+    } catch (error) {
+      this.note('Error al guardar: ' + this.describe(error));
+      return false;
     }
-    this.note('Guardado en ' + path);
   }
 
-  /**
-   * Nombre del archivo si "path" esta justo dentro de levels/ del proyecto
-   * abierto; null en cualquier otro caso.
-   *
-   * Se compara en minusculas y con barras normales porque en Windows la misma
-   * carpeta llega escrita de varias formas (mayusculas distintas, / o \).
-   */
-  private levelsFolderFile(path: string): string | null {
+  /** Ruta absoluta de algo de la carpeta del editor, a partir de su ruta relativa. */
+  private absolutePath(relativePath: string): string | null {
     const root = this.project.projectRoot();
-    if (!root) {
-      return null;
-    }
-    const normalize = (value: string) => value.replace(/\\/g, '/').toLowerCase();
-    const prefix = normalize(root).replace(/\/$/, '') + '/levels/';
-    const target = normalize(path);
-    if (!target.startsWith(prefix)) {
-      return null;
-    }
-    const rest = target.slice(prefix.length);
-    // Solo el nivel de arriba de levels/: una subcarpeta no la lista el editor.
-    return rest.includes('/') ? null : path.slice(path.length - rest.length);
+    return root ? root.replace(/[\\/]$/, '') + '/' + relativePath : null;
   }
 
   /**
    * Ruta absoluta del archivo del nivel abierto, o null si todavia no se
-   * guardo en ningun lado.
-   *
-   * Hay dos formas de saberla: si el nivel vive en el proyecto, se arma con la
-   * raiz mas levels/<archivo>; si se abrio o guardo con el dialogo del
-   * sistema, es la ruta que quedo de ahi.
+   * guardo. Si vive justo en levels/ se arma con su nombre; si se abrio de una
+   * subcarpeta, es la ruta con que se abrio.
    */
   private currentLevelPath(): string | null {
-    const root = this.project.projectRoot();
     const fileName = this.levels.fileName();
-    if (root && fileName) {
-      return root.replace(/[\\/]$/, '') + '/levels/' + fileName;
-    }
-    return this.lastSavedPath();
+    return fileName ? this.absolutePath('levels/' + fileName) : this.lastSavedPath();
   }
 
   /**

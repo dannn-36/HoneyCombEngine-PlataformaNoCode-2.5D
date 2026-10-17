@@ -2,7 +2,14 @@ import { Injectable, signal } from '@angular/core';
 
 import { normalizePreset } from '../core/characters';
 import { normalizeItem } from '../core/items';
-import type { ImportSession, ProjectFileData, ProjectNode } from '../electron-api';
+import type {
+  ConvertSession,
+  ConvertSource,
+  LevelImport,
+  ProjectFileData,
+  ProjectNode,
+  WorkspaceInfo,
+} from '../electron-api';
 import { CharacterPreset } from '../models/character-preset.model';
 import { ItemDef } from '../models/item.model';
 
@@ -73,24 +80,41 @@ function parseLevel(contents: string, source: string): Level {
 // con tipos (Level, EventCatalog) en vez de strings/JSON crudo.
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
-  /** Carpeta raiz del proyecto abierto. Null mientras no se abrio ninguno. */
+  /**
+   * La carpeta del editor, que es la raiz del proyecto (ver
+   * ipc/project-root.js). Null solo hasta que el editor termina de arrancar.
+   */
   readonly projectRoot = signal<string | null>(null);
 
-  /** Abre el dialogo de carpeta. Devuelve false si el usuario cancelo. */
-
-  async openProjectFolder(): Promise<boolean> {
-    const folder = await window.honeycombProject.openFolder();
-    if (!folder) {
-      return false;
-    }
-    this.projectRoot.set(folder);
-    return true;
+  /** Pregunta cual es la carpeta del editor, y que se copio a ella si se creo recien. */
+  async workspaceInfo(): Promise<WorkspaceInfo> {
+    const info = await window.honeycombProject.workspaceInfo();
+    this.projectRoot.set(info.root);
+    return info;
   }
 
-  // Las rutas de abajo ("levels/", "schema/", "assets/textures/") son la
-  // convencion de carpetas de un proyecto HoneyComb, y estan escritas relativas
-  // a la raiz que eligio el usuario: main.js las resuelve contra ella y rechaza
-  // cualquiera que se salga de esa carpeta.
+  /** Elige otra carpeta del editor con el dialogo. Null si se cancelo. */
+  async changeWorkspace(): Promise<string | null> {
+    const root = await window.honeycombProject.changeWorkspace();
+    if (root) {
+      this.projectRoot.set(root);
+    }
+    return root;
+  }
+
+  /** Abre la carpeta del editor en el explorador de archivos del sistema. */
+  async revealWorkspace(): Promise<void> {
+    return window.honeycombProject.revealWorkspace();
+  }
+
+  /** Crea una carpeta dentro de la carpeta del editor. Falla si ya existe. */
+  async createDir(relativePath: string): Promise<void> {
+    return window.honeycombProject.createDir(relativePath);
+  }
+
+  // Las rutas de abajo ("levels/", "assets/textures/") son la convencion de
+  // carpetas de un proyecto HoneyComb, relativas a la carpeta del editor:
+  // main.js las resuelve contra ella y rechaza cualquiera que se salga.
 
   /** Nombres de archivo de los niveles del proyecto (solo .json). */
   async listLevels(): Promise<string[]> {
@@ -125,35 +149,44 @@ export class ProjectService {
     return window.honeycombProject.readFileData(relativePath);
   }
 
-  // Importar imagenes va en tres pasos porque el ajuste de tamano lo hace la UI
-  // (ver el comentario de project:beginImport en main.js).
+  // Importar imagenes: el convertidor, en tres pasos porque el ajuste de tamano
+  // lo hace la UI (ver ipc/convert.js).
 
-  async beginImport(): Promise<ImportSession | null> {
-    return window.honeycombProject.beginImport();
+  async beginConvert(from: ConvertSource): Promise<ConvertSession | null> {
+    return window.honeycombProject.beginConvert(from);
   }
 
-  async readImportImage(index: number): Promise<string> {
-    return window.honeycombProject.readImportImage(index);
+  async readConvertImage(index: number): Promise<string> {
+    return window.honeycombProject.readConvertImage(index);
   }
 
-  async writeImportedTexture(index: number, pngBase64: string | null): Promise<{ written: boolean }> {
-    return window.honeycombProject.writeImportedTexture(index, pngBase64);
+  async writeConvertedImage(index: number, pngBase64: string | null): Promise<{ target: string }> {
+    return window.honeycombProject.writeConvertedImage(index, pngBase64);
+  }
+
+  async resetConvert(): Promise<void> {
+    return window.honeycombProject.resetConvert();
   }
 
   /**
    * Abre un nivel eligiendo el ARCHIVO con el dialogo del sistema, en vez de
    * elegirlo del desplegable del proyecto.
    *
-   * Sirve para abrir un .json que este en cualquier parte, tenga o no un
-   * proyecto abierto. Devuelve la ruta elegida junto al nivel, o null si se
-   * cancelo.
+   * El dialogo arranca en levels/, pero se puede elegir un .json de cualquier
+   * parte: ese se importa (se copia a levels/ con sus texturas y sonidos) y lo
+   * que vuelve es la copia. "relativePath" es siempre relativa a la carpeta del
+   * editor. Null si se cancelo.
    */
-  async openLevelFile(): Promise<{ path: string; level: Level } | null> {
+  async openLevelFile(): Promise<{ relativePath: string; level: Level; imported?: LevelImport } | null> {
     const result = await window.honeycombProject.open();
-    if (result.canceled || !result.filePath || result.contents === undefined) {
+    if (result.canceled) {
       return null;
     }
-    return { path: result.filePath, level: parseLevel(result.contents, result.filePath) };
+    return {
+      relativePath: result.relativePath,
+      level: parseLevel(result.contents, result.relativePath),
+      imported: result.imported,
+    };
   }
 
   // Indentado a 2 espacios y no minificado: el JSON del nivel se versiona en
@@ -164,25 +197,8 @@ export class ProjectService {
   }
 
   /**
-   * Guarda abriendo el dialogo nativo del sistema, donde se elige carpeta y
-   * nombre: el "Guardar como" de cualquier programa de escritorio.
-   *
-   * A diferencia de saveLevel(), esto NO exige tener un proyecto abierto: el
-   * dialogo escribe en la ruta que elija la persona, sin pasar por la raiz del
-   * proyecto. Devuelve esa ruta, o null si se cancelo.
-   */
-  async saveLevelAs(suggestedPath: string, level: Level): Promise<string | null> {
-    const result = await window.honeycombProject.save(
-      suggestedPath,
-      JSON.stringify(level, null, 2),
-    );
-    return result.canceled || !result.filePath ? null : result.filePath;
-  }
-
-  /**
-   * La carpeta del proyecto, deduciendola o preguntandola si nadie abrio una.
-   * Lo usa todo lo que necesita escribir en el proyecto sin haber pasado antes
-   * por "Abrir carpeta" (ver project:ensureRoot en main.js). Null si se cancelo.
+   * La raiz del proyecto, que es siempre la carpeta del editor. Lo usa lo que
+   * necesita escribir en el proyecto antes de que termine de arrancar.
    */
   async ensureRoot(): Promise<string | null> {
     const root = await window.honeycombProject.ensureRoot();
@@ -253,8 +269,9 @@ export class ProjectService {
     await window.honeycombProject.writeFile(ITEMS_FILE, JSON.stringify({ items }, null, 2));
   }
 
+  /** El catalogo de eventos es del programa: se lee de la instalacion, no de la carpeta del editor. */
   async readEventCatalog(): Promise<EventCatalog> {
-    const contents = await window.honeycombProject.readFile('schema/event_catalog.json');
+    const contents = await window.honeycombProject.readEventCatalog();
     return JSON.parse(contents) as EventCatalog;
   }
 

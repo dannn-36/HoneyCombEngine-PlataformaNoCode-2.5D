@@ -26,30 +26,6 @@
       }
     },
     {
-      "id": "player",
-      "name": "Player",
-      "kind": "player",
-      "texture": "textures/player.png",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "width": 15,
-        "height": 14
-      },
-      "frames": 2,
-      "frameDuration": 0.4,
-      "scale": 1,
-      "collider": {
-        "width": 16,
-        "height": 16
-      },
-      "stats": {
-        "health": 100,
-        "damage": 10,
-        "speed": 3
-      }
-    },
-    {
       "id": "flutershy",
       "name": "Flutershy",
       "kind": "enemy",
@@ -71,6 +47,78 @@
         "health": 30,
         "damage": 10,
         "speed": 1.5
+      }
+    },
+    {
+      "id": "kaine",
+      "name": "Kaine",
+      "kind": "player",
+      "texture": "textures/♡.jpg",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 736,
+        "height": 736
+      },
+      "frames": 1,
+      "frameDuration": 0.4,
+      "scale": 1,
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 100,
+        "damage": 10,
+        "speed": 3
+      }
+    },
+    {
+      "id": "mounstro",
+      "name": "Mounstro",
+      "kind": "player",
+      "texture": "textures/♡.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 1,
+      "frameDuration": 0.4,
+      "scale": 1,
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 100,
+        "damage": 10,
+        "speed": 3
+      }
+    },
+    {
+      "id": "nuevo_jugador",
+      "name": "Nuevo jugador",
+      "kind": "player",
+      "texture": "textures/(NieR Replicant).png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 1,
+      "frameDuration": 0.4,
+      "scale": 1,
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 100,
+        "damage": 10,
+        "speed": 3
       }
     }
   ]

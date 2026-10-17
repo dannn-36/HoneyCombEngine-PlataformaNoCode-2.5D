@@ -6,17 +6,19 @@
 // registra solos.
 
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter, withHashLocation } from '@angular/router';
-import { routes } from './app.routes';
 
+// Sin router: el editor es una sola pantalla con docks fijos y no navega. El
+// router estaba configurado "por si acaso" con la tabla de rutas vacia, y aun
+// asi sumaba ~70 kB al bundle (el router y la parte de rxjs que arrastra).
+//
+// Si algun dia hace falta una segunda pantalla, se vuelve a agregar aca:
+//   provideRouter(routes, withHashLocation())
+// con withHashLocation() porque bajo Electron la app se sirve desde file://,
+// donde las rutas por path no resuelven contra un servidor.
 export const appConfig: ApplicationConfig = {
   providers: [
     // Engancha los errores no capturados de la UI para que lleguen a la consola
     // en vez de perderse en silencio.
     provideBrowserGlobalErrorListeners(),
-    // Hash routing porque bajo Electron la app se sirve desde file://, donde
-    // las rutas por path no resuelven contra un servidor. Hoy no hay rutas,
-    // pero en cuanto se agregue una el editor dejaria de cargar sin esto.
-    provideRouter(routes, withHashLocation()),
   ],
 };

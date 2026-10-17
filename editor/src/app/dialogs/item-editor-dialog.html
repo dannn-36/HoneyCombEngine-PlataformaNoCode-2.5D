@@ -1,0 +1,245 @@
+<!-- Objetos y armas: la biblioteca del proyecto (items.json). Mismo armado que
+     Configurar personajes; la logica esta en combat/item-editor.controller.ts.
+     Cada ataque muestra su forma en vivo, con la misma geometria que el motor. -->
+@if (itemEditor.state(); as editor) {
+  <div class="modal-backdrop" (click)="itemEditor.close()">
+    <section class="modal modal--xl" role="dialog" aria-modal="true" aria-labelledby="items-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="items-title">Objetos y armas</h2>
+        <button class="icon-button" type="button" title="Cerrar" (click)="itemEditor.close()">×</button>
+      </div>
+
+      <div class="chareditor">
+        <nav class="chareditor__list">
+          @for (group of itemEditor.groups(); track group.id) {
+            <div class="chareditor__group">
+              <div class="chareditor__grouphead">
+                <span>{{ group.label }}</span>
+                <button class="btn btn--small" type="button" [title]="'Nuevo: ' + group.label.toLowerCase()"
+                        (click)="itemEditor.create(group.kind, group.category)">+</button>
+              </div>
+              @for (item of group.items; track item.id) {
+                <button class="tree__item" type="button" [class.is-active]="editor.savedId === item.id"
+                        (click)="itemEditor.edit(item.id)">
+                  <span class="tree__label">{{ items.itemGlyph(item) }} {{ item.name }}</span>
+                </button>
+              } @empty {
+                <p class="chareditor__empty">Ninguno guardado</p>
+              }
+            </div>
+          }
+        </nav>
+
+        <div class="chareditor__form">
+          @if (!editor.savedId) {
+            <p class="hint hint--warn">Sin guardar todavía.</p>
+          }
+
+          <div class="field-row">
+            <label class="field">
+              <span>Nombre</span>
+              <input class="input" [value]="editor.draft.name" (input)="itemEditor.setName(str($event))" />
+            </label>
+            <label class="field">
+              <span>Tipo</span>
+              <select class="input" (change)="itemEditor.setKind(str($event))">
+                @for (kind of items.itemKinds; track kind.id) {
+                  <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.glyph }} {{ kind.label }}</option>
+                }
+              </select>
+            </label>
+            @if (editor.draft.weapon; as weapon) {
+              <label class="field">
+                <span>Categoría</span>
+                <select class="input" (change)="itemEditor.setCategory(str($event))">
+                  <option value="melee" [selected]="weapon.category === 'melee'">Cuerpo a cuerpo</option>
+                  <option value="ranged" [selected]="weapon.category === 'ranged'">A distancia</option>
+                </select>
+              </label>
+            }
+          </div>
+          <p class="hint">{{ items.itemKindHint(editor.draft.kind) }}</p>
+
+          <div class="chareditor__section">Sprite</div>
+          <div class="chareditor__asset">
+            <div class="chareditor__preview" title="Así se ve en el piso y en el inventario" [appTextureThumb]="editor.draft.texture">
+              @if (items.itemSpriteStyle(editor.draft, 96); as style) {
+                <span class="chareditor__sprite" [style]="style"></span>
+              } @else {
+                <span class="chareditor__nopreview">Sin vista previa</span>
+              }
+            </div>
+            <div class="texpicker">
+              @for (texture of tex.textures(); track texture) {
+                <button class="texpicker__item" type="button" [title]="texture" [appTextureThumb]="texture"
+                        [class.is-active]="editor.draft.texture === 'textures/' + texture"
+                        (click)="items.setItemTexture(texture)">
+                  @if (tex.textureAssets()[texture]; as asset) {
+                    <img [src]="asset.dataUrl" [alt]="texture" />
+                  }
+                </button>
+              } @empty {
+                <p class="hint">Sin texturas en assets/textures/. Importalas desde Recursos.</p>
+              }
+            </div>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span>Recorte X</span>
+              <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.x"
+                     (change)="itemEditor.patchRect('x', int($event))" />
+            </label>
+            <label class="field">
+              <span>Y</span>
+              <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.y"
+                     (change)="itemEditor.patchRect('y', int($event))" />
+            </label>
+            <label class="field">
+              <span>Ancho</span>
+              <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.width"
+                     (change)="itemEditor.patchRect('width', int($event))" />
+            </label>
+            <label class="field">
+              <span>Alto</span>
+              <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.height"
+                     (change)="itemEditor.patchRect('height', int($event))" />
+            </label>
+            <label class="field">
+              <span>Escala</span>
+              <input class="input" type="number" min="0.05" step="0.05" [value]="editor.draft.scale ?? 1"
+                     (change)="itemEditor.setScale(num($event))" />
+            </label>
+          </div>
+
+          @if (editor.draft.kind === 'healing') {
+            <div class="chareditor__section">Curación</div>
+            <div class="field-row">
+              <label class="field">
+                <span>Vida que devuelve</span>
+                <input class="input" type="number" min="0" step="5" [value]="editor.draft.heal ?? 0"
+                       (change)="itemEditor.setHeal(num($event))" />
+              </label>
+            </div>
+          }
+
+          @if (editor.draft.kind === 'coin') {
+            <div class="chareditor__section">Moneda</div>
+            <div class="field-row">
+              <label class="field">
+                <span>Monedas que suma</span>
+                <input class="input" type="number" min="1" step="1" [value]="editor.draft.value ?? 1"
+                       (change)="itemEditor.setCoinValue(int($event))" />
+              </label>
+            </div>
+            <p class="hint">Las monedas se gastan en la tienda de un NPC (inspector del NPC > Tienda).</p>
+          }
+
+          @if (editor.draft.weapon; as weapon) {
+            @for (block of itemEditor.attackSlots(); track block.slot) {
+              <div class="chareditor__section">{{ block.label }}</div>
+              <div class="attackform">
+                <div>
+                  <div class="patterns">
+                    @for (pattern of itemEditor.patterns; track pattern.id) {
+                      <button type="button" class="patterns__item" [class.is-active]="block.attack.pattern === pattern.id"
+                              [class.patterns__item--ranged]="pattern.category === 'ranged'" [title]="pattern.hint"
+                              (click)="itemEditor.setPattern(block.slot, pattern.id)">
+                        <span class="patterns__glyph">{{ pattern.glyph }}</span>
+                        <span>{{ pattern.label }}</span>
+                      </button>
+                    }
+                  </div>
+                  <p class="hint">{{ itemEditor.patternHint(block.attack) }}</p>
+                  <div class="field-row field-row--wrap">
+                    <label class="field">
+                      <span>Daño</span>
+                      <input class="input" type="number" min="0" step="1" [value]="block.attack.damage"
+                             (change)="itemEditor.setDamage(block.slot, num($event))" />
+                    </label>
+                    <label class="field">
+                      <span title="Segundos entre dos ataques">Pausa (s)</span>
+                      <input class="input" type="number" min="0" step="0.05" [value]="block.attack.cooldown"
+                             (change)="itemEditor.setCooldown(block.slot, num($event))" />
+                    </label>
+                    @for (field of itemEditor.numericFields(block.attack); track field.field) {
+                      <label class="field">
+                        <span [title]="field.hint">{{ field.label }}</span>
+                        <input class="input" type="number" [min]="field.min" [attr.max]="field.max ?? null"
+                               [step]="field.step" [value]="field.value"
+                               (change)="itemEditor.setField(block.slot, field.field, num($event))" />
+                      </label>
+                    }
+                  </div>
+                  @if (itemEditor.usesPierce(block.attack)) {
+                    <label class="check">
+                      <input type="checkbox" [checked]="block.attack.pierce === true"
+                             (change)="itemEditor.setPierce(block.slot, checked($event))" />
+                      <span>Atraviesa enemigos</span>
+                    </label>
+                  }
+                </div>
+                <canvas class="attackform__preview" width="260" height="160"
+                        [appAttackPreview]="block.attack" title="Vista previa: apuntando con el mouse hacia la derecha"></canvas>
+              </div>
+
+              @if (block.slot === 'weapon') {
+                <div class="chareditor__section">Habilidad por golpes</div>
+                <label class="check">
+                  <input type="checkbox" [checked]="!!weapon.ability" (change)="itemEditor.setAbilityEnabled(checked($event))" />
+                  <span>El arma carga una habilidad acertando golpes</span>
+                </label>
+                @if (weapon.ability; as ability) {
+                  <div class="field-row">
+                    <label class="field">
+                      <span>Nombre</span>
+                      <input class="input" [value]="ability.name ?? ''"
+                             (input)="itemEditor.patchAbility({ name: str($event) })" />
+                    </label>
+                    <label class="field">
+                      <span title="Ataques que tienen que acertar para cargarla">Golpes para cargar</span>
+                      <input class="input" type="number" min="1" step="1" [value]="ability.hitsRequired"
+                             (change)="itemEditor.setHitsRequired(int($event))" />
+                    </label>
+                    <label class="field">
+                      <span>Se lanza</span>
+                      <select class="input" (change)="itemEditor.setActivation(str($event))">
+                        <option value="auto" [selected]="ability.activation !== 'manual'">Sola, en el ataque siguiente</option>
+                        <option value="manual" [selected]="ability.activation === 'manual'">Con la tecla Q</option>
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span title="Segundos sin acertar que vacían el contador. 0 = nunca">Se pierde tras (s)</span>
+                      <input class="input" type="number" min="0" step="0.5" [value]="ability.resetAfter ?? 0"
+                             (change)="itemEditor.setResetAfter(num($event))" />
+                    </label>
+                  </div>
+                  <p class="hint">
+                    Cada ataque que acierta suma 1 al contador del arma (se ve bajo su casillero en el juego). Lleno, la
+                    habilidad queda lista; lanzarla vacía el contador. El evento “Al usar una habilidad” permite
+                    reaccionar a ella.
+                  </p>
+                }
+              }
+            }
+          }
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        @if (editor.savedId) {
+          <button class="btn btn--danger" type="button" (click)="itemEditor.remove()">Eliminar</button>
+          <button class="btn" type="button" (click)="itemEditor.duplicate()">Duplicar</button>
+          @if (itemEditor.definedInLevel()) {
+            <button class="btn" type="button" (click)="itemEditor.updateInLevel()"
+                    title="El nivel abierto tiene su propia copia de este objeto: ponerla al día con lo guardado">
+              Actualizar en este nivel
+            </button>
+          }
+        }
+        <button class="btn" type="button" (click)="itemEditor.close()">Cerrar</button>
+        <button class="btn btn--primary" type="button" (click)="itemEditor.save()">Guardar</button>
+      </div>
+    </section>
+  </div>
+}

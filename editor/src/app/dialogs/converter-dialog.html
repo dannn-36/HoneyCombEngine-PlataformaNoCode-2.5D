@@ -1,0 +1,111 @@
+<!-- Herramientas > Convertidor de imagenes: PNG, JPG o JPEG a texturas PNG
+     que el motor puede abrir, en assets/textures/. Ver
+     textures/image-converter.controller.ts. -->
+@if (converter.isOpen()) {
+  <div class="modal-backdrop" (click)="converter.close()">
+    <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="converter-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="converter-title">Convertidor de imágenes</h2>
+        <button class="icon-button" type="button" title="Cerrar" [disabled]="converter.busy()"
+                (click)="converter.close()">×</button>
+      </div>
+
+      <div class="modal__body">
+        <p class="hint converter__intro">
+          Convierte PNG, JPG y JPEG a PNG y los guarda en assets/textures/. El motor solo abre PNG y
+          nombres sin símbolos, así que los nombres se limpian (♡.jpg → imagen.png). El original no se toca.
+        </p>
+
+        <div class="converter__add">
+          <button class="btn" type="button" [disabled]="converter.busy()" (click)="converter.add('files')">
+            Agregar imágenes…
+          </button>
+          <button class="btn" type="button" [disabled]="converter.busy()" (click)="converter.add('project-jpg')">
+            Agregar los JPG del proyecto
+          </button>
+        </div>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Tamaño</span>
+            <select class="input" (change)="converter.setSizeMode(str($event))">
+              <option value="tile" [selected]="converter.sizeMode() === 'tile'">
+                Ajustar al tile ({{ grid().tileWidth }} px)
+              </option>
+              <option value="custom" [selected]="converter.sizeMode() === 'custom'">Tamaño máximo a elección</option>
+              <option value="original" [selected]="converter.sizeMode() === 'original'">Sin reducir</option>
+            </select>
+          </label>
+          @if (converter.sizeMode() === 'custom') {
+            <label class="field">
+              <span>Lado máx. (px)</span>
+              <input class="input" type="number" min="1" max="4096" step="1" [value]="converter.customSide()"
+                     (change)="converter.customSide.set(int($event))" />
+            </label>
+          }
+          <label class="field">
+            <span>Reducción</span>
+            <select class="input" (change)="converter.setFilter(str($event))">
+              <option value="auto" [selected]="converter.filter() === 'auto'">Automática</option>
+              <option value="pixel" [selected]="converter.filter() === 'pixel'">Pixel art (nítida)</option>
+              <option value="smooth" [selected]="converter.filter() === 'smooth'">Suavizada (fotos)</option>
+            </select>
+          </label>
+        </div>
+
+        <ul class="converter__list">
+          @for (row of converter.rows(); track row.index) {
+            <li class="converter__row" [class.is-done]="row.state === 'done'" [class.is-failed]="row.state === 'failed'">
+              <div class="converter__thumb">
+                @if (row.preview) {
+                  <img [src]="row.preview" [alt]="row.source" />
+                }
+              </div>
+              <div class="converter__info">
+                <div class="converter__names" [title]="row.source + ' → ' + row.target">
+                  <span>{{ row.source }}</span>
+                  <span class="converter__arrow">→</span>
+                  <span [class.converter__renamed]="converter.renamed(row)">{{ row.target }}</span>
+                </div>
+                <div class="converter__meta">
+                  @switch (row.state) {
+                    @case ('loading') { Leyendo… }
+                    @case ('ready') {
+                      @let size = converter.finalSize(row);
+                      {{ row.format }} {{ row.width }}×{{ row.height }} → PNG {{ size.width }}×{{ size.height }}
+                      @if (converter.renamed(row)) { · nombre nuevo }
+                    }
+                    @case ('done') { ✓ {{ row.message }} }
+                    @case ('failed') { ✗ {{ row.message }} }
+                  }
+                </div>
+              </div>
+              <button class="icon-button" type="button" title="Quitar de la lista" [disabled]="converter.busy()"
+                      (click)="converter.remove(row.index)">×</button>
+            </li>
+          } @empty {
+            <li class="hint converter__empty">
+              Todavía no hay imágenes. Usa «Agregar imágenes…» o «Agregar los JPG del proyecto».
+            </li>
+          }
+        </ul>
+
+        @if (converter.rows().length > 0) {
+          <p class="hint">
+            Las entidades y personajes que usaban la imagen original siguen apuntando a ella: elige la textura
+            nueva en cada uno y ajusta su recorte al tamaño nuevo.
+          </p>
+        }
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn" type="button" [disabled]="converter.busy()" (click)="converter.close()">Cerrar</button>
+        <button class="btn btn--primary" type="button" [disabled]="converter.busy() || converter.pending() === 0"
+                (click)="converter.convert()">
+          {{ converter.pending() === 1 ? 'Convertir 1 imagen' : 'Convertir ' + converter.pending() + ' imágenes' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

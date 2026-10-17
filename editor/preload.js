@@ -11,12 +11,19 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('honeycombProject', {
-  save: (defaultPath, contents) => ipcRenderer.invoke('project:save', { defaultPath, contents }),
+  // Abrir un nivel con el dialogo. Uno de fuera de la carpeta del editor se
+  // importa (se copia adentro con sus assets): ver ipc/levels.js.
   open: () => ipcRenderer.invoke('project:open'),
 
-  openFolder: () => ipcRenderer.invoke('project:openFolder'),
-  // La raiz del proyecto sin pasar por "Abrir carpeta": la deduce, o la pregunta.
+  // La carpeta del editor, que es siempre la raiz del proyecto (ver
+  // ipc/project-root.js): cual es, cambiarla, y mostrarla en el sistema.
+  workspaceInfo: () => ipcRenderer.invoke('workspace:info'),
+  changeWorkspace: () => ipcRenderer.invoke('workspace:change'),
+  revealWorkspace: () => ipcRenderer.invoke('workspace:reveal'),
+  // El catalogo de eventos es del programa, no del proyecto: se lee de la instalacion.
+  readEventCatalog: () => ipcRenderer.invoke('workspace:readEventCatalog'),
   ensureRoot: () => ipcRenderer.invoke('project:ensureRoot'),
+  createDir: (relativePath) => ipcRenderer.invoke('project:createDir', relativePath),
   readFile: (relativePath) => ipcRenderer.invoke('project:readFile', relativePath),
   writeFile: (relativePath, contents) =>
     ipcRenderer.invoke('project:writeFile', { filePath: relativePath, contents }),
@@ -25,12 +32,13 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   // una, al desplegarla), y la lectura de cualquier archivo para mirarlo.
   listEntries: (relativeDir) => ipcRenderer.invoke('project:listEntries', relativeDir),
   readFileData: (relativePath) => ipcRenderer.invoke('project:readFileData', relativePath),
-  // Importar imagenes como texturas, en tres pasos (ver project:beginImport en
-  // main.js). Los dos ultimos reciben un indice del plan, nunca una ruta.
-  beginImport: () => ipcRenderer.invoke('project:beginImport'),
-  readImportImage: (index) => ipcRenderer.invoke('project:readImportImage', index),
-  writeImportedTexture: (index, pngBase64) =>
-    ipcRenderer.invoke('project:writeImportedTexture', { index, pngBase64 }),
+  // Importar imagenes: el convertidor (ver ipc/convert.js), en tres pasos. Los
+  // dos ultimos reciben un indice del plan, nunca una ruta. "from" es 'files'
+  // (dialogo) o 'project-jpg'.
+  beginConvert: (from) => ipcRenderer.invoke('convert:begin', from),
+  readConvertImage: (index) => ipcRenderer.invoke('convert:readImage', index),
+  writeConvertedImage: (index, pngBase64) => ipcRenderer.invoke('convert:writeImage', { index, pngBase64 }),
+  resetConvert: () => ipcRenderer.invoke('convert:reset'),
 
   // Lanza el runtime con un nivel ya guardado. Recibe la ruta del nivel y no
   // la del ejecutable: quien decide que binario correr es el proceso principal,

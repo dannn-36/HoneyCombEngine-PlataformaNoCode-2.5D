@@ -5,27 +5,42 @@ skinparam componentStyle rectangle
 
 actor "Disenador" as designer
 rectangle "Editor de niveles\nAngular + Electron" as editor
-folder "Proyecto HoneyComb" as project {
+folder "Carpeta del editor\n(Documentos/HoneyComb por defecto)" as project {
   file "levels/*.json" as levels
-  file "schema/event_catalog.json" as catalog
-  folder "assets/" as assets
+  folder "assets/\ntextures, sounds" as assets
+  file "characters.json\nitems.json" as libraries
+}
+folder "Instalacion de HoneyComb" as install {
+  file "schema/level.schema.json\nschema/event_catalog.json" as schema
+  file "engine.exe" as exe
 }
 rectangle "Runtime HoneyComb\nC++ + raylib" as runtime
 actor "Jugador" as player
 
 designer --> editor : crea y configura niveles
 editor --> levels : lee / escribe
-editor --> catalog : consulta catalogo
-editor --> assets : inspecciona recursos
+editor --> assets : copia imagenes y niveles\nde afuera (importar)
+editor --> libraries : lee / escribe
+editor --> schema : lee el catalogo de eventos
+editor --> exe : Ejecutar (nivel por argumento)
+exe --> runtime
 runtime --> levels : carga nivel
-runtime --> catalog : interpreta eventos
-runtime --> assets : carga texturas y sonidos
+runtime --> assets : carga texturas y sonidos\n({nivel}/../../assets)
 player --> runtime : entrada y juego
 
 note bottom of project
-Contrato de integracion actual:
-JSON + assets en una carpeta de proyecto.
+Contrato de integracion: JSON + assets en la carpeta
+del editor. Todo lo que llega de afuera se COPIA
+adentro; el original no se toca.
 No existe comunicacion IPC en vivo entre
 editor y runtime en esta version.
+end note
+
+note bottom of install
+Los schemas son el CONTRATO entre los dos programas:
+el editor tiene modelos TypeScript espejo de
+level.schema.json, y el runtime implementa en C++
+cada bloque de event_catalog.json. Son del programa,
+no de cada proyecto.
 end note
 @enduml

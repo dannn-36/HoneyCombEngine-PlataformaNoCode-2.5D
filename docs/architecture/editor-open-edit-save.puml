@@ -3,43 +3,78 @@ title Editor - Abrir, editar y guardar un nivel
 autonumber
 
 actor Disenador as designer
-participant "App\nAngular" as app
+participant "App\nAngular\n(ProjectController)" as app
 participant "LevelService" as level
 participant "ProjectService" as project
 participant "preload.js" as preload
-participant "Electron main" as main
-database "Proyecto en disco" as disk
+participant "Electron main\nipc/" as main
+database "Carpeta del editor" as disk
+database "Archivos de afuera" as outside
 
-designer -> app : Abrir proyecto
-app -> project : openProjectFolder()
-project -> preload : openFolder()
-preload -> main : IPC project:openFolder
-main -> disk : seleccionar carpeta
-disk --> main : ruta raiz
-main --> preload : ruta
-preload --> project : ruta
-project --> app : proyecto abierto
+== Arranque: la carpeta del editor se abre sola ==
+app -> project : workspaceInfo()
+project -> preload : workspaceInfo()
+preload -> main : IPC workspace:info
+note right of main
+initWorkspace() ya corrio antes de abrir
+la ventana: la carpeta guardada o
+Documentos/HoneyComb, con su estructura.
+La primera vez se copia el contenido
+del repositorio.
+end note
+main --> preload : raiz
+preload --> project : raiz
+project --> app : listar niveles y texturas
 
+== Abrir un nivel del proyecto ==
+designer -> app : elegir nivel
 app -> project : readLevel(fileName)
 project -> preload : readFile(levels/...)
 preload -> main : IPC project:readFile
-main -> disk : leer JSON
+main -> disk : leer JSON (ruta validada)
 disk --> main : contenido
 main --> preload : contenido
 preload --> project : contenido
 project --> level : parse Level
 level --> app : estado reactivo actualizado
 
+== Abrir con el dialogo (Ctrl+O) ==
+designer -> app : Abrir escena...
+app -> project : openLevelFile()
+project -> preload : open()
+preload -> main : IPC project:open
+main -> designer : dialogo, arranca en levels/
+alt el archivo esta dentro de la carpeta del editor
+  main -> disk : leer JSON
+  main --> preload : ruta relativa + contenido
+else el archivo esta afuera: se IMPORTA
+  main -> outside : leer JSON y sus assets\n({nivel}/../../assets)
+  main -> disk : copiar a levels/ con nombre libre\ny assets que falten (sin pisar)
+  main --> preload : levels/{copia} + informe
+end
+preload --> project : resultado
+project --> level : parse Level
+level --> app : estado reactivo actualizado
+
+== Editar ==
 designer -> app : mover entidad / cambiar evento
 app -> level : updateEntity / updateEvent
 level --> app : signal actualizado
 
+== Guardar ==
 designer -> app : Guardar
-app -> level : save()
+alt el nivel ya tiene archivo en levels/
+  app -> level : save()
+else nivel nuevo o de una subcarpeta: Guardar como
+  app -> designer : pedir nombre (dialogo del editor)
+  designer --> app : nombre
+  app -> level : fileName = nombre seguro + .json\n(confirma si reemplaza)
+  app -> level : save()
+end
 level -> project : saveLevel(fileName, level)
 project -> preload : writeFile(levels/..., JSON)
 preload -> main : IPC project:writeFile
-main -> disk : escribir JSON
+main -> disk : escribir JSON (nunca fuera de la carpeta)
 disk --> main : confirmacion
 main --> preload : ok
 preload --> project : ok

@@ -1,0 +1,176 @@
+<!-- Configurar personajes. A la izquierda, los guardados en el proyecto por
+     tipo; a la derecha, el que se esta editando. Lo que se guarda aca
+     aparece en el panel Personajes para arrastrarlo a cualquier nivel. -->
+@if (chars.characterEditor(); as editor) {
+  <div class="modal-backdrop" (click)="chars.closeCharacterEditor()">
+    <section class="modal modal--xl" role="dialog" aria-modal="true" aria-labelledby="chars-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="chars-title">Configurar personajes</h2>
+        <button class="icon-button" type="button" title="Cerrar" (click)="chars.closeCharacterEditor()">×</button>
+      </div>
+
+      <div class="chareditor">
+        <nav class="chareditor__list">
+          @for (kind of chars.characterKinds; track kind.id) {
+            <div class="chareditor__group">
+              <div class="chareditor__grouphead">
+                <span>{{ kind.glyph }} {{ kind.label }}</span>
+                <button class="btn btn--small" type="button" [title]="'Nuevo ' + kind.label.toLowerCase()"
+                        (click)="chars.newCharacterDraft(kind.id)">+</button>
+              </div>
+              @for (preset of chars.savedPresetsOfKind(kind.id); track preset.id) {
+                <button class="tree__item" type="button" [class.is-active]="editor.savedId === preset.id"
+                        (click)="chars.editCharacterPreset(preset.id)">
+                  <span class="tree__label">{{ preset.name }}</span>
+                </button>
+              } @empty {
+                <p class="chareditor__empty">Ninguno guardado</p>
+              }
+            </div>
+          }
+        </nav>
+
+        <div class="chareditor__form">
+          @if (!editor.savedId) {
+            <p class="hint hint--warn">Sin guardar todavía.</p>
+          }
+
+          <div class="field-row">
+            <label class="field">
+              <span>Nombre</span>
+              <input class="input" [value]="editor.draft.name" (input)="chars.patchCharacterDraft({ name: str($event) })" />
+            </label>
+            <label class="field">
+              <span>Tipo</span>
+              <select class="input" [value]="editor.draft.kind" (change)="chars.setCharacterKind(str($event))">
+                @for (kind of chars.characterKinds; track kind.id) {
+                  <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.label }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          <p class="hint">{{ chars.kindHint(editor.draft.kind) }}</p>
+
+          <div class="chareditor__section">Asset</div>
+          <div class="chareditor__asset">
+            <div class="chareditor__preview" title="Primer cuadro del recorte">
+              @if (chars.draftPreviewStyle(); as style) {
+                <span class="chareditor__sprite" [style]="style"></span>
+              } @else {
+                <span class="chareditor__nopreview">Sin vista previa</span>
+              }
+            </div>
+            <div class="texpicker">
+              @for (texture of tex.textures(); track texture) {
+                <button class="texpicker__item" type="button" [title]="texture" [appTextureThumb]="texture"
+                        [class.is-active]="editor.draft.texture === 'textures/' + texture"
+                        (click)="chars.setDraftTexture(texture)">
+                  @if (tex.textureAssets()[texture]; as asset) {
+                    <img [src]="asset.dataUrl" [alt]="texture" />
+                  }
+                </button>
+              } @empty {
+                <p class="hint">Sin texturas en assets/textures/. Importalas desde Recursos.</p>
+              }
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Recorte X</span>
+              <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.x"
+                     (change)="chars.patchDraftRect('x', int($event))" />
+            </label>
+            <label class="field">
+              <span>Y</span>
+              <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.y"
+                     (change)="chars.patchDraftRect('y', int($event))" />
+            </label>
+            <label class="field">
+              <span>Ancho</span>
+              <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.width"
+                     (change)="chars.patchDraftRect('width', int($event))" />
+            </label>
+            <label class="field">
+              <span>Alto</span>
+              <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.height"
+                     (change)="chars.patchDraftRect('height', int($event))" />
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Cuadros</span>
+              <input class="input" type="number" min="1" step="1" [value]="editor.draft.frames"
+                     (change)="chars.setDraftFrames(int($event))" />
+            </label>
+            <label class="field">
+              <span>Seg. por cuadro</span>
+              <input class="input" type="number" min="0.05" step="0.05" [value]="editor.draft.frameDuration"
+                     (change)="chars.setDraftFrameDuration(num($event))" />
+            </label>
+            <label class="field">
+              <span>Tamaño (escala)</span>
+              <input class="input" type="number" min="0.25" step="0.25" [value]="editor.draft.scale"
+                     (change)="chars.setDraftScale(num($event))" />
+            </label>
+          </div>
+          <p class="hint">
+            Los cuadros van uno al lado del otro en la textura, del ancho del recorte. Con escala 2 se dibuja
+            al doble.
+          </p>
+
+          <div class="chareditor__section">Colisión</div>
+          <div class="field-row chareditor__collider">
+            <label class="field">
+              <span>Ancho</span>
+              <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.width"
+                     (change)="chars.patchDraftCollider('width', int($event))" />
+            </label>
+            <label class="field">
+              <span>Alto</span>
+              <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.height"
+                     (change)="chars.patchDraftCollider('height', int($event))" />
+            </label>
+            <label class="check">
+              <input type="checkbox" [checked]="editor.draft.collider.solid === true"
+                     (change)="chars.setDraftSolid(checked($event))" />
+              <span>Sólido</span>
+            </label>
+            <button class="btn btn--small" type="button" (click)="chars.fitDraftCollider()"
+                    title="Del tamaño con que se dibuja: el recorte por la escala">Ajustar al sprite</button>
+          </div>
+
+          <div class="chareditor__section">Características</div>
+          <div class="field-row">
+            <label class="field">
+              <span>Vida</span>
+              <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.health"
+                     (change)="chars.patchDraftStats('health', num($event))" />
+            </label>
+            <label class="field">
+              <span>Daño</span>
+              <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.damage"
+                     (change)="chars.patchDraftStats('damage', num($event))" />
+            </label>
+            <label class="field">
+              <span title="Celdas de grilla por segundo">Velocidad</span>
+              <input class="input" type="number" min="0" step="0.5" [value]="editor.draft.stats.speed"
+                     (change)="chars.patchDraftStats('speed', num($event))" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        @if (editor.savedId) {
+          <button class="btn btn--danger" type="button" (click)="chars.deleteCharacterPreset()">Eliminar</button>
+          <button class="btn" type="button" (click)="chars.duplicateCharacterPreset()">Duplicar</button>
+        }
+        <button class="btn" type="button" (click)="chars.closeCharacterEditor()">Cerrar</button>
+        <button class="btn btn--primary" type="button" (click)="chars.saveCharacterDraft()">Guardar</button>
+      </div>
+    </section>
+  </div>
+}

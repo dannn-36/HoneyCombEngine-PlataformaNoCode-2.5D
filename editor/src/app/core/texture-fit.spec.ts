@@ -1,4 +1,4 @@
-import { fitTextureSize, usesNearestNeighbor } from './texture-fit';
+import { convertedSize, convertsWithNearest, fitTextureSize, usesNearestNeighbor } from './texture-fit';
 
 describe('fitTextureSize', () => {
   it('no toca una imagen que ya entra en el tile', () => {
@@ -33,5 +33,40 @@ describe('usesNearestNeighbor', () => {
 
   it('suaviza aunque el factor sea entero si es grande', () => {
     expect(usesNearestNeighbor(512, fitTextureSize(512, 512, 64))).toBe(false);
+  });
+});
+
+describe('convertedSize', () => {
+  it('en modo tile reduce igual que Importar', () => {
+    expect(convertedSize(720, 960, 'tile', 64, 200)).toEqual(fitTextureSize(720, 960, 64));
+  });
+
+  it('en modo custom usa el tope elegido', () => {
+    expect(convertedSize(720, 960, 'custom', 64, 128)).toEqual({ width: 96, height: 128, scaled: true });
+  });
+
+  it('en modo original no reduce nunca', () => {
+    expect(convertedSize(2377, 1837, 'original', 64, 128)).toEqual({ width: 2377, height: 1837, scaled: false });
+  });
+
+  it('un tope roto no deja la imagen en cero', () => {
+    expect(convertedSize(360, 360, 'custom', 64, Number.NaN)).toEqual({ width: 360, height: 360, scaled: false });
+    expect(convertedSize(360, 360, 'custom', 64, 0)).toEqual({ width: 1, height: 1, scaled: true });
+  });
+});
+
+describe('convertsWithNearest', () => {
+  const photo = fitTextureSize(2377, 1837, 64);
+
+  it('pixel fuerza bordes duros aunque sea una foto', () => {
+    expect(convertsWithNearest('pixel', 2377, photo)).toBe(true);
+  });
+
+  it('smooth fuerza suavizado aunque sea pixel art', () => {
+    expect(convertsWithNearest('smooth', 128, fitTextureSize(128, 128, 64))).toBe(false);
+  });
+
+  it('auto decide como Importar', () => {
+    expect(convertsWithNearest('auto', 2377, photo)).toBe(usesNearestNeighbor(2377, photo));
   });
 });

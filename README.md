@@ -33,6 +33,8 @@ La primera vez tarda entre **10 y 25 minutos**: raylib y el motor se compilan de
 | `editor.cmd` / `./editor.sh` | Abre el editor en modo desarrollo, con recarga en vivo |
 | `engine.sh` *(Linux)* | Recompila y abre el motor por separado |
 
+Los niveles, imágenes y bibliotecas que crees con el editor se guardan en **`Documentos/HoneyComb`** (la *carpeta del editor*, ver sección 7.2), no en el repositorio. Se puede cambiar desde *Archivo › Cambiar carpeta del editor…* y abrir con *Archivo › Mostrar carpeta del editor*.
+
 El asistente **no reemplaza** la guía de abajo: si prefieres montar el entorno paso a paso, o algo falla y quieres entender qué hace cada pieza, las secciones 1 a 9 siguen siendo la referencia completa.
 
 ---
@@ -272,11 +274,15 @@ npm install --save-dev electron electron-builder
 Se necesita un `main.js` (proceso principal de Electron) que cargue el build de Angular (`dist/editor/index.html`) dentro de una `BrowserWindow`, y un `preload.js` que exponga de forma segura el acceso al sistema de archivos vía `contextBridge` (para guardar/abrir proyectos `.json` en disco).
 
 ### 6.4 Librerías adicionales según necesidades del editor
-| Necesidad del proyecto | Librería recomendada |
-| :--- | :--- |
-| Drag & drop de tiles/entidades en el canvas isométrico | `@angular/cdk` (módulo `DragDropModule`) |
-| Formularios de configuración de eventos (Trigger→Condición→Acción) | `Reactive Forms` (`@angular/forms`) |
-| Validación del JSON contra `level.schema.json` / `event_catalog.json` | `ajv` (JSON Schema validator) |
+
+Al empezar se evaluaron estas librerías. Ninguna terminó usándose, y se quitaron de `package.json` para no cargar dependencias muertas:
+
+| Necesidad del proyecto | Se evaluó | Cómo se resolvió |
+| :--- | :--- | :--- |
+| Drag & drop de tiles/entidades en el canvas isométrico | `@angular/cdk` (`DragDropModule`) | Drag & drop nativo de HTML5 (`dataTransfer`) sobre el canvas |
+| Formularios de configuración de eventos (Trigger→Condición→Acción) | `Reactive Forms` (`@angular/forms`) | Campos enlazados a signals; el panel se arma a partir de los `params` del catálogo |
+| Validación del JSON contra `level.schema.json` / `event_catalog.json` | `ajv` (JSON Schema validator) | `parseLevel()` en `ProjectService` valida lo que el editor necesita al abrir |
+| Navegación entre pantallas | `@angular/router` | No hace falta: el editor es una sola pantalla. Si se agrega otra, va en `app.config.ts` con `withHashLocation()` |
 
 ### 6.5 Testing del Editor
 - **Jasmine + Karma** (incluidos por defecto con `ng new`) para pruebas unitarias de componentes.
@@ -286,7 +292,7 @@ Se necesita un `main.js` (proceso principal de Electron) que cargue el build de 
 
 Antes de construir canvas/paneles, el editor tiene una capa de lógica sin UI, espejo del mismo contrato de datos que usa el runtime C++:
 
-- **`main.js` / `preload.js`** — API de proyecto vía `contextBridge`: `openFolder()` (elige la carpeta raíz del proyecto), `readFile`/`writeFile`/`listDir` (rutas siempre relativas a esa raíz; el proceso principal valida que no escapen de la carpeta del proyecto antes de tocar el disco).
+- **`main.js` / `preload.js` / `ipc/`** — API de proyecto vía `contextBridge`. La raíz es siempre la **carpeta del editor** (ver sección 7.2): ya no se elige ni se deduce. `readFile`/`writeFile`/`listDir`/`createDir` usan rutas relativas a ella, y el proceso principal (`ipc/project-root.js`) valida que ninguna se salga antes de tocar el disco. Abrir un nivel de afuera o importar una imagen los **copia** adentro.
 - **`src/app/models/`** — interfaces TypeScript espejo de `level.schema.json` y `event_catalog.json` (`level.model.ts`, `event-catalog.model.ts`). Cualquier campo nuevo se agrega primero al schema, y aquí y en `LevelLoader.cpp` en simultáneo.
 - **`src/app/core/iso-projection.ts`** — espejo exacto en TypeScript de `IsoGridSystem::GridToScreen`/`ScreenToGrid` (C++), para que el canvas ubique las entidades en pantalla de la misma forma que el runtime.
 - **`src/app/services/`**:
@@ -300,50 +306,72 @@ El panel de eventos que se construya sobre `CatalogService` debe generar sus for
 
 ## 7. Estructura de Carpetas del Proyecto
 
+Hay dos carpetas distintas, y no hay que confundirlas:
+
+- **El repositorio** (lo que está en git): el código del editor y del motor, los schemas y el contenido de ejemplo.
+- **La carpeta del editor**: donde el editor guarda y lee **todo** el trabajo del diseñador. Por defecto es `Documentos/HoneyComb`, y se cambia desde *Archivo › Cambiar carpeta del editor…*. El editor nunca lee ni escribe fuera de ella: lo que viene de afuera (una imagen, un nivel de Descargas) se **copia** adentro, y el original no se toca.
+
+### 7.1 El repositorio
+
 ```
 /honeycomb-engine
 ├── editor/                        # Angular + Electron
 │   ├── src/app/
+│   │   ├── app.ts / app.html        # Shell: menús, atajos, áreas fijas y cableado
+│   │   ├── dialogs/                 # Diálogos grandes, cargados con @defer al abrirlos
 │   │   ├── models/                  # Espejo TS de level.schema.json / event_catalog.json
-│   │   ├── core/                    # iso-projection.ts (espejo de IsoGridSystem)
-│   │   ├── services/                # ProjectService, CatalogService, LevelService
+│   │   ├── core/                    # Lógica pura con tests (iso-projection.ts, texture-fit.ts...)
+│   │   ├── services/                # ProjectService, CatalogService, LevelService...
+│   │   ├── textures/                # Biblioteca de texturas, miniaturas bajo demanda, convertidor
+│   │   ├── project/                 # El nivel como documento y el explorador de archivos
+│   │   ├── viewport/ entities/ map/ selection/ palette/ inspector/
+│   │   ├── characters/ combat/ events/ ui/ menu-bar/
 │   │   └── electron-api.d.ts        # Tipos de la API que expone preload.js
-│   ├── main.js                      # Proceso principal de Electron (API de proyecto)
+│   ├── ipc/                         # Proceso principal: un módulo por dominio
+│   │   ├── project-root.js          # Carpeta del editor y barrera de rutas
+│   │   ├── workspace.js             # Cuál es, cambiarla, catálogo de eventos
+│   │   ├── levels.js                # Abrir / importar niveles
+│   │   ├── files.js                 # Leer, escribir, listar, crear carpetas
+│   │   ├── convert.js               # Importar imágenes (PNG, JPG, JPEG → PNG)
+│   │   ├── run.js                   # Lanzar engine.exe
+│   │   └── names.js / media-types.js
+│   ├── main.js                      # Proceso principal de Electron (ventana y registro de IPC)
 │   └── preload.js                   # Puente seguro renderer <-> sistema de archivos
 ├── engine/                        # C++17 / raylib (backend SDL2)
-│   ├── core/                        # GraphicsDevice, ResourceManager (wrapper sobre raylib)
-│   ├── systems/
-<<<<<<< HEAD
-│   │   ├── iso_grid/                 # IsoGridSystem
-│   │   ├── z_sort/                   # ZSortSystem
-│   │   ├── collision/                # CollisionSystem
-│   │   ├── event_system/             # EventSystem
-│   │   ├── animation/                # AnimationSystem
-│   │   ├── audio/                    # AudioSystem
-│   │   └── input/                    # InputSystem
-│   ├── loader/                      # LevelLoader, EventLoader, AssetResolver
-│   ├── vcpkg.json                    # Manifiesto de dependencias (sdl2, nlohmann-json; raylib se compila vía FetchContent)
-│   ├── CMakePresets.json             # Toolchain de vcpkg vía $env{VCPKG_ROOT} (portable entre máquinas)
-=======
-│   │   ├── iso_grid/
-│   │   ├── z_sort/
-│   │   ├── collision/
-│   │   └── event_system/
-│   ├── loader/                      # LevelLoader, EventLoader
-│   ├── vcpkg.json                    # Manifiesto de dependencias (raylib 6.0, nlohmann-json)
->>>>>>> parent of a8793ce (Update README to document SDL2 backend and vcpkg manifest changes)
+│   ├── core/                        # Capa 1: GraphicsDevice, ResourceManager (únicos que hablan con raylib)
+│   ├── systems/                     # Capa 2: lógica reutilizable, sin saber de niveles
+│   │   ├── iso_grid/  z_sort/  collision/  event_system/
+│   │   └── animation/  audio/  input/  camera/
+│   ├── loader/                      # Capa 3: LevelLoader, EventLoader, ItemLoader, AssetResolver
+│   ├── game/                        # Capa 4: GameSession, Movement, Mobility, Combat, Inventory, Loot, Zones...
+│   ├── world/                       # Modelo compartido: Level, ItemDefs
+│   ├── vcpkg.json                   # Manifiesto de dependencias (sdl2, nlohmann-json; raylib se compila vía FetchContent)
+│   ├── CMakePresets.json            # Toolchain de vcpkg vía $env{VCPKG_ROOT} (portable entre máquinas)
 │   ├── CMakeLists.txt
 │   └── main.cpp
-├── schema/
+├── schema/                        # Contrato entre editor y runtime (es del programa, no de cada proyecto)
 │   ├── level.schema.json            # Contrato de niveles
 │   └── event_catalog.json           # Catálogo de triggers/condiciones/acciones
-├── tools/
-│   └── profiling/                    # Scripts de evaluación de rendimiento
-├── assets/
-│   ├── textures/
-│   └── sounds/
-└── levels/
+├── docs/architecture/             # Diagramas PlantUML (contexto, componentes, secuencias)
+├── tools/                         # Generadores de niveles y sprites, asistente de instalación
+├── assets/                        # Contenido de ejemplo (se copia a la carpeta del editor la primera vez)
+├── levels/                        # Niveles de ejemplo (ídem)
+└── characters.json / items.json   # Bibliotecas de ejemplo (ídem)
 ```
+
+### 7.2 La carpeta del editor
+
+```
+Documentos/HoneyComb/              # o la que se elija en Archivo › Cambiar carpeta del editor…
+├── levels/                        # Los niveles (.json). Guardar y Guardar como escriben acá
+├── assets/
+│   ├── textures/                  # Imágenes ya convertidas a PNG, con nombres que el motor puede abrir
+│   └── sounds/
+├── characters.json                # Personajes configurados
+└── items.json                     # Biblioteca de objetos
+```
+
+La primera vez que se abre el editor, si esta carpeta no existe, se crea con una **copia** de `levels/`, `assets/`, `characters.json` e `items.json` del repositorio. El runtime no necesita saber nada de esto: busca los assets en `<nivel>/../../assets`, así que un nivel guardado en `levels/` corre tal cual. La carpeta elegida se recuerda en `honeycomb-settings.json`, dentro de los datos de Electron.
 
 ---
 
@@ -362,7 +390,7 @@ El panel de eventos que se construya sobre `CatalogService` debe generar sus for
 11. [ ] Abrir `/engine` en VS Code → configurar `cmake.configureArgs` con la ruta al toolchain de vcpkg (sección 5.2).
 12. [ ] `CMake: Configure` → `CMake: Build` en `/engine`. Confirmar que compila sin errores.
 13. [ ] Instalar `@angular/cli` globalmente.
-14. [ ] Dentro de `/editor`: `npm install` (Angular, Electron, electron-builder, @angular/cdk, ajv).
+14. [ ] Dentro de `/editor`: `npm install` (Angular, Electron, electron-builder, Vitest).
 15. [ ] Levantar el editor en modo desarrollo (`ng serve` + `electron .`) y confirmar que abre la ventana de escritorio.
 16. [ ] Verificar que ambos módulos (`/editor` y `/engine`) compilan/corren **de forma independiente** antes de conectar el flujo de niveles JSON entre ambos.
 

@@ -2,11 +2,19 @@
 // HoneyComb Engine - Editor (componente raiz)
 // =============================================================================
 //
-// Todo el editor vive en un solo componente. Es una decision deliberada para el
-// prototipo: la ventana es una unica pantalla con areas fijas (outliner,
-// recursos, viewport, propiedades, eventos) que comparten el mismo nivel
-// abierto, y partirla en componentes solo agregaria capas de @Input/@Output
-// para pasar el mismo estado de un lado a otro.
+// El editor es, casi entero, un solo componente. Es una decision deliberada
+// para el prototipo: la ventana es una unica pantalla con areas fijas
+// (outliner, recursos, viewport, propiedades, eventos) que comparten el mismo
+// nivel abierto, y partirla en componentes solo agregaria capas de
+// @Input/@Output para pasar el mismo estado de un lado a otro.
+//
+// La excepcion son los DIALOGOS GRANDES (dialogs/): objetos y armas,
+// personajes, convertidor, puzzle, grilla, tunel y pasar de nivel. Son
+// componentes aparte por PESO, no por estado: se cargan con @defer la primera
+// vez que se abren, y uno que no se usa en la sesion no se carga nunca. El
+// estado sigue siendo de App y de sus controladores; el dialogo solo tiene el
+// markup (ver dialogs/dialog-base.ts). Por eso app.scss no esta encapsulado:
+// es el tema de toda la ventana, dialogos incluidos.
 //
 // La interfaz esta modelada sobre la de Blender: areas con cabecera propia
 // separadas por un surco, pestanas de workspace que cambian que editores estan
@@ -22,8 +30,8 @@
 //   core/        logica pura, sin Angular y con tests; core/iso-projection.ts
 //                es el espejo de IsoGridSystem en C++, y su proyeccion tiene
 //                que ser identica a la del runtime
-//   */*.controller.ts  cada area del editor, con su markup todavia en
-//                app.html para compartir los estilos de App
+//   */*.controller.ts  cada area del editor; su markup esta en app.html, o
+//                en dialogs/ si es uno de los dialogos grandes
 //
 // Los controladores de la escena forman capas, y las dependencias van en un
 // solo sentido -- de la entrada hacia el dominio, nunca al reves:
@@ -37,9 +45,16 @@
 //      v
 //   selection/  palette/  inspector/      que esta elegido y como se edita
 //
-// Alrededor: project/ (el nivel como documento y el explorador), characters/,
-// textures/ y combat/ (las bibliotecas del proyecto y sus ventanas), events/
-// (el panel Eventos y el dialogo de pasar de nivel), ui/ (paneles).
+// Alrededor: project/ (el nivel como documento y el explorador de la carpeta
+// del editor), characters/, textures/ y combat/ (las bibliotecas del proyecto
+// y sus ventanas; en textures/ tambien el convertidor de imagenes y las
+// miniaturas bajo demanda), events/ (el panel Eventos y el dialogo de pasar de
+// nivel), dialogs/ (el markup de los dialogos grandes), ui/ (paneles y el
+// dialogo de pedir un nombre).
+//
+// Todo lo que toca el disco pasa por services/project.service.ts -> preload.js
+// -> ipc/ (proceso principal), siempre dentro de la carpeta del editor (ver
+// ipc/project-root.js).
 //
 // El dibujo y la proyeccion pantalla<->celda estan en core/iso-canvas-renderer.ts.
 // =============================================================================
@@ -47,7 +62,9 @@
 import {
   Component,
   ElementRef,
+  ViewEncapsulation,
   computed,
+  forwardRef,
   inject,
   signal,
   viewChild,
@@ -65,7 +82,14 @@ import {
   SHAPE_SHEET_WIDTH,
   ShapeDef,
 } from './core/iso-shapes';
-import { AttackPreviewDirective } from './combat/attack-preview.directive';
+import { EDITOR_HOST } from './dialogs/dialog-base';
+import { RoomDialog } from './dialogs/room-dialog';
+import { TunnelDialog } from './dialogs/tunnel-dialog';
+import { CharactersDialog } from './dialogs/characters-dialog';
+import { ItemEditorDialog } from './dialogs/item-editor-dialog';
+import { TransitionDialog } from './dialogs/transition-dialog';
+import { ConverterDialog } from './dialogs/converter-dialog';
+import { PuzzleDialog } from './dialogs/puzzle-dialog';
 import { CombatInspectorController } from './combat/combat-inspector.controller';
 import { ItemEditorController } from './combat/item-editor.controller';
 import { PuzzleController } from './combat/puzzle.controller';
@@ -74,8 +98,11 @@ import { MapController } from './map/map.controller';
 import { CharactersController } from './characters/characters.controller';
 import { EventsController } from './events/events.controller';
 import { TexturesController } from './textures/textures.controller';
+import { TextureThumbDirective } from './textures/texture-thumb.directive';
+import { ImageConverterController } from './textures/image-converter.controller';
 import { BackgroundPickerController } from './inspector/background-picker.controller';
 import { PanelsController } from './ui/panels.controller';
+import { NamePromptController } from './ui/name-prompt.controller';
 import { CatalogService } from './services/catalog.service';
 import { ItemLibraryService } from './services/item-library.service';
 import { LevelService } from './services/level.service';
@@ -146,9 +173,30 @@ const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
 
 @Component({
   selector: 'app-root',
-  imports: [MenuBar, NgTemplateOutlet, AttackPreviewDirective],
+  // Los dialogos de dialogs/ solo se usan dentro de @defer en app.html: el
+  // compilador los saca del bundle principal y los carga aparte.
+  imports: [
+    MenuBar,
+    NgTemplateOutlet,
+    TextureThumbDirective,
+    RoomDialog,
+    TunnelDialog,
+    CharactersDialog,
+    ItemEditorDialog,
+    TransitionDialog,
+    ConverterDialog,
+    PuzzleDialog,
+  ],
+  // Los dialogos llegan a App por este token (ver dialogs/dialog-base.ts).
+  providers: [{ provide: EDITOR_HOST, useExisting: forwardRef(() => App) }],
   templateUrl: './app.html',
   styleUrl: './app.scss',
+  // Sin encapsular: app.scss es el tema de TODO el editor, y los dialogos de
+  // dialogs/ son componentes aparte. Encapsulado, Angular le agregaba a cada
+  // regla un atributo propio de App, y nada de lo que dibuja otro componente
+  // las recibia. App es la raiz, asi que sus estilos ya eran de toda la
+  // ventana; ahora tambien en el DOM (ver la cabecera de app.scss).
+  encapsulation: ViewEncapsulation.None,
   // Los atajos se escuchan en window y no en el canvas: en Blender funcionan
   // con el puntero sobre cualquier editor, no solo sobre el viewport, y ademas
   // el canvas no tiene foco propio (habria que darle tabindex y pedirlo a mano).
@@ -239,6 +287,9 @@ export class App {
    */
   readonly panels: PanelsController = new PanelsController();
 
+  /** El dialogo de "escribi un nombre" (Guardar como, Nueva carpeta). Ver ui/name-prompt.controller.ts. */
+  readonly prompt: NamePromptController = new NamePromptController();
+
   /**
    * El explorador de archivos del proyecto. Ver project/explorer.controller.ts.
    * Lo que no decide el (abrir un nivel, elegir una textura) se le pasa por
@@ -250,6 +301,7 @@ export class App {
     (node) => this.openProjectLevel(node),
     (name) => this.palette.selectTexture(name),
     () => this.workspace.set('archivo'),
+    (request) => this.prompt.ask(request),
   );
 
   readonly chars: CharactersController = new CharactersController(
@@ -263,20 +315,30 @@ export class App {
   /** El selector de color del fondo. Ver inspector/background-picker.controller.ts. */
   /** La biblioteca de texturas del proyecto. Ver textures/textures.controller.ts. */
   readonly tex: TexturesController = new TexturesController(
-    (message) => this.note(message),
-    (error) => this.describe(error),
-    () => this.proj.refreshProject(),
     (path) => this.explorer.reloadDir(path),
     (id) => this.panels.expand(id),
-    () => this.grid(),
-    this.hasFileSystem,
   );
+
+  /** Herramientas > Convertidor de imagenes. Ver textures/image-converter.controller.ts. */
+  readonly converter: ImageConverterController = new ImageConverterController({
+    note: (message) => this.note(message),
+    describe: (error) => this.describe(error),
+    refreshProject: () => this.proj.refreshProject(),
+    reloadLibrary: () => this.tex.reloadLibrary(),
+    tileWidth: () => this.grid().tileWidth,
+    hasFileSystem: this.hasFileSystem,
+  });
 
   /** Como se muestran los objetos. Ver combat/items-panel.controller.ts. */
   readonly items: ItemsPanelController = new ItemsPanelController(
     () => this.tex.textureAssets(),
     () => this.combat.options(),
-    (name, asset) => this.itemEditor.setTexture(name, asset),
+    // Con el tamano real aunque la miniatura todavia no hubiera cargado: las
+    // texturas se cargan bajo demanda (ver TexturesController).
+    (name, asset) =>
+      asset
+        ? this.itemEditor.setTexture(name, asset)
+        : void this.tex.ensureAsset(name).then((loaded) => this.itemEditor.setTexture(name, loaded ?? undefined)),
   );
 
   readonly itemEditor: ItemEditorController = new ItemEditorController(
@@ -379,7 +441,14 @@ export class App {
     tex: this.tex,
     view: this.view,
     ev: this.ev,
+    prompt: this.prompt,
   });
+
+  constructor() {
+    // La carpeta del editor se abre sola al arrancar: ya no hay que elegir
+    // ninguna (ver ipc/project-root.js).
+    void this.proj.openWorkspace();
+  }
 
   // --- Datos para la plantilla ----------------------------------------------
   //
@@ -443,7 +512,9 @@ export class App {
               run: () => void this.proj.loadLevel(file),
             })),
           },
-          { kind: 'action', label: 'Abrir carpeta de proyecto…', run: () => void this.proj.openProject() },
+          separator,
+          { kind: 'action', label: 'Mostrar carpeta del editor', run: () => void this.proj.revealWorkspace() },
+          { kind: 'action', label: 'Cambiar carpeta del editor…', run: () => void this.proj.changeWorkspace() },
           separator,
           {
             kind: 'action',
@@ -457,9 +528,9 @@ export class App {
           separator,
           {
             kind: 'action',
-            label: 'Importar texturas…',
-            disabled: this.tex.importing(),
-            run: () => void this.tex.importTextures(),
+            label: 'Importar imágenes…',
+            disabled: this.converter.busy(),
+            run: () => void this.converter.openAndAdd('files'),
           },
           separator,
           { kind: 'action', label: 'Salir', run: () => window.close() },
@@ -645,6 +716,33 @@ export class App {
         ],
       },
       {
+        id: 'herramientas',
+        label: 'Herramientas',
+        items: [
+          {
+            kind: 'submenu',
+            label: 'Convertidor de imágenes',
+            emptyLabel: '',
+            items: [
+              { kind: 'action', label: 'Abrir convertidor…', run: () => this.converter.open() },
+              separator,
+              {
+                kind: 'action',
+                label: 'Convertir imágenes (PNG, JPG, JPEG)…',
+                disabled: this.converter.busy(),
+                run: () => void this.converter.openAndAdd('files'),
+              },
+              {
+                kind: 'action',
+                label: 'Convertir los JPG del proyecto…',
+                disabled: this.converter.busy(),
+                run: () => void this.converter.openAndAdd('project-jpg'),
+              },
+            ],
+          },
+        ],
+      },
+      {
         id: 'ejecutar',
         label: 'Ejecutar',
         items: [{ kind: 'action', label: 'Ejecutar nivel', shortcut: 'F5', run: () => void this.proj.run() }],
@@ -696,6 +794,20 @@ export class App {
     if (this.entityOps.pendingPlacement()) {
       if (event.key === 'Escape') {
         this.entityOps.cancelPending();
+      }
+      return;
+    }
+    // El dialogo de nombre va primero: puede abrirse ENCIMA de otro (Guardar
+    // como desde el convertidor, por ejemplo) y Escape tiene que cerrar este.
+    if (this.prompt.request()) {
+      if (event.key === 'Escape') {
+        this.prompt.cancel();
+      }
+      return;
+    }
+    if (this.converter.isOpen()) {
+      if (event.key === 'Escape') {
+        this.converter.close();
       }
       return;
     }

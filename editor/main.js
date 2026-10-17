@@ -24,10 +24,12 @@ const fsSync = require('node:fs');
 // Los handlers de IPC, uno por dominio. Cada modulo registra sus propios
 // canales; los nombres de canal siguen siendo los mismos que declara
 // preload.js, que es el contrato con la UI y no cambia.
+const ipcWorkspace = require('./ipc/workspace');
 const ipcLevels = require('./ipc/levels');
 const ipcFiles = require('./ipc/files');
-const ipcImport = require('./ipc/import');
+const ipcConvert = require('./ipc/convert');
 const ipcRun = require('./ipc/run');
+const { initWorkspace } = require('./ipc/project-root');
 
 const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
 const ANGULAR_BUILD_INDEX = path.join(__dirname, 'dist/editor/browser/index.html');
@@ -118,17 +120,29 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Sin el menu nativo ("File Edit View Window"): el editor dibuja su propia
   // barra de menus, y con las dos habria dos filas de menus que no se hablan.
   // Lo util que traia el nativo (recargar, herramientas de desarrollo) esta en
   // el menu Ver del editor.
   Menu.setApplicationMenu(null);
 
+  // La carpeta del editor, lista antes que la ventana: es la raiz de todo lo
+  // que la UI lee y escribe (ver ipc/project-root.js). Si falla (Documentos sin
+  // permiso de escritura, por ejemplo) se reintenta con el primer pedido de la
+  // UI, que ahi si puede mostrar el error.
+  let startup = { root: null, seeded: [] };
+  try {
+    startup = await initWorkspace();
+  } catch (err) {
+    console.error('[honeycomb] no se pudo preparar la carpeta del editor:', err.message);
+  }
+
   // Antes de abrir la ventana: la UI puede pedir cosas apenas carga.
+  ipcWorkspace.register(startup);
   ipcLevels.register();
   ipcFiles.register();
-  ipcImport.register();
+  ipcConvert.register();
   ipcRun.register();
 
   createWindow();

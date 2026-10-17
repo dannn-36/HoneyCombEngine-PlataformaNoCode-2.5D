@@ -1,0 +1,85 @@
+<!-- Menu del tunel: nuevo, recien trazado a mano, o uno existente (clic
+     derecho sobre el, o ✎ en el panel Mapa). Los lados deciden por donde
+     sale y entra; el trazado, por donde pasa. -->
+@if (map.tunnelDraft(); as draft) {
+  <div class="modal-backdrop" (click)="map.cancelTunnelDialog()">
+    <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="tunnel-dialog-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="tunnel-dialog-title">
+          {{ draft.editId ? 'Túnel “' + draft.editId + '”' : 'Conectar grillas con un túnel' }}
+        </h2>
+        <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelTunnelDialog()">×</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="field-row">
+          <label class="field">
+            <span>Desde</span>
+            <select class="input" [value]="draft.from" (change)="map.patchTunnelDraft({ from: str($event) })">
+              @for (room of map.rooms(); track room.id) {
+                <option [value]="room.id" [selected]="draft.from === room.id">{{ room.id }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Hasta</span>
+            <select class="input" [value]="draft.to" (change)="map.patchTunnelDraft({ to: str($event) })">
+              @for (room of map.rooms(); track room.id) {
+                <option [value]="room.id" [selected]="draft.to === room.id">{{ room.id }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Sale por</span>
+            <select class="input" [value]="draft.fromSide" (change)="map.patchTunnelDraft({ fromSide: map.sideValue($event) })">
+              <option value="" [selected]="draft.fromSide === ''">Automático (centro)</option>
+              @for (side of map.roomSides; track side.value) {
+                <option [value]="side.value" [selected]="draft.fromSide === side.value">{{ side.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Entra por</span>
+            <select class="input" [value]="draft.toSide" (change)="map.patchTunnelDraft({ toSide: map.sideValue($event) })">
+              <option value="" [selected]="draft.toSide === ''">Automático (centro)</option>
+              @for (side of map.roomSides; track side.value) {
+                <option [value]="side.value" [selected]="draft.toSide === side.value">{{ side.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Ancho (celdas caminables)</span>
+          <input class="input" type="number" min="1" step="1" [value]="draft.width"
+                 (input)="map.patchTunnelDraft({ width: int($event) })" />
+        </label>
+
+        <div class="fieldblock">
+          <span class="fieldblock__label">Trazado</span>
+          @if (draft.path.length > 0) {
+            <p class="hint">A mano, pasando por {{ draft.path.length }} puntos marcados.</p>
+          } @else {
+            <p class="hint">Automático: tramos rectos entre sus dos extremos.</p>
+          }
+          <div class="field-row">
+            <button class="btn" style="flex: 1" type="button" (click)="map.retraceTunnel()">Trazar a mano…</button>
+            <button class="btn" style="flex: 1" type="button" [disabled]="draft.path.length === 0"
+                    (click)="map.patchTunnelDraft({ path: [] })">Volver a automático</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn" type="button" (click)="map.cancelTunnelDialog()">Cancelar</button>
+        <button class="btn btn--primary" type="button" (click)="map.confirmTunnelDialog()">
+          {{ draft.editId ? 'Guardar' : 'Conectar' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

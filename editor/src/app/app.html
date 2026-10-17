@@ -238,819 +238,79 @@
     </div>
   }
 
-  <!-- Grilla del mapa: agregar una nueva, o cambiar una que ya existe (clic
-       derecho sobre ella, o ✎ en el panel Mapa). Una nueva se puede pegar a
-       otra eligiendo de que lado va, o dejar donde se la dibujo con la
-       herramienta Grilla. La vista previa verde del viewport muestra el lugar
-       mientras se cambian los numeros. -->
-  @if (map.roomDraft(); as draft) {
-    <div class="modal-backdrop" (click)="map.cancelRoomDialog()">
-      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="room-dialog-title"
-               (click)="$event.stopPropagation()">
-        <div class="modal__head">
-          <h2 id="room-dialog-title">{{ draft.editId ? 'Grilla “' + draft.editId + '”' : 'Agregar grilla al mapa' }}</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelRoomDialog()">×</button>
-        </div>
+  <!-- Los dialogos grandes viven en dialogs/ y se cargan aparte (ver
+       dialogs/dialog-base.ts). "when" baja su codigo y lo monta la PRIMERA vez
+       que se abre; el @if de adentro de cada uno lo muestra y lo oculta
+       despues. Un dialogo que no se usa en la sesion no se carga nunca, y el
+       que se usa sale del disco local en milisegundos. Sin "prefetch": bajarlos
+       en segundo plano al arrancar los dejaba en memoria aunque nadie los
+       abriera. -->
 
-        <div class="modal__body">
-          @if (!draft.editId && map.rooms().length === 0) {
-            <p class="hint">
-              El nivel todavía es una sola grilla. Al agregar esta, el área actual pasa a llamarse
-              “sala_1” y se puede unir con la nueva.
-            </p>
-          }
-
-          <div class="field-row">
-            @if (!draft.editId) {
-              <label class="field">
-                <span>Nombre</span>
-                <input class="input" [value]="draft.id" (input)="map.patchRoomDraft({ id: str($event) })" />
-              </label>
-            }
-            <label class="field">
-              <span>Ubicar junto a</span>
-              <select class="input" [value]="draft.anchor" (change)="map.setRoomAnchor(str($event))">
-                <option value="" [selected]="draft.anchor === ''">— posición libre —</option>
-                @for (room of map.anchorRooms(); track room.id) {
-                  <option [value]="room.id" [selected]="draft.anchor === room.id">{{ room.id }}</option>
-                }
-              </select>
-            </label>
-          </div>
-
-          @if (draft.anchor) {
-            <div class="fieldblock">
-              <span class="fieldblock__label">De qué lado</span>
-              <div class="seg seg--wrap">
-                @for (side of map.roomSides; track side.value) {
-                  <button class="tool" type="button" [class.is-active]="draft.side === side.value"
-                          [title]="side.hint" (click)="map.setRoomSide(side.value)">{{ side.label }}</button>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- Escribir columna o fila suelta la grilla de la de al lado; el
-               tamano, en cambio, la mantiene pegada. Ver map.patchRoomPosition. -->
-          <div class="field-row">
-            <label class="field">
-              <span>Columna</span>
-              <input class="input" type="number" step="1" [value]="draft.col"
-                     (input)="map.patchRoomPosition({ col: int($event) })" />
-            </label>
-            <label class="field">
-              <span>Fila</span>
-              <input class="input" type="number" step="1" [value]="draft.row"
-                     (input)="map.patchRoomPosition({ row: int($event) })" />
-            </label>
-            <label class="field">
-              <span>Ancho</span>
-              <input class="input" type="number" min="1" step="1" [value]="draft.width"
-                     (input)="map.patchRoomSize({ width: int($event) })" />
-            </label>
-            <label class="field">
-              <span>Alto</span>
-              <input class="input" type="number" min="1" step="1" [value]="draft.height"
-                     (input)="map.patchRoomSize({ height: int($event) })" />
-            </label>
-          </div>
-
-          @if (!draft.editId) {
-            <div class="field-row">
-              <label class="field">
-                <span>Conectar con</span>
-                <select class="input" [value]="draft.connectTo" (change)="map.patchRoomDraft({ connectTo: str($event) })">
-                  <option value="" [selected]="draft.connectTo === ''">— sin túnel —</option>
-                  @for (room of map.connectableRooms(); track room.id) {
-                    <option [value]="room.id" [selected]="draft.connectTo === room.id">{{ room.id }}</option>
-                  }
-                </select>
-              </label>
-              @if (draft.connectTo) {
-                <label class="field">
-                  <span>Ancho del túnel (celdas)</span>
-                  <input class="input" type="number" min="1" step="1" [value]="draft.tunnelWidth"
-                         (input)="map.patchRoomDraft({ tunnelWidth: int($event) })" />
-                </label>
-              }
-            </div>
-          }
-
-          <p class="hint">
-            El recuadro verde del viewport muestra dónde va a quedar. Si cae a la izquierda o arriba del
-            mapa, el mapa entero se corre para hacerle lugar.
-          </p>
-        </div>
-
-        <div class="modal__actions">
-          <button class="btn" type="button" (click)="map.cancelRoomDialog()">Cancelar</button>
-          <button class="btn btn--primary" type="button" (click)="map.confirmRoomDialog()">
-            {{ draft.editId ? 'Guardar' : 'Agregar grilla' }}
-          </button>
-        </div>
-      </section>
-    </div>
+  <!-- Grilla del mapa: agregar o editar: dialogs/room-dialog.html -->
+  @defer (when map.roomDraft()) {
+    <app-room-dialog />
   }
 
-  <!-- Menu del tunel: nuevo, recien trazado a mano, o uno existente (clic
-       derecho sobre el, o ✎ en el panel Mapa). Los lados deciden por donde
-       sale y entra; el trazado, por donde pasa. -->
-  @if (map.tunnelDraft(); as draft) {
-    <div class="modal-backdrop" (click)="map.cancelTunnelDialog()">
-      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="tunnel-dialog-title"
+  <!-- Tunel entre grillas: nuevo, trazado a mano o existente: dialogs/tunnel-dialog.html -->
+  @defer (when map.tunnelDraft()) {
+    <app-tunnel-dialog />
+  }
+
+  <!-- Configurar personajes: dialogs/characters-dialog.html -->
+  @defer (when chars.characterEditor()) {
+    <app-characters-dialog />
+  }
+
+  <!-- Objetos y armas: dialogs/item-editor-dialog.html -->
+  @defer (when itemEditor.state()) {
+    <app-item-editor-dialog />
+  }
+
+  <!-- Pasar a otro nivel: dialogs/transition-dialog.html -->
+  @defer (when transition.transitionDraft()) {
+    <app-transition-dialog />
+  }
+
+  <!-- Convertidor de imagenes: dialogs/converter-dialog.html -->
+  @defer (when converter.isOpen()) {
+    <app-converter-dialog />
+  }
+
+  <!-- Pedir un nombre (Guardar como, Nueva carpeta). Va despues de los otros
+       dialogos para quedar encima si se abre desde uno de ellos. Enter
+       confirma, Escape cancela (ver onKeyDown en app.ts). -->
+  @if (prompt.request(); as request) {
+    <div class="modal-backdrop" (click)="prompt.cancel()">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="prompt-title"
                (click)="$event.stopPropagation()">
         <div class="modal__head">
-          <h2 id="tunnel-dialog-title">
-            {{ draft.editId ? 'Túnel “' + draft.editId + '”' : 'Conectar grillas con un túnel' }}
-          </h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelTunnelDialog()">×</button>
+          <h2 id="prompt-title">{{ request.title }}</h2>
+          <button class="icon-button" type="button" title="Cerrar" (click)="prompt.cancel()">×</button>
         </div>
 
         <div class="modal__body">
-          <div class="field-row">
-            <label class="field">
-              <span>Desde</span>
-              <select class="input" [value]="draft.from" (change)="map.patchTunnelDraft({ from: str($event) })">
-                @for (room of map.rooms(); track room.id) {
-                  <option [value]="room.id" [selected]="draft.from === room.id">{{ room.id }}</option>
-                }
-              </select>
-            </label>
-            <label class="field">
-              <span>Hasta</span>
-              <select class="input" [value]="draft.to" (change)="map.patchTunnelDraft({ to: str($event) })">
-                @for (room of map.rooms(); track room.id) {
-                  <option [value]="room.id" [selected]="draft.to === room.id">{{ room.id }}</option>
-                }
-              </select>
-            </label>
-          </div>
-
-          <div class="field-row">
-            <label class="field">
-              <span>Sale por</span>
-              <select class="input" [value]="draft.fromSide" (change)="map.patchTunnelDraft({ fromSide: map.sideValue($event) })">
-                <option value="" [selected]="draft.fromSide === ''">Automático (centro)</option>
-                @for (side of map.roomSides; track side.value) {
-                  <option [value]="side.value" [selected]="draft.fromSide === side.value">{{ side.label }}</option>
-                }
-              </select>
-            </label>
-            <label class="field">
-              <span>Entra por</span>
-              <select class="input" [value]="draft.toSide" (change)="map.patchTunnelDraft({ toSide: map.sideValue($event) })">
-                <option value="" [selected]="draft.toSide === ''">Automático (centro)</option>
-                @for (side of map.roomSides; track side.value) {
-                  <option [value]="side.value" [selected]="draft.toSide === side.value">{{ side.label }}</option>
-                }
-              </select>
-            </label>
-          </div>
-
           <label class="field">
-            <span>Ancho (celdas caminables)</span>
-            <input class="input" type="number" min="1" step="1" [value]="draft.width"
-                   (input)="map.patchTunnelDraft({ width: int($event) })" />
+            <span>{{ request.label }}</span>
+            <input class="input" [value]="request.value" autofocus
+                   (input)="prompt.setValue(str($event))" (keydown.enter)="prompt.confirm()" />
           </label>
-
-          <div class="fieldblock">
-            <span class="fieldblock__label">Trazado</span>
-            @if (draft.path.length > 0) {
-              <p class="hint">A mano, pasando por {{ draft.path.length }} puntos marcados.</p>
-            } @else {
-              <p class="hint">Automático: tramos rectos entre sus dos extremos.</p>
-            }
-            <div class="field-row">
-              <button class="btn" style="flex: 1" type="button" (click)="map.retraceTunnel()">Trazar a mano…</button>
-              <button class="btn" style="flex: 1" type="button" [disabled]="draft.path.length === 0"
-                      (click)="map.patchTunnelDraft({ path: [] })">Volver a automático</button>
-            </div>
-          </div>
+          @if (request.hint) {
+            <p class="hint">{{ request.hint }}</p>
+          }
         </div>
 
         <div class="modal__actions">
-          <button class="btn" type="button" (click)="map.cancelTunnelDialog()">Cancelar</button>
-          <button class="btn btn--primary" type="button" (click)="map.confirmTunnelDialog()">
-            {{ draft.editId ? 'Guardar' : 'Conectar' }}
-          </button>
+          <button class="btn" type="button" (click)="prompt.cancel()">Cancelar</button>
+          <button class="btn btn--primary" type="button" [disabled]="request.value.trim() === ''"
+                  (click)="prompt.confirm()">{{ request.confirmLabel }}</button>
         </div>
       </section>
     </div>
   }
 
-  <!-- Configurar personajes. A la izquierda, los guardados en el proyecto por
-       tipo; a la derecha, el que se esta editando. Lo que se guarda aca
-       aparece en el panel Personajes para arrastrarlo a cualquier nivel. -->
-  @if (chars.characterEditor(); as editor) {
-    <div class="modal-backdrop" (click)="chars.closeCharacterEditor()">
-      <section class="modal modal--xl" role="dialog" aria-modal="true" aria-labelledby="chars-title"
-               (click)="$event.stopPropagation()">
-        <div class="modal__head">
-          <h2 id="chars-title">Configurar personajes</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="chars.closeCharacterEditor()">×</button>
-        </div>
-
-        <div class="chareditor">
-          <nav class="chareditor__list">
-            @for (kind of chars.characterKinds; track kind.id) {
-              <div class="chareditor__group">
-                <div class="chareditor__grouphead">
-                  <span>{{ kind.glyph }} {{ kind.label }}</span>
-                  <button class="btn btn--small" type="button" [title]="'Nuevo ' + kind.label.toLowerCase()"
-                          (click)="chars.newCharacterDraft(kind.id)">+</button>
-                </div>
-                @for (preset of chars.savedPresetsOfKind(kind.id); track preset.id) {
-                  <button class="tree__item" type="button" [class.is-active]="editor.savedId === preset.id"
-                          (click)="chars.editCharacterPreset(preset.id)">
-                    <span class="tree__label">{{ preset.name }}</span>
-                  </button>
-                } @empty {
-                  <p class="chareditor__empty">Ninguno guardado</p>
-                }
-              </div>
-            }
-          </nav>
-
-          <div class="chareditor__form">
-            @if (!editor.savedId) {
-              <p class="hint hint--warn">Sin guardar todavía.</p>
-            }
-
-            <div class="field-row">
-              <label class="field">
-                <span>Nombre</span>
-                <input class="input" [value]="editor.draft.name" (input)="chars.patchCharacterDraft({ name: str($event) })" />
-              </label>
-              <label class="field">
-                <span>Tipo</span>
-                <select class="input" [value]="editor.draft.kind" (change)="chars.setCharacterKind(str($event))">
-                  @for (kind of chars.characterKinds; track kind.id) {
-                    <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.label }}</option>
-                  }
-                </select>
-              </label>
-            </div>
-            <p class="hint">{{ chars.kindHint(editor.draft.kind) }}</p>
-
-            <div class="chareditor__section">Asset</div>
-            <div class="chareditor__asset">
-              <div class="chareditor__preview" title="Primer cuadro del recorte">
-                @if (chars.draftPreviewStyle(); as style) {
-                  <span class="chareditor__sprite" [style]="style"></span>
-                } @else {
-                  <span class="chareditor__nopreview">Sin vista previa</span>
-                }
-              </div>
-              <div class="texpicker">
-                @for (texture of tex.textures(); track texture) {
-                  <button class="texpicker__item" type="button" [title]="texture"
-                          [class.is-active]="editor.draft.texture === 'textures/' + texture"
-                          (click)="chars.setDraftTexture(texture)">
-                    @if (tex.textureAssets()[texture]; as asset) {
-                      <img [src]="asset.dataUrl" [alt]="texture" />
-                    }
-                  </button>
-                } @empty {
-                  <p class="hint">Sin texturas en assets/textures/. Importalas desde Recursos.</p>
-                }
-              </div>
-            </div>
-
-            <div class="field-row">
-              <label class="field">
-                <span>Recorte X</span>
-                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.x"
-                       (change)="chars.patchDraftRect('x', int($event))" />
-              </label>
-              <label class="field">
-                <span>Y</span>
-                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.y"
-                       (change)="chars.patchDraftRect('y', int($event))" />
-              </label>
-              <label class="field">
-                <span>Ancho</span>
-                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.width"
-                       (change)="chars.patchDraftRect('width', int($event))" />
-              </label>
-              <label class="field">
-                <span>Alto</span>
-                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.height"
-                       (change)="chars.patchDraftRect('height', int($event))" />
-              </label>
-            </div>
-
-            <div class="field-row">
-              <label class="field">
-                <span>Cuadros</span>
-                <input class="input" type="number" min="1" step="1" [value]="editor.draft.frames"
-                       (change)="chars.setDraftFrames(int($event))" />
-              </label>
-              <label class="field">
-                <span>Seg. por cuadro</span>
-                <input class="input" type="number" min="0.05" step="0.05" [value]="editor.draft.frameDuration"
-                       (change)="chars.setDraftFrameDuration(num($event))" />
-              </label>
-              <label class="field">
-                <span>Tamaño (escala)</span>
-                <input class="input" type="number" min="0.25" step="0.25" [value]="editor.draft.scale"
-                       (change)="chars.setDraftScale(num($event))" />
-              </label>
-            </div>
-            <p class="hint">
-              Los cuadros van uno al lado del otro en la textura, del ancho del recorte. Con escala 2 se dibuja
-              al doble.
-            </p>
-
-            <div class="chareditor__section">Colisión</div>
-            <div class="field-row chareditor__collider">
-              <label class="field">
-                <span>Ancho</span>
-                <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.width"
-                       (change)="chars.patchDraftCollider('width', int($event))" />
-              </label>
-              <label class="field">
-                <span>Alto</span>
-                <input class="input" type="number" min="1" step="1" [value]="editor.draft.collider.height"
-                       (change)="chars.patchDraftCollider('height', int($event))" />
-              </label>
-              <label class="check">
-                <input type="checkbox" [checked]="editor.draft.collider.solid === true"
-                       (change)="chars.setDraftSolid(checked($event))" />
-                <span>Sólido</span>
-              </label>
-              <button class="btn btn--small" type="button" (click)="chars.fitDraftCollider()"
-                      title="Del tamaño con que se dibuja: el recorte por la escala">Ajustar al sprite</button>
-            </div>
-
-            <div class="chareditor__section">Características</div>
-            <div class="field-row">
-              <label class="field">
-                <span>Vida</span>
-                <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.health"
-                       (change)="chars.patchDraftStats('health', num($event))" />
-              </label>
-              <label class="field">
-                <span>Daño</span>
-                <input class="input" type="number" min="0" step="1" [value]="editor.draft.stats.damage"
-                       (change)="chars.patchDraftStats('damage', num($event))" />
-              </label>
-              <label class="field">
-                <span title="Celdas de grilla por segundo">Velocidad</span>
-                <input class="input" type="number" min="0" step="0.5" [value]="editor.draft.stats.speed"
-                       (change)="chars.patchDraftStats('speed', num($event))" />
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal__actions">
-          @if (editor.savedId) {
-            <button class="btn btn--danger" type="button" (click)="chars.deleteCharacterPreset()">Eliminar</button>
-            <button class="btn" type="button" (click)="chars.duplicateCharacterPreset()">Duplicar</button>
-          }
-          <button class="btn" type="button" (click)="chars.closeCharacterEditor()">Cerrar</button>
-          <button class="btn btn--primary" type="button" (click)="chars.saveCharacterDraft()">Guardar</button>
-        </div>
-      </section>
-    </div>
-  }
-
-  <!-- Objetos y armas: la biblioteca del proyecto (items.json). Mismo armado que
-       Configurar personajes; la logica esta en combat/item-editor.controller.ts.
-       Cada ataque muestra su forma en vivo, con la misma geometria que el motor. -->
-  @if (itemEditor.state(); as editor) {
-    <div class="modal-backdrop" (click)="itemEditor.close()">
-      <section class="modal modal--xl" role="dialog" aria-modal="true" aria-labelledby="items-title"
-               (click)="$event.stopPropagation()">
-        <div class="modal__head">
-          <h2 id="items-title">Objetos y armas</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="itemEditor.close()">×</button>
-        </div>
-
-        <div class="chareditor">
-          <nav class="chareditor__list">
-            @for (group of itemEditor.groups(); track group.id) {
-              <div class="chareditor__group">
-                <div class="chareditor__grouphead">
-                  <span>{{ group.label }}</span>
-                  <button class="btn btn--small" type="button" [title]="'Nuevo: ' + group.label.toLowerCase()"
-                          (click)="itemEditor.create(group.kind, group.category)">+</button>
-                </div>
-                @for (item of group.items; track item.id) {
-                  <button class="tree__item" type="button" [class.is-active]="editor.savedId === item.id"
-                          (click)="itemEditor.edit(item.id)">
-                    <span class="tree__label">{{ items.itemGlyph(item) }} {{ item.name }}</span>
-                  </button>
-                } @empty {
-                  <p class="chareditor__empty">Ninguno guardado</p>
-                }
-              </div>
-            }
-          </nav>
-
-          <div class="chareditor__form">
-            @if (!editor.savedId) {
-              <p class="hint hint--warn">Sin guardar todavía.</p>
-            }
-
-            <div class="field-row">
-              <label class="field">
-                <span>Nombre</span>
-                <input class="input" [value]="editor.draft.name" (input)="itemEditor.setName(str($event))" />
-              </label>
-              <label class="field">
-                <span>Tipo</span>
-                <select class="input" (change)="itemEditor.setKind(str($event))">
-                  @for (kind of items.itemKinds; track kind.id) {
-                    <option [value]="kind.id" [selected]="editor.draft.kind === kind.id">{{ kind.glyph }} {{ kind.label }}</option>
-                  }
-                </select>
-              </label>
-              @if (editor.draft.weapon; as weapon) {
-                <label class="field">
-                  <span>Categoría</span>
-                  <select class="input" (change)="itemEditor.setCategory(str($event))">
-                    <option value="melee" [selected]="weapon.category === 'melee'">Cuerpo a cuerpo</option>
-                    <option value="ranged" [selected]="weapon.category === 'ranged'">A distancia</option>
-                  </select>
-                </label>
-              }
-            </div>
-            <p class="hint">{{ items.itemKindHint(editor.draft.kind) }}</p>
-
-            <div class="chareditor__section">Sprite</div>
-            <div class="chareditor__asset">
-              <div class="chareditor__preview" title="Así se ve en el piso y en el inventario">
-                @if (items.itemSpriteStyle(editor.draft, 96); as style) {
-                  <span class="chareditor__sprite" [style]="style"></span>
-                } @else {
-                  <span class="chareditor__nopreview">Sin vista previa</span>
-                }
-              </div>
-              <div class="texpicker">
-                @for (texture of tex.textures(); track texture) {
-                  <button class="texpicker__item" type="button" [title]="texture"
-                          [class.is-active]="editor.draft.texture === 'textures/' + texture"
-                          (click)="items.setItemTexture(texture)">
-                    @if (tex.textureAssets()[texture]; as asset) {
-                      <img [src]="asset.dataUrl" [alt]="texture" />
-                    }
-                  </button>
-                } @empty {
-                  <p class="hint">Sin texturas en assets/textures/. Importalas desde Recursos.</p>
-                }
-              </div>
-            </div>
-            <div class="field-row">
-              <label class="field">
-                <span>Recorte X</span>
-                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.x"
-                       (change)="itemEditor.patchRect('x', int($event))" />
-              </label>
-              <label class="field">
-                <span>Y</span>
-                <input class="input" type="number" min="0" step="1" [value]="editor.draft.sourceRect.y"
-                       (change)="itemEditor.patchRect('y', int($event))" />
-              </label>
-              <label class="field">
-                <span>Ancho</span>
-                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.width"
-                       (change)="itemEditor.patchRect('width', int($event))" />
-              </label>
-              <label class="field">
-                <span>Alto</span>
-                <input class="input" type="number" min="1" step="1" [value]="editor.draft.sourceRect.height"
-                       (change)="itemEditor.patchRect('height', int($event))" />
-              </label>
-              <label class="field">
-                <span>Escala</span>
-                <input class="input" type="number" min="0.05" step="0.05" [value]="editor.draft.scale ?? 1"
-                       (change)="itemEditor.setScale(num($event))" />
-              </label>
-            </div>
-
-            @if (editor.draft.kind === 'healing') {
-              <div class="chareditor__section">Curación</div>
-              <div class="field-row">
-                <label class="field">
-                  <span>Vida que devuelve</span>
-                  <input class="input" type="number" min="0" step="5" [value]="editor.draft.heal ?? 0"
-                         (change)="itemEditor.setHeal(num($event))" />
-                </label>
-              </div>
-            }
-
-            @if (editor.draft.kind === 'coin') {
-              <div class="chareditor__section">Moneda</div>
-              <div class="field-row">
-                <label class="field">
-                  <span>Monedas que suma</span>
-                  <input class="input" type="number" min="1" step="1" [value]="editor.draft.value ?? 1"
-                         (change)="itemEditor.setCoinValue(int($event))" />
-                </label>
-              </div>
-              <p class="hint">Las monedas se gastan en la tienda de un NPC (inspector del NPC > Tienda).</p>
-            }
-
-            @if (editor.draft.weapon; as weapon) {
-              @for (block of itemEditor.attackSlots(); track block.slot) {
-                <div class="chareditor__section">{{ block.label }}</div>
-                <div class="attackform">
-                  <div>
-                    <div class="patterns">
-                      @for (pattern of itemEditor.patterns; track pattern.id) {
-                        <button type="button" class="patterns__item" [class.is-active]="block.attack.pattern === pattern.id"
-                                [class.patterns__item--ranged]="pattern.category === 'ranged'" [title]="pattern.hint"
-                                (click)="itemEditor.setPattern(block.slot, pattern.id)">
-                          <span class="patterns__glyph">{{ pattern.glyph }}</span>
-                          <span>{{ pattern.label }}</span>
-                        </button>
-                      }
-                    </div>
-                    <p class="hint">{{ itemEditor.patternHint(block.attack) }}</p>
-                    <div class="field-row field-row--wrap">
-                      <label class="field">
-                        <span>Daño</span>
-                        <input class="input" type="number" min="0" step="1" [value]="block.attack.damage"
-                               (change)="itemEditor.setDamage(block.slot, num($event))" />
-                      </label>
-                      <label class="field">
-                        <span title="Segundos entre dos ataques">Pausa (s)</span>
-                        <input class="input" type="number" min="0" step="0.05" [value]="block.attack.cooldown"
-                               (change)="itemEditor.setCooldown(block.slot, num($event))" />
-                      </label>
-                      @for (field of itemEditor.numericFields(block.attack); track field.field) {
-                        <label class="field">
-                          <span [title]="field.hint">{{ field.label }}</span>
-                          <input class="input" type="number" [min]="field.min" [attr.max]="field.max ?? null"
-                                 [step]="field.step" [value]="field.value"
-                                 (change)="itemEditor.setField(block.slot, field.field, num($event))" />
-                        </label>
-                      }
-                    </div>
-                    @if (itemEditor.usesPierce(block.attack)) {
-                      <label class="check">
-                        <input type="checkbox" [checked]="block.attack.pierce === true"
-                               (change)="itemEditor.setPierce(block.slot, checked($event))" />
-                        <span>Atraviesa enemigos</span>
-                      </label>
-                    }
-                  </div>
-                  <canvas class="attackform__preview" width="260" height="160"
-                          [appAttackPreview]="block.attack" title="Vista previa: apuntando con el mouse hacia la derecha"></canvas>
-                </div>
-
-                @if (block.slot === 'weapon') {
-                  <div class="chareditor__section">Habilidad por golpes</div>
-                  <label class="check">
-                    <input type="checkbox" [checked]="!!weapon.ability" (change)="itemEditor.setAbilityEnabled(checked($event))" />
-                    <span>El arma carga una habilidad acertando golpes</span>
-                  </label>
-                  @if (weapon.ability; as ability) {
-                    <div class="field-row">
-                      <label class="field">
-                        <span>Nombre</span>
-                        <input class="input" [value]="ability.name ?? ''"
-                               (input)="itemEditor.patchAbility({ name: str($event) })" />
-                      </label>
-                      <label class="field">
-                        <span title="Ataques que tienen que acertar para cargarla">Golpes para cargar</span>
-                        <input class="input" type="number" min="1" step="1" [value]="ability.hitsRequired"
-                               (change)="itemEditor.setHitsRequired(int($event))" />
-                      </label>
-                      <label class="field">
-                        <span>Se lanza</span>
-                        <select class="input" (change)="itemEditor.setActivation(str($event))">
-                          <option value="auto" [selected]="ability.activation !== 'manual'">Sola, en el ataque siguiente</option>
-                          <option value="manual" [selected]="ability.activation === 'manual'">Con la tecla Q</option>
-                        </select>
-                      </label>
-                      <label class="field">
-                        <span title="Segundos sin acertar que vacían el contador. 0 = nunca">Se pierde tras (s)</span>
-                        <input class="input" type="number" min="0" step="0.5" [value]="ability.resetAfter ?? 0"
-                               (change)="itemEditor.setResetAfter(num($event))" />
-                      </label>
-                    </div>
-                    <p class="hint">
-                      Cada ataque que acierta suma 1 al contador del arma (se ve bajo su casillero en el juego). Lleno, la
-                      habilidad queda lista; lanzarla vacía el contador. El evento “Al usar una habilidad” permite
-                      reaccionar a ella.
-                    </p>
-                  }
-                }
-              }
-            }
-          </div>
-        </div>
-
-        <div class="modal__actions">
-          @if (editor.savedId) {
-            <button class="btn btn--danger" type="button" (click)="itemEditor.remove()">Eliminar</button>
-            <button class="btn" type="button" (click)="itemEditor.duplicate()">Duplicar</button>
-            @if (itemEditor.definedInLevel()) {
-              <button class="btn" type="button" (click)="itemEditor.updateInLevel()"
-                      title="El nivel abierto tiene su propia copia de este objeto: ponerla al día con lo guardado">
-                Actualizar en este nivel
-              </button>
-            }
-          }
-          <button class="btn" type="button" (click)="itemEditor.close()">Cerrar</button>
-          <button class="btn btn--primary" type="button" (click)="itemEditor.save()">Guardar</button>
-        </div>
-      </section>
-    </div>
-  }
-
-  <!-- Pasar a otro nivel: arma el evento con su trigger y la accion
-       load_level, que en el juego muestra la pantalla con el mensaje y carga
-       el nivel elegido. Queda en el panel Eventos para ajustarlo. -->
-  @if (transition.transitionDraft(); as draft) {
-    <div class="modal-backdrop" (click)="transition.cancelTransitionDialog()">
-      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="transition-title"
-               (click)="$event.stopPropagation()">
-        <div class="modal__head">
-          <h2 id="transition-title">Pasar a otro nivel</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="transition.cancelTransitionDialog()">×</button>
-        </div>
-
-        <div class="modal__body">
-          <div class="field-row">
-            <label class="field">
-              <span>Cuándo</span>
-              <select class="input" [value]="draft.when" (change)="transition.setTransitionWhen(str($event))">
-                <option value="entity_destroyed" [selected]="draft.when === 'entity_destroyed'">
-                  Al eliminar una entidad
-                </option>
-                <option value="all_enemies" [selected]="draft.when === 'all_enemies'">
-                  Al vencer a todos los enemigos
-                </option>
-                <option value="touch" [selected]="draft.when === 'touch'">Cuando el jugador toca una entidad</option>
-              </select>
-            </label>
-            @if (draft.when !== 'all_enemies') {
-              <label class="field">
-                <span>Entidad</span>
-                <select class="input" [value]="draft.entity" (change)="transition.patchTransitionDraft({ entity: str($event) })">
-                  <option value="" disabled [selected]="draft.entity === ''">— entidad —</option>
-                  @for (id of entityIds(); track id) {
-                    <option [value]="id" [selected]="draft.entity === id">{{ id }}</option>
-                  }
-                </select>
-              </label>
-            }
-          </div>
-
-          <div class="field-row">
-            <label class="field">
-              <span>Ir al nivel</span>
-              @if (proj.levelFiles().length > 0) {
-                <select class="input" [value]="draft.level" (change)="transition.patchTransitionDraft({ level: str($event) })">
-                  <option value="" disabled [selected]="draft.level === ''">— nivel —</option>
-                  @for (file of proj.levelFiles(); track file) {
-                    <option [value]="file" [selected]="draft.level === file">{{ file }}</option>
-                  }
-                </select>
-              } @else {
-                <input class="input" [value]="draft.level" placeholder="test_level_1.json"
-                       (input)="transition.patchTransitionDraft({ level: str($event) })" />
-              }
-            </label>
-            <label class="field">
-              <span>Mensaje</span>
-              <input class="input" [value]="draft.message" (input)="transition.patchTransitionDraft({ message: str($event) })" />
-            </label>
-          </div>
-
-          <p class="hint">
-            Al cumplirse, el juego se congela, muestra el mensaje un par de segundos y carga el nivel elegido.
-            El nivel siguiente tiene que estar en la misma carpeta levels/.
-          </p>
-          @if (draft.when !== 'all_enemies' && entityIds().length === 0) {
-            <p class="hint hint--warn">El nivel todavía no tiene entidades: coloca un enemigo primero.</p>
-          }
-        </div>
-
-        <div class="modal__actions">
-          <button class="btn" type="button" (click)="transition.cancelTransitionDialog()">Cancelar</button>
-          <button class="btn btn--primary" type="button" (click)="transition.confirmTransitionDialog()">Crear evento</button>
-        </div>
-      </section>
-    </div>
-  }
-
-  <!-- Puzzle de sala: que hay que resolver, en que sala, y que entidades
-       bloquean el paso hasta entonces. Arma los eventos con core/puzzles.ts y
-       los deja en el panel Eventos para ajustarlos. -->
-  @if (puzzle.draft(); as draft) {
-    <div class="modal-backdrop" (click)="puzzle.cancel()">
-      <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="puzzle-title"
-               (click)="$event.stopPropagation()">
-        <div class="modal__head">
-          <h2 id="puzzle-title">Puzzle de sala</h2>
-          <button class="icon-button" type="button" title="Cerrar" (click)="puzzle.cancel()">×</button>
-        </div>
-
-        <div class="modal__body">
-          <div class="field-row">
-            <label class="field">
-              <span>Para abrir el paso</span>
-              <select class="input" (change)="puzzle.setKind(str($event))">
-                @for (kind of puzzle.kinds; track kind.id) {
-                  <option [value]="kind.id" [selected]="draft.kind === kind.id">{{ kind.label }}</option>
-                }
-              </select>
-            </label>
-            <label class="field">
-              <span>Sala o zona</span>
-              <select class="input" (change)="puzzle.patch({ zone: str($event) })">
-                <option value="" [selected]="draft.zone === ''">— ninguna —</option>
-                @for (id of puzzle.zoneIds(); track id) {
-                  <option [value]="id" [selected]="draft.zone === id">{{ id }}</option>
-                }
-              </select>
-            </label>
-          </div>
-          <p class="hint">{{ puzzle.kindHint() }}</p>
-
-          @if (draft.kind === 'boss') {
-            <label class="field">
-              <span>Jefe</span>
-              <select class="input" (change)="puzzle.patch({ boss: str($event) })">
-                <option value="" disabled [selected]="draft.boss === ''">— enemigo —</option>
-                @for (enemy of puzzle.enemies(); track enemy.id) {
-                  <option [value]="enemy.id" [selected]="draft.boss === enemy.id">{{ enemy.id }}{{ enemy.boss ? ' ♛' : '' }}</option>
-                }
-              </select>
-            </label>
-          }
-
-          @if (draft.kind === 'collect') {
-            <div class="field-row">
-              <label class="field">
-                <span>Objeto</span>
-                <select class="input" (change)="puzzle.patch({ item: str($event) })">
-                  <option value="" [selected]="draft.item === ''">— cualquiera —</option>
-                  @for (item of combat.options(); track item.id) {
-                    <option [value]="item.id" [selected]="draft.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
-                  }
-                </select>
-              </label>
-              <label class="field">
-                <span title="0 = todos los que están colocados en el nivel">Cantidad (0 = todos)</span>
-                <input class="input" type="number" min="0" step="1" [value]="draft.count"
-                       (change)="puzzle.patch({ count: int($event) })" />
-              </label>
-            </div>
-          }
-
-          <div class="subhead">Bloquean el paso hasta resolverlo</div>
-          <div class="checklist">
-            @for (entity of puzzle.gateCandidates(); track entity.id) {
-              <label class="check">
-                <input type="checkbox" [checked]="draft.gates.includes(entity.id)"
-                       (change)="puzzle.toggleGate(entity.id, checked($event))" />
-                <span>{{ entity.id }} <small>{{ entity.type }} · {{ entity.position.col }},{{ entity.position.row }}</small></span>
-              </label>
-            } @empty {
-              <p class="hint hint--warn">
-                No hay entidades que puedan hacer de puerta. Coloca figuras (un cubo, un pilar) donde se corta el paso.
-              </p>
-            }
-          </div>
-
-          <label class="check">
-            <input type="checkbox" [checked]="draft.lockOnEnter" (change)="puzzle.patch({ lockOnEnter: checked($event) })" />
-            <span>Cerrar las puertas cuando el jugador entra a la zona</span>
-          </label>
-          <p class="hint">
-            @if (draft.lockOnEnter) {
-              Las puertas arrancan ocultas, aparecen al entrar y se van al resolverlo. Volver a entrar no las cierra otra vez.
-            } @else {
-              Las puertas bloquean desde el principio y se van al resolverlo.
-            }
-          </p>
-
-          <label class="field">
-            <span>Mensaje al resolverlo</span>
-            <input class="input" [value]="draft.message" (input)="puzzle.patch({ message: str($event) })" />
-          </label>
-
-          @if (puzzle.zoneIds().length === 0) {
-            <p class="hint">El nivel no tiene salas ni zonas: agrega una con Combate > Agregar zona de puzzle.</p>
-          }
-          @if (puzzle.error(); as error) {
-            <p class="hint hint--warn">{{ error }}</p>
-          }
-        </div>
-
-        <div class="modal__actions">
-          <button class="btn" type="button" (click)="puzzle.cancel()">Cancelar</button>
-          <button class="btn btn--primary" type="button" [disabled]="!!puzzle.error()" (click)="puzzle.confirm()">
-            Crear puzzle
-          </button>
-        </div>
-      </section>
-    </div>
+  <!-- Puzzle de sala: dialogs/puzzle-dialog.html -->
+  @defer (when puzzle.draft()) {
+    <app-puzzle-dialog />
   }
 
   <!-- ===================== CUERPO: TRES AREAS =====================
@@ -1128,14 +388,17 @@
           </div>
         } @else if (!panels.isCollapsed('side-main')) {
           <div class="area__body filetree">
-            <!-- Los dos puntos de entrada del panel: elegir una escena ya
-                 existente con el dialogo del sistema (sirva o no la carpeta
-                 abierta), y cambiar cual es la carpeta del proyecto. -->
+            <!-- El arbol es SIEMPRE la carpeta del editor (ver
+                 ipc/project-root.js). Abrir escena arranca en levels/, y una
+                 de afuera se importa: se copia adentro con sus assets. Nueva
+                 carpeta crea dentro de la ultima carpeta clickeada. -->
             <div class="filetools">
               <button class="btn btn--small" (click)="proj.openLevelFile()"
-                      title="Elegir un archivo .json de nivel (Ctrl+O)">Abrir escena…</button>
-              <button class="btn btn--small" (click)="proj.openProject()"
-                      title="Elegir la carpeta raiz del proyecto">Carpeta…</button>
+                      title="Abrir un nivel (Ctrl+O). Uno de fuera de la carpeta del editor se copia adentro">Abrir escena…</button>
+              <button class="btn btn--small" (click)="explorer.createFolder()"
+                      [title]="'Crear una carpeta en ' + (explorer.currentDir() || 'la raíz')">Nueva carpeta…</button>
+              <button class="btn btn--small" (click)="proj.revealWorkspace()"
+                      [title]="'Abrir en el sistema: ' + (project.projectRoot() ?? '')">Mostrar</button>
             </div>
 
             <!-- Una sola lista plana: la sangria la da la profundidad que
@@ -1154,15 +417,16 @@
               </button>
             } @empty {
               <p class="empty">
-                Sin proyecto abierto. Usa “Carpeta…” y elige la raiz: la carpeta que contiene
-                levels/, assets/ y schema/.
+                Preparando la carpeta del editor… Si no aparece, revisa la barra de estado o usa
+                Archivo › Cambiar carpeta del editor.
               </p>
             }
           </div>
         }
       </section>
 
-      <!-- Texturas del proyecto. "Importar…" copia una carpeta de imagenes a
+      <!-- Texturas del proyecto. "Importar…" abre el convertidor con las
+           imagenes que se elijan (nunca una carpeta entera) y las copia a
            assets/textures/, y desde ahi cada una se puede arrastrar sobre una
            entidad del viewport para cambiarle el arte, o sobre una celda vacia
            para crear una entidad nueva con ella. -->
@@ -1176,9 +440,9 @@
           <span class="area__title">Recursos</span>
           <div class="head__spacer"></div>
           <span class="area__title">{{ tex.textures().length }}</span>
-          <button class="tool" [disabled]="tex.importing()" (click)="tex.importTextures()"
-                  title="Copiar a assets/textures/ las imagenes de una carpeta, ajustadas al tamano de un tile">
-            {{ tex.importing() ? 'Importando…' : 'Importar…' }}
+          <button class="tool" [disabled]="converter.busy()" (click)="converter.openAndAdd('files')"
+                  title="Elegir imágenes (PNG, JPG, JPEG): se convierten y se copian a assets/textures/ de la carpeta del editor">
+            Importar…
           </button>
         </div>
 
@@ -1190,7 +454,7 @@
                     (dragstart)="tex.onTextureDragStart($event, texture)"
                     (click)="palette.selectTexture(texture)"
                     [title]="texture + ' — arrastra sobre una entidad para cambiarle la textura'">
-              <span class="asset__thumb">
+              <span class="asset__thumb" [appTextureThumb]="texture">
                 @if (tex.textureAssets()[texture]; as asset) {
                   <img class="asset__img" [src]="asset.dataUrl" [alt]="texture" />
                 }
@@ -1199,8 +463,7 @@
             </button>
           } @empty {
             <p class="empty">
-              assets/textures/ vacio o proyecto sin abrir. Usa “Importar…” para traer una carpeta
-              de imagenes.
+              assets/textures/ vacio. Usa “Importar…” para traer imagenes (PNG, JPG, JPEG).
             </p>
           }
         </div>
@@ -1294,7 +557,7 @@
                         [title]="preset.name + ' — arrastra a la grilla, o clic para colocarlo'"
                         (dragstart)="view.onCharacterDragStart($event, preset.id)"
                         (click)="palette.selectCharacter(preset.id)">
-                  <span class="presetlist__thumb" [style.background]="chars.kindColor(kind)">
+                  <span class="presetlist__thumb" [style.background]="chars.kindColor(kind)" [appTextureThumb]="preset.texture">
                     @if (chars.presetSpriteStyle(preset); as style) {
                       <span class="presetlist__sprite" [style]="style"></span>
                     }
@@ -1336,7 +599,7 @@
                       [title]="item.name + ' — arrastra a la grilla, o clic para colocarlo'"
                       (dragstart)="items.onItemDragStart($event, item.id)"
                       (click)="palette.selectItem(item.id)">
-                <span class="presetlist__thumb" [style.background]="items.itemColor(item)">
+                <span class="presetlist__thumb" [style.background]="items.itemColor(item)" [appTextureThumb]="item.texture">
                   @if (items.itemSpriteStyle(item); as style) {
                     <span class="presetlist__sprite" [style]="style"></span>
                   } @else {

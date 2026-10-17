@@ -16,7 +16,7 @@ const fsSync = require('node:fs');
 const { spawn } = require('node:child_process');
 const { ipcMain } = require('electron');
 
-const { getProjectRoot } = require('./project-root');
+const { INSTALL_ROOT, getProjectRoot } = require('./project-root');
 
 // Donde puede haber quedado el binario, en orden de preferencia. "build" es lo
 // que usan el instalador y el preset de Linux, pero los presets de Windows
@@ -33,16 +33,17 @@ const ENGINE_BUILD_DIRS = [
 ];
 
 /**
- * Busca el ejecutable del motor a partir de la ruta del nivel.
+ * Busca el ejecutable del motor.
  *
- * Se usa la MISMA convencion de carpetas que ya usa el motor para los assets:
- * un nivel vive en <raiz>/levels/, asi que la raiz es su abuelo. Deducirlo de
- * ahi hace que Ejecutar funcione aunque no se haya abierto una carpeta de
- * proyecto en el editor; si aun asi no aparece, se prueba con esa carpeta.
+ * Primero donde esta instalado HoneyComb (junto a editor/): el motor es del
+ * programa, y la carpeta del editor -- donde viven los niveles -- no lo
+ * tiene. Despues, por compatibilidad, la raiz que se deduce del nivel
+ * (<raiz>/levels/<nivel>) y la carpeta del editor, por si alguien la puso
+ * dentro de una instalacion.
  */
 function findEngineExecutable(levelPath) {
   const exeName = process.platform === 'win32' ? 'engine.exe' : 'engine';
-  const roots = [path.dirname(path.dirname(levelPath)), getProjectRoot()].filter(Boolean);
+  const roots = [INSTALL_ROOT, path.dirname(path.dirname(levelPath)), getProjectRoot()].filter(Boolean);
 
   for (const root of roots) {
     for (const buildDir of ENGINE_BUILD_DIRS) {

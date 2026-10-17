@@ -5,11 +5,13 @@ skinparam componentStyle rectangle
 
 node "Equipo del disenador" as workstation {
   node "Proceso Electron" as electron {
-    component "Main process\nmain.js" as main
+    component "Main process\nmain.js + ipc/" as main
     component "Preload isolated\npreload.js" as preload
     component "Renderer\nAngular build" as renderer
   }
-  folder "Carpeta de proyecto" as project
+  folder "Carpeta del editor\nDocumentos/HoneyComb" as project
+  folder "Datos de Electron\nhoneycomb-settings.json" as settings
+  folder "Instalacion\nschema/, engine/" as install
 }
 
 node "Entorno de desarrollo" as dev {
@@ -27,10 +29,16 @@ node --> ng : npm run dev
 main --> preload
 preload --> renderer
 renderer --> project : IPC y filesystem
-project --> exe : levels, schema y assets
+main --> settings : recuerda la carpeta elegida
+main --> install : catalogo de eventos
+project --> exe : levels y assets
+install --> exe : Ejecutar lo lanza
 
 note bottom
 Desarrollo: Electron carga Angular desde localhost si esta disponible.
 Distribucion: Electron carga dist/ y electron-builder empaqueta la aplicacion.
+Primer arranque: si la carpeta del editor por defecto no existe, se crea con
+una COPIA de levels/, assets/, characters.json e items.json del repositorio.
+El renderer carga los dialogos grandes en archivos aparte (@defer).
 end note
 @enduml

@@ -1,0 +1,114 @@
+<!-- Puzzle de sala: que hay que resolver, en que sala, y que entidades
+     bloquean el paso hasta entonces. Arma los eventos con core/puzzles.ts y
+     los deja en el panel Eventos para ajustarlos. -->
+@if (puzzle.draft(); as draft) {
+  <div class="modal-backdrop" (click)="puzzle.cancel()">
+    <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="puzzle-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="puzzle-title">Puzzle de sala</h2>
+        <button class="icon-button" type="button" title="Cerrar" (click)="puzzle.cancel()">×</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="field-row">
+          <label class="field">
+            <span>Para abrir el paso</span>
+            <select class="input" (change)="puzzle.setKind(str($event))">
+              @for (kind of puzzle.kinds; track kind.id) {
+                <option [value]="kind.id" [selected]="draft.kind === kind.id">{{ kind.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Sala o zona</span>
+            <select class="input" (change)="puzzle.patch({ zone: str($event) })">
+              <option value="" [selected]="draft.zone === ''">— ninguna —</option>
+              @for (id of puzzle.zoneIds(); track id) {
+                <option [value]="id" [selected]="draft.zone === id">{{ id }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <p class="hint">{{ puzzle.kindHint() }}</p>
+
+        @if (draft.kind === 'boss') {
+          <label class="field">
+            <span>Jefe</span>
+            <select class="input" (change)="puzzle.patch({ boss: str($event) })">
+              <option value="" disabled [selected]="draft.boss === ''">— enemigo —</option>
+              @for (enemy of puzzle.enemies(); track enemy.id) {
+                <option [value]="enemy.id" [selected]="draft.boss === enemy.id">{{ enemy.id }}{{ enemy.boss ? ' ♛' : '' }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (draft.kind === 'collect') {
+          <div class="field-row">
+            <label class="field">
+              <span>Objeto</span>
+              <select class="input" (change)="puzzle.patch({ item: str($event) })">
+                <option value="" [selected]="draft.item === ''">— cualquiera —</option>
+                @for (item of combat.options(); track item.id) {
+                  <option [value]="item.id" [selected]="draft.item === item.id">{{ items.itemGlyph(item) }} {{ item.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="field">
+              <span title="0 = todos los que están colocados en el nivel">Cantidad (0 = todos)</span>
+              <input class="input" type="number" min="0" step="1" [value]="draft.count"
+                     (change)="puzzle.patch({ count: int($event) })" />
+            </label>
+          </div>
+        }
+
+        <div class="subhead">Bloquean el paso hasta resolverlo</div>
+        <div class="checklist">
+          @for (entity of puzzle.gateCandidates(); track entity.id) {
+            <label class="check">
+              <input type="checkbox" [checked]="draft.gates.includes(entity.id)"
+                     (change)="puzzle.toggleGate(entity.id, checked($event))" />
+              <span>{{ entity.id }} <small>{{ entity.type }} · {{ entity.position.col }},{{ entity.position.row }}</small></span>
+            </label>
+          } @empty {
+            <p class="hint hint--warn">
+              No hay entidades que puedan hacer de puerta. Coloca figuras (un cubo, un pilar) donde se corta el paso.
+            </p>
+          }
+        </div>
+
+        <label class="check">
+          <input type="checkbox" [checked]="draft.lockOnEnter" (change)="puzzle.patch({ lockOnEnter: checked($event) })" />
+          <span>Cerrar las puertas cuando el jugador entra a la zona</span>
+        </label>
+        <p class="hint">
+          @if (draft.lockOnEnter) {
+            Las puertas arrancan ocultas, aparecen al entrar y se van al resolverlo. Volver a entrar no las cierra otra vez.
+          } @else {
+            Las puertas bloquean desde el principio y se van al resolverlo.
+          }
+        </p>
+
+        <label class="field">
+          <span>Mensaje al resolverlo</span>
+          <input class="input" [value]="draft.message" (input)="puzzle.patch({ message: str($event) })" />
+        </label>
+
+        @if (puzzle.zoneIds().length === 0) {
+          <p class="hint">El nivel no tiene salas ni zonas: agrega una con Combate > Agregar zona de puzzle.</p>
+        }
+        @if (puzzle.error(); as error) {
+          <p class="hint hint--warn">{{ error }}</p>
+        }
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn" type="button" (click)="puzzle.cancel()">Cancelar</button>
+        <button class="btn btn--primary" type="button" [disabled]="!!puzzle.error()" (click)="puzzle.confirm()">
+          Crear puzzle
+        </button>
+      </div>
+    </section>
+  </div>
+}

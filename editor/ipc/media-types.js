@@ -4,8 +4,8 @@
 //
 // Las tablas viven aparte porque las comparten dos dominios que no se conocen:
 // el visor de archivos (ipc/files.js) decide con ellas si un archivo se muestra
-// como texto, como imagen o no se muestra, y el importador (ipc/import.js) usa
-// la misma lista de imagenes para saber que puede copiar como textura.
+// como texto, como imagen o no se muestra, y el convertidor (ipc/convert.js)
+// usa la misma lista de imagenes para saber como leer la que va a convertir.
 // Duplicarlas haria que un formato agregado en un lado faltara en el otro.
 
 const TEXT_FILE_NAMES = new Set([

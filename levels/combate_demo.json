@@ -13,54 +13,6 @@
   },
   "entities": [
     {
-      "id": "player_1",
-      "type": "player",
-      "position": {
-        "col": 49,
-        "row": 8
-      },
-      "texture": "textures/player.png",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "width": 16,
-        "height": 16
-      },
-      "scale": 2,
-      "collider": {
-        "width": 16,
-        "height": 16
-      },
-      "stats": {
-        "health": 100,
-        "damage": 10,
-        "speed": 3
-      },
-      "frames": 2,
-      "frameDuration": 0.4,
-      "inventory": {
-        "slots": 3,
-        "locked": false,
-        "onFull": "manual_replace",
-        "items": [
-          "espada"
-        ],
-        "coins": 3
-      },
-      "mobility": {
-        "dash": {
-          "distance": 3,
-          "duration": 0.18,
-          "cooldown": 0.8,
-          "iframes": 0.25
-        },
-        "defense": {
-          "reduction": 0.6,
-          "speedMultiplier": 0.5
-        }
-      }
-    },
-    {
       "id": "tienda_1",
       "type": "npc",
       "position": {
@@ -538,6 +490,34 @@
           "chance": 1
         }
       ]
+    },
+    {
+      "id": "player_1",
+      "type": "player",
+      "position": {
+        "col": 49,
+        "row": 8
+      },
+      "texture": "textures/WhatsApp Image 2026-09-28 at 6.02.02 PM.jpeg",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 360,
+        "height": 960
+      },
+      "collider": {
+        "width": 360,
+        "height": 960
+      },
+      "stats": {
+        "health": 100,
+        "damage": 10,
+        "speed": 3
+      },
+      "preset": "nuevo_jugador",
+      "frames": 4,
+      "frameDuration": 0.4,
+      "scale": 2
     }
   ],
   "events": [
@@ -19456,7 +19436,7 @@
   ],
   "camera": {
     "mode": "follow",
-    "zoom": 2,
+    "zoom": 1,
     "smoothing": 0.15,
     "deadzone": {
       "width": 0,

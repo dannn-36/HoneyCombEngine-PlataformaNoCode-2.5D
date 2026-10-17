@@ -28,4 +28,37 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.brand__name')?.textContent).toContain('HoneyComb');
   });
+
+  // Los dialogos grandes son componentes aparte que se cargan con @defer la
+  // primera vez que se abren (ver dialogs/dialog-base.ts). Esto comprueba que
+  // cada uno llegue a dibujarse con los controladores de App: si el token
+  // EDITOR_HOST o un nombre expuesto se rompe, el dialogo no aparece.
+  const dialogs: [string, string, (app: App) => void][] = [
+    ['grilla del mapa', 'room-dialog-title', (app) => app.map.openRoomDialog()],
+    [
+      'tunel',
+      'tunnel-dialog-title',
+      (app) =>
+        app.map.tunnelDraft.set({ editId: null, from: '', to: '', width: 1, fromSide: '', toSide: '', path: [] }),
+    ],
+    ['personajes', 'chars-title', (app) => app.chars.openCharacterEditor()],
+    ['objetos y armas', 'items-title', (app) => app.itemEditor.open()],
+    ['pasar a otro nivel', 'transition-title', (app) => app.transition.openTransitionDialog()],
+    ['convertidor', 'converter-title', (app) => app.converter.isOpen.set(true)],
+    ['puzzle de sala', 'puzzle-title', (app) => app.puzzle.open()],
+  ];
+
+  for (const [name, titleId, open] of dialogs) {
+    it(`carga y dibuja el dialogo diferido de ${name}`, async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('#' + titleId)).toBeNull();
+
+      open(fixture.componentInstance);
+      await fixture.whenStable();
+
+      expect(compiled.querySelector('#' + titleId)).not.toBeNull();
+    });
+  }
 });

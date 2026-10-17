@@ -610,25 +610,27 @@ export class ViewportController {
   }
 
   /**
-   * Importa una carpeta de imagenes como texturas: las copia a assets/textures/
-   * del proyecto AJUSTADAS a lo que el motor puede dibujar dentro de una celda
-   * (ver core/texture-fit.ts) y las deja listas en Recursos.
+   * Suelta una textura en el viewport. Sobre una entidad le cambia el arte;
+   * sobre una celda vacia crea una entidad nueva con esa textura, igual que
+   * arrastrar una figura.
    *
-   * Se copian y no se referencian donde estaban porque el nivel guarda rutas
-   * relativas a assets/: una textura de afuera saldria en negro al ejecutar.
-   *
-   * Ya no exige abrir un proyecto antes. Si falta, el proceso principal lo
-   * deduce -- o lo pregunta en el mismo gesto -- y aca solo hay que ponerse al
-   * dia con la raiz que devuelve.
+   * El recorte se rehace con el tamano real de la imagen: conservar el anterior
+   * (16x16 por defecto) mostraria apenas la esquina de un sprite mas grande.
+   * El tamano se ESPERA (ensureAsset): las miniaturas se cargan recien cuando
+   * aparecen en pantalla, y la textura pudo soltarse antes de que la suya
+   * terminara. Donde cae se calcula antes de esperar, con el puntero de ese
+   * momento.
    */
-  private dropTexture(event: DragEvent, name: string): void {
-    const asset = this.tex.textureAssets()[name];
+  private async dropTexture(event: DragEvent, name: string): Promise<void> {
+    const targetId = this.entityAt(event);
+    const coord = targetId ? null : this.coordAt(event);
+
+    const asset = await this.tex.ensureAsset(name);
     const sourceRect =
       asset && asset.width > 0
         ? { x: 0, y: 0, width: asset.width, height: asset.height }
         : { ...FALLBACK_SOURCE_RECT };
 
-    const targetId = this.entityAt(event);
     if (targetId) {
       this.levels.updateEntity(targetId, { texture: 'textures/' + name, sourceRect });
       this.sel.selectEntity(targetId);
@@ -637,9 +639,8 @@ export class ViewportController {
       return;
     }
 
-    const coord = this.coordAt(event);
     const grid = this.grid();
-    if (!new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(coord, grid.width, grid.height)) {
+    if (!coord || !new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(coord, grid.width, grid.height)) {
       return;
     }
     this.entityOps.commitPlacement({
@@ -759,7 +760,7 @@ export class ViewportController {
 
     const textureName = event.dataTransfer?.getData('text/honeycomb-texture');
     if (textureName) {
-      this.dropTexture(event, textureName);
+      void this.dropTexture(event, textureName);
       return;
     }
 

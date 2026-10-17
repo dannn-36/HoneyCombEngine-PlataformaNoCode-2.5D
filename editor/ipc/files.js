@@ -1,23 +1,18 @@
 // =============================================================================
-// Archivos del proyecto abierto: abrir la carpeta, leer, escribir, listar
+// Archivos de la carpeta del editor: leer, escribir, listar, crear carpetas
 // =============================================================================
 //
-// Todas las rutas que llegan del renderer se resuelven relativas a la raiz del
-// proyecto y se validan para que no puedan escapar de esa carpeta (ver
+// Todas las rutas que llegan del renderer se resuelven relativas a la carpeta
+// del editor y se validan para que no puedan escapar de ella (ver
 // ipc/project-root.js). El renderer no es confiable por definicion, aunque
 // contextIsolation ya limita mucho el riesgo -- esto es una segunda barrera
 // barata.
 
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { ipcMain, dialog } = require('electron');
+const { ipcMain } = require('electron');
 
-const {
-  getProjectRoot,
-  setProjectRoot,
-  resolveInProject,
-  ensureProjectRoot,
-} = require('./project-root');
+const { getProjectRoot, resolveInProject, ensureProjectRoot } = require('./project-root');
 const {
   TEXT_FILE_NAMES,
   TEXT_EXTENSIONS,
@@ -27,17 +22,25 @@ const {
 } = require('./media-types');
 
 function register() {
-  ipcMain.handle('project:openFolder', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-      properties: ['openDirectory'],
-    });
-    if (canceled || filePaths.length === 0) return null;
-    return setProjectRoot(filePaths[0]);
-  });
+  // La raiz es siempre la carpeta del editor: ya no se deduce ni se pregunta.
+  ipcMain.handle('project:ensureRoot', () => ensureProjectRoot());
 
-  ipcMain.handle('project:ensureRoot', () =>
-    ensureProjectRoot('Elegi la carpeta del proyecto (donde estan levels/ y assets/)'),
-  );
+  // Carpeta nueva dentro del proyecto (el boton "Nueva carpeta" del
+  // explorador). Falla si ya existe: crear no debe parecer que anduvo cuando
+  // en realidad no hizo nada.
+  ipcMain.handle('project:createDir', async (_event, relativePath) => {
+    const name = path.basename(relativePath);
+    if (!name || name === '.' || name === '..' || /[<>:"|?*]/.test(name)) {
+      throw new Error(`"${name}" no es un nombre de carpeta valido.`);
+    }
+    const targetPath = resolveInProject(relativePath);
+    try {
+      await fs.mkdir(targetPath);
+    } catch (err) {
+      if (err.code === 'EEXIST') throw new Error(`Ya existe una carpeta o archivo "${name}" ahi.`);
+      throw err;
+    }
+  });
 
   ipcMain.handle('project:readFile', async (_event, relativePath) => {
     const targetPath = resolveInProject(relativePath);

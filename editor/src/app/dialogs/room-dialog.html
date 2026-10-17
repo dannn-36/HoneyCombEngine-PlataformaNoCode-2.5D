@@ -1,0 +1,113 @@
+<!-- Grilla del mapa: agregar una nueva, o cambiar una que ya existe (clic
+     derecho sobre ella, o ✎ en el panel Mapa). Una nueva se puede pegar a
+     otra eligiendo de que lado va, o dejar donde se la dibujo con la
+     herramienta Grilla. La vista previa verde del viewport muestra el lugar
+     mientras se cambian los numeros. -->
+@if (map.roomDraft(); as draft) {
+  <div class="modal-backdrop" (click)="map.cancelRoomDialog()">
+    <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="room-dialog-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="room-dialog-title">{{ draft.editId ? 'Grilla “' + draft.editId + '”' : 'Agregar grilla al mapa' }}</h2>
+        <button class="icon-button" type="button" title="Cerrar" (click)="map.cancelRoomDialog()">×</button>
+      </div>
+
+      <div class="modal__body">
+        @if (!draft.editId && map.rooms().length === 0) {
+          <p class="hint">
+            El nivel todavía es una sola grilla. Al agregar esta, el área actual pasa a llamarse
+            “sala_1” y se puede unir con la nueva.
+          </p>
+        }
+
+        <div class="field-row">
+          @if (!draft.editId) {
+            <label class="field">
+              <span>Nombre</span>
+              <input class="input" [value]="draft.id" (input)="map.patchRoomDraft({ id: str($event) })" />
+            </label>
+          }
+          <label class="field">
+            <span>Ubicar junto a</span>
+            <select class="input" [value]="draft.anchor" (change)="map.setRoomAnchor(str($event))">
+              <option value="" [selected]="draft.anchor === ''">— posición libre —</option>
+              @for (room of map.anchorRooms(); track room.id) {
+                <option [value]="room.id" [selected]="draft.anchor === room.id">{{ room.id }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        @if (draft.anchor) {
+          <div class="fieldblock">
+            <span class="fieldblock__label">De qué lado</span>
+            <div class="seg seg--wrap">
+              @for (side of map.roomSides; track side.value) {
+                <button class="tool" type="button" [class.is-active]="draft.side === side.value"
+                        [title]="side.hint" (click)="map.setRoomSide(side.value)">{{ side.label }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Escribir columna o fila suelta la grilla de la de al lado; el
+             tamano, en cambio, la mantiene pegada. Ver map.patchRoomPosition. -->
+        <div class="field-row">
+          <label class="field">
+            <span>Columna</span>
+            <input class="input" type="number" step="1" [value]="draft.col"
+                   (input)="map.patchRoomPosition({ col: int($event) })" />
+          </label>
+          <label class="field">
+            <span>Fila</span>
+            <input class="input" type="number" step="1" [value]="draft.row"
+                   (input)="map.patchRoomPosition({ row: int($event) })" />
+          </label>
+          <label class="field">
+            <span>Ancho</span>
+            <input class="input" type="number" min="1" step="1" [value]="draft.width"
+                   (input)="map.patchRoomSize({ width: int($event) })" />
+          </label>
+          <label class="field">
+            <span>Alto</span>
+            <input class="input" type="number" min="1" step="1" [value]="draft.height"
+                   (input)="map.patchRoomSize({ height: int($event) })" />
+          </label>
+        </div>
+
+        @if (!draft.editId) {
+          <div class="field-row">
+            <label class="field">
+              <span>Conectar con</span>
+              <select class="input" [value]="draft.connectTo" (change)="map.patchRoomDraft({ connectTo: str($event) })">
+                <option value="" [selected]="draft.connectTo === ''">— sin túnel —</option>
+                @for (room of map.connectableRooms(); track room.id) {
+                  <option [value]="room.id" [selected]="draft.connectTo === room.id">{{ room.id }}</option>
+                }
+              </select>
+            </label>
+            @if (draft.connectTo) {
+              <label class="field">
+                <span>Ancho del túnel (celdas)</span>
+                <input class="input" type="number" min="1" step="1" [value]="draft.tunnelWidth"
+                       (input)="map.patchRoomDraft({ tunnelWidth: int($event) })" />
+              </label>
+            }
+          </div>
+        }
+
+        <p class="hint">
+          El recuadro verde del viewport muestra dónde va a quedar. Si cae a la izquierda o arriba del
+          mapa, el mapa entero se corre para hacerle lugar.
+        </p>
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn" type="button" (click)="map.cancelRoomDialog()">Cancelar</button>
+        <button class="btn btn--primary" type="button" (click)="map.confirmRoomDialog()">
+          {{ draft.editId ? 'Guardar' : 'Agregar grilla' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

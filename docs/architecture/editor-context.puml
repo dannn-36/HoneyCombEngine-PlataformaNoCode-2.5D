@@ -5,14 +5,16 @@ skinparam componentStyle rectangle
 
 actor "Disenador" as designer
 rectangle "HoneyComb Editor" as editor
-folder "Carpeta de proyecto" as project
+folder "Carpeta del editor\nlevels/, assets/,\ncharacters.json, items.json" as project
+folder "Archivos de afuera\n(Descargas, otra carpeta...)" as outside
 file "level.schema.json" as levelSchema
 file "event_catalog.json" as eventSchema
 rectangle "Runtime C++" as runtime
 
 designer --> editor : editar escena y eventos
-editor --> project : abrir, leer, guardar
-editor --> levelSchema : validar niveles
+editor --> project : abrir, leer, guardar,\ncrear carpetas
+outside --> editor : imagenes y niveles\nque se importan
+editor --> levelSchema : contrato (modelos\nTypeScript espejo)
 editor --> eventSchema : cargar definiciones
 project --> runtime : archivos JSON y assets
 designer --> runtime : ejecutar preview o juego
@@ -20,6 +22,13 @@ designer --> runtime : ejecutar preview o juego
 note right of editor
 Aplicacion de escritorio.
 La UI no accede directamente al disco:
-usa ProjectService -> preload -> Electron main.
+usa ProjectService -> preload -> Electron main (ipc/).
+Trabaja SIEMPRE dentro de la carpeta del editor:
+lo que viene de afuera se copia adentro.
+end note
+
+note bottom of eventSchema
+Los dos schemas viven en la instalacion
+(schema/), no en la carpeta del editor.
 end note
 @enduml

@@ -51,6 +51,62 @@ export function usesNearestNeighbor(sourceWidth: number, fitted: FittedSize): bo
   return Number.isInteger(factor) && factor <= 4;
 }
 
+// --- Convertidor de imagenes ------------------------------------------------
+//
+// El convertidor (textures/image-converter.controller.ts) aplica las mismas
+// dos reglas, pero deja elegir el tamano y como se reduce, en vez de fijarlos
+// al tile del nivel abierto.
+
+/**
+ * Hasta donde se reduce:
+ *   tile      el lado mas largo al ancho del tile, como Importar
+ *   custom    el lado mas largo a un tope elegido a mano
+ *   original  sin reducir: solo cambia el formato
+ */
+export type ConvertSizeMode = 'tile' | 'custom' | 'original';
+
+/**
+ * Como se reduce:
+ *   auto    como Importar (ver usesNearestNeighbor)
+ *   pixel   siempre vecino mas cercano: bordes duros, para pixel art
+ *   smooth  siempre suavizado: para fotos y capturas
+ */
+export type ConvertFilter = 'auto' | 'pixel' | 'smooth';
+
+/** Tope del lado elegido a mano: mas chico no se ve, mas grande no tiene sentido como sprite. */
+export const CONVERT_SIDE_MIN = 1;
+export const CONVERT_SIDE_MAX = 4096;
+
+/** Medidas finales de una imagen segun el modo de tamano del convertidor. */
+export function convertedSize(
+  width: number,
+  height: number,
+  mode: ConvertSizeMode,
+  tileWidth: number,
+  customSide: number,
+): FittedSize {
+  if (mode === 'original') {
+    return { width, height, scaled: false };
+  }
+  const side = mode === 'tile' ? tileWidth : customSide;
+  // Un tope roto (vacio, 0, NaN) no puede dejar la imagen en 0x0.
+  const maxSide = Number.isFinite(side)
+    ? Math.min(CONVERT_SIDE_MAX, Math.max(CONVERT_SIDE_MIN, Math.round(side)))
+    : CONVERT_SIDE_MAX;
+  return fitTextureSize(width, height, maxSide);
+}
+
+/** Si el convertidor reduce sin interpolar. */
+export function convertsWithNearest(filter: ConvertFilter, sourceWidth: number, fitted: FittedSize): boolean {
+  if (filter === 'pixel') {
+    return true;
+  }
+  if (filter === 'smooth') {
+    return false;
+  }
+  return usesNearestNeighbor(sourceWidth, fitted);
+}
+
 /** Decodifica una imagen que llega como data URL. */
 export function decodeImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {

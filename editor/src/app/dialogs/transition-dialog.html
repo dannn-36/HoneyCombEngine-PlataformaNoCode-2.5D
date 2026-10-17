@@ -1,0 +1,76 @@
+<!-- Pasar a otro nivel: arma el evento con su trigger y la accion
+     load_level, que en el juego muestra la pantalla con el mensaje y carga
+     el nivel elegido. Queda en el panel Eventos para ajustarlo. -->
+@if (transition.transitionDraft(); as draft) {
+  <div class="modal-backdrop" (click)="transition.cancelTransitionDialog()">
+    <section class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="transition-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="transition-title">Pasar a otro nivel</h2>
+        <button class="icon-button" type="button" title="Cerrar" (click)="transition.cancelTransitionDialog()">×</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="field-row">
+          <label class="field">
+            <span>Cuándo</span>
+            <select class="input" [value]="draft.when" (change)="transition.setTransitionWhen(str($event))">
+              <option value="entity_destroyed" [selected]="draft.when === 'entity_destroyed'">
+                Al eliminar una entidad
+              </option>
+              <option value="all_enemies" [selected]="draft.when === 'all_enemies'">
+                Al vencer a todos los enemigos
+              </option>
+              <option value="touch" [selected]="draft.when === 'touch'">Cuando el jugador toca una entidad</option>
+            </select>
+          </label>
+          @if (draft.when !== 'all_enemies') {
+            <label class="field">
+              <span>Entidad</span>
+              <select class="input" [value]="draft.entity" (change)="transition.patchTransitionDraft({ entity: str($event) })">
+                <option value="" disabled [selected]="draft.entity === ''">— entidad —</option>
+                @for (id of entityIds(); track id) {
+                  <option [value]="id" [selected]="draft.entity === id">{{ id }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Ir al nivel</span>
+            @if (proj.levelFiles().length > 0) {
+              <select class="input" [value]="draft.level" (change)="transition.patchTransitionDraft({ level: str($event) })">
+                <option value="" disabled [selected]="draft.level === ''">— nivel —</option>
+                @for (file of proj.levelFiles(); track file) {
+                  <option [value]="file" [selected]="draft.level === file">{{ file }}</option>
+                }
+              </select>
+            } @else {
+              <input class="input" [value]="draft.level" placeholder="test_level_1.json"
+                     (input)="transition.patchTransitionDraft({ level: str($event) })" />
+            }
+          </label>
+          <label class="field">
+            <span>Mensaje</span>
+            <input class="input" [value]="draft.message" (input)="transition.patchTransitionDraft({ message: str($event) })" />
+          </label>
+        </div>
+
+        <p class="hint">
+          Al cumplirse, el juego se congela, muestra el mensaje un par de segundos y carga el nivel elegido.
+          El nivel siguiente tiene que estar en la misma carpeta levels/.
+        </p>
+        @if (draft.when !== 'all_enemies' && entityIds().length === 0) {
+          <p class="hint hint--warn">El nivel todavía no tiene entidades: coloca un enemigo primero.</p>
+        }
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn" type="button" (click)="transition.cancelTransitionDialog()">Cancelar</button>
+        <button class="btn btn--primary" type="button" (click)="transition.confirmTransitionDialog()">Crear evento</button>
+      </div>
+    </section>
+  </div>
+}

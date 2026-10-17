@@ -1,6 +1,11 @@
 /* Estilos del editor (componente App). La base global -- fondo y tipografia de
    la pagina -- esta en src/styles.scss; todo lo demas es esto.
 
+   NO estan encapsulados (ViewEncapsulation.None en app.ts): los usan tambien
+   los dialogos de dialogs/, que son componentes aparte. Por eso la raiz se
+   llama "app-root" y no ":host", y la regla universal de abajo deja afuera a
+   la barra de menus, que tiene sus propios estilos.
+
    Tema calcado del oscuro de Blender. Las tres decisiones que lo definen, y de
    las que sale casi todo lo demas:
 
@@ -26,7 +31,7 @@
      - "is-active" marca el estado encendido de un control (herramienta elegida,
        pestana abierta, entidad seleccionada). La clase la pone la plantilla con
        [class.is-active], nunca el CSS. */
-:host {
+app-root {
   /* Fondos, del mas oscuro al mas claro. Son los valores del tema Dark de
      Blender: la ventana y el surco entre areas son lo mas oscuro, el cuerpo de
      cada editor queda un escalon arriba, y los paneles otro mas. La profundidad
@@ -72,8 +77,12 @@
 }
 
 /* border-box en todo: los anchos fijos de los docks incluyen su borde y su
-   padding, asi que las cuentas del layout cierran sin restar a mano. */
-* {
+   padding, asi que las cuentas del layout cierran sin restar a mano.
+
+   "Todo" es el editor sin el interior de la barra de menus: es exactamente lo
+   que alcanzaba esta regla cuando los estilos estaban encapsulados, y la barra
+   tiene medidas pensadas sin ella. */
+app-root *:not(app-menu-bar *) {
   box-sizing: border-box;
 }
 
@@ -1898,6 +1907,102 @@
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* ---------- Convertidor de imagenes (Herramientas) ---------- */
+.converter {
+  &__intro {
+    margin: 0 0 8px;
+  }
+
+  &__add {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+
+    .btn {
+      flex: 1;
+      height: 24px;
+    }
+  }
+
+  /* Con muchas imagenes la lista se desplaza por dentro: los botones de
+     Convertir tienen que seguir a la vista. */
+  &__list {
+    display: grid;
+    gap: 2px;
+    max-height: 280px;
+    margin: 8px 0 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: var(--radius);
+    background: var(--bg-panel);
+
+    &.is-done .converter__meta {
+      color: #8fbf6a;
+    }
+
+    &.is-failed .converter__meta {
+      color: #d9705f;
+    }
+  }
+
+  &__thumb {
+    display: grid;
+    flex: 0 0 32px;
+    place-items: center;
+    height: 32px;
+    border-radius: 3px;
+    background: var(--widget-sunken);
+
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+    }
+  }
+
+  /* min-width: 0 deja que los nombres largos se corten con "…" en vez de
+     empujar el boton de quitar fuera de la fila. */
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__names {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__arrow {
+    margin: 0 4px;
+    color: var(--text-dim);
+  }
+
+  &__renamed {
+    color: #c9a24a;
+  }
+
+  &__meta {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  &__empty {
+    padding: 10px 0;
+    text-align: center;
+  }
 }
 
 /* Lista de casillas (las puertas de un puzzle), en columnas y con scroll. */
