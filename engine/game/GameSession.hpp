@@ -11,6 +11,7 @@
 #include "core/GraphicsDevice.hpp"
 #include "core/ResourceManager.hpp"
 #include "game/Combat.hpp"
+#include "game/DevTools.hpp"
 #include "game/EventBindings.hpp"
 #include "game/Inventory.hpp"
 #include "game/Loot.hpp"
@@ -64,6 +65,16 @@ public:
 
     // El bucle principal, hasta que se cierre la ventana.
     void Run();
+
+    // Medicion ("engine <nivel> --bench <segundos>"): corre el nivel sin tope
+    // de FPS durante ese tiempo, imprime cuantos cuadros por segundo dio y
+    // termina. Existe en las dos compilaciones, para poder comparar Debug con
+    // Release con el mismo nivel; la Release no tiene el panel F3.
+    void Benchmark(float seconds);
+
+    // Con false se dibuja todo el nivel, se vea o no ("--sin-recorte"): sirve
+    // para medir cuanto ahorra el recorte por camara. Por defecto, encendido.
+    void SetCulling(bool enabled) { culling = enabled; }
 
 private:
     void BindInput();
@@ -188,8 +199,16 @@ private:
     Vector2 cameraFixedCenter{0, 0};
     Rectangle cameraBounds{0, 0, 0, 0};
     Font defaultFont;
+    // F1 y F2: solo en Debug, como el resto de las herramientas (ver DevTools).
     bool showGrid = false;
     bool showHitboxes = false;  // F2, independiente de F1: se pueden ver los dos
+    DevTools::State dev;
+    bool culling = true;
+
+    // Donde va cada baldosa de piso en el mundo, ya ordenadas de atras hacia
+    // adelante. El piso no se mueve: se calcula y se ordena una vez al cargar el
+    // nivel (PrepareLevel) y no en cada frame (ver ZSortSystem).
+    std::vector<Vector2> floorDrawOrder;
 
     std::vector<HealthBarMark> healthBars;
 };

@@ -4,6 +4,7 @@ import { cameraOf } from '../core/camera';
 import { ENGINE_PLAYER_ID, characterOf, defaultStatsFor } from '../core/characters';
 import { ParamTypeLookup, eventsUsingEntity, renameEntityInEvents } from '../core/entity-refs';
 import { SHAPES, shapeDef, usesShapeSheet } from '../core/iso-shapes';
+import { isStripRect, stripRect } from '../core/sprite-frames';
 import { CameraConfig, EntityStats, GridConfig, LevelEntity } from '../models/level.model';
 import { CatalogService } from '../services/catalog.service';
 import { LevelService } from '../services/level.service';
@@ -49,6 +50,8 @@ export class InspectorController {
   constructor(
     private readonly markDirty: () => void,
     private readonly note: (message: string) => void,
+    /** Medidas reales de la imagen de una entidad ("textures/x.png"), si ya se cargo. */
+    private readonly textureSize: (texture: string) => { width: number; height: number } | null,
   ) {}
 
   // --- Nombre ------------------------------------------------------------------
@@ -221,6 +224,9 @@ export class InspectorController {
    * Cuadros de animacion de la entidad. Se quita "animation" en el mismo paso:
    * el nombre de clip viejo solo cuenta mientras no haya "frames", y dejarlo
    * suelto confundiria a quien lea el JSON.
+   *
+   * Si el recorte es la imagen partida en partes iguales, se vuelve a partir
+   * con la cantidad nueva (ver setDraftFrames en characters.controller.ts).
    */
   patchEntityFrames(value: number): void {
     const entity = this.selected();
@@ -228,10 +234,14 @@ export class InspectorController {
       return;
     }
     const frames = Math.max(1, Math.round(value) || 1);
+    const image = this.textureSize(entity.texture);
+    const resplit =
+      image !== null && isStripRect(entity.sourceRect, image.width, image.height, this.effectiveFrames(entity));
     this.patchEntity({
       frames: frames > 1 ? frames : undefined,
       frameDuration: frames > 1 ? this.effectiveFrameDuration(entity) : undefined,
       animation: undefined,
+      sourceRect: resplit ? stripRect(image.width, image.height, frames) : entity.sourceRect,
     });
   }
 

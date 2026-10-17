@@ -110,10 +110,31 @@ export interface HoneycombProjectApi {
   writeTexture(name: string, pngBase64: string, overwrite: boolean): Promise<TextureWriteResult>;
 
   /**
-   * Lanza el runtime con el nivel de esa ruta absoluta. El ejecutable lo
-   * localiza el proceso principal a partir de ella.
+   * Lanza el runtime con el nivel de esa ruta absoluta, con el motor del modo
+   * elegido. El ejecutable lo localiza el proceso principal. "missing" dice que
+   * ese motor no esta compilado, y que se puede compilar con buildEngine.
    */
-  run(levelPath: string): Promise<{ ok: boolean; executable?: string; error?: string }>;
+  run(levelPath: string, mode: EngineMode): Promise<EngineRunResult>;
+
+  /** Que motores estan compilados (ver ipc/engine-modes.js). */
+  engineStatus(): Promise<Record<EngineMode, boolean>>;
+  /** Compila el motor de un modo con CMake. La salida llega por onEngineBuildLog. */
+  buildEngine(mode: EngineMode): Promise<{ ok: boolean; executable?: string | null; error?: string }>;
+  /** Escucha la salida de la compilacion, de a una linea. Devuelve como dejar de escucharla. */
+  onEngineBuildLog(callback: (line: string) => void): () => void;
+}
+
+/**
+ * Con que motor se ejecuta: "debug" es la version de desarrollo (sin optimizar,
+ * con las herramientas de F3) y "release" la optimizada, la que se juega.
+ */
+export type EngineMode = 'debug' | 'release';
+
+export interface EngineRunResult {
+  ok: boolean;
+  executable?: string;
+  error?: string;
+  missing?: boolean;
 }
 
 /** Control de la ventana, para lo que antes daba el menu nativo de Electron. */

@@ -46,8 +46,18 @@ contextBridge.exposeInMainWorld('honeycombProject', {
 
   // Lanza el runtime con un nivel ya guardado. Recibe la ruta del nivel y no
   // la del ejecutable: quien decide que binario correr es el proceso principal,
-  // no la UI.
-  run: (levelPath) => ipcRenderer.invoke('project:run', levelPath),
+  // no la UI. "mode" elige el motor: 'debug' o 'release' (ver ipc/engine-modes.js).
+  run: (levelPath, mode) => ipcRenderer.invoke('project:run', { levelPath, mode }),
+
+  // Los dos motores: cuales estan compilados, y compilar uno (ver
+  // ipc/engine-build.js). La salida de la compilacion llega de a una linea.
+  engineStatus: () => ipcRenderer.invoke('engine:status'),
+  buildEngine: (mode) => ipcRenderer.invoke('engine:build', mode),
+  onEngineBuildLog: (callback) => {
+    const listener = (_event, line) => callback(line);
+    ipcRenderer.on('engine:build-log', listener);
+    return () => ipcRenderer.removeListener('engine:build-log', listener);
+  },
 });
 
 // Control de la ventana. Existe porque se quito el menu nativo de Electron

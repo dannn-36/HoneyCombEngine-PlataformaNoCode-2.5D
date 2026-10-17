@@ -10,7 +10,7 @@
     | proyecto  |      viewport isometrico      | objeto|escena |
     |           |                               |               |
     +-----------+-------------------------------+---------------+
-    | Recursos · Eventos · Consola · Vista previa (plegable)    |
+    | Recursos · Eventos · Consola · Vista previa · JSON (plegable) |
     +-----------------------------------------------------------+
     | pistas de teclas · mensaje · estadisticas                 |  24px
     +-----------------------------------------------------------+
@@ -122,6 +122,21 @@
           </button>
         </div>
       } @else {
+        <!-- Deshacer y rehacer el nivel. El titulo dice que paso deshace
+             ("Deshacer: mover player_1"). En Sprites estan en su cabecera. -->
+        <div class="tgroup" role="group" aria-label="Historial">
+          <button class="tbtn" type="button" [disabled]="!canUndo()" (click)="undo()"
+                  [title]="undoText() + ' (Ctrl+Z)'" aria-label="Deshacer" aria-keyshortcuts="Control+Z">
+            <svg hcIcon="undo-2"></svg>
+          </button>
+          <button class="tbtn" type="button" [disabled]="!canRedo()" (click)="redo()"
+                  [title]="redoText() + ' (Ctrl+Y)'" aria-label="Rehacer" aria-keyshortcuts="Control+Y">
+            <svg hcIcon="redo-2"></svg>
+          </button>
+        </div>
+
+        <span class="toolbar__sep" aria-hidden="true"></span>
+
         <div class="tgroup" role="group" aria-label="Herramienta">
           @for (tool of toolButtons; track tool.id) {
             <button class="tbtn tbtn--tool" type="button" [class.is-active]="palette.tool() === tool.id"
@@ -151,14 +166,38 @@
       }
     </div>
 
-    <!-- Guarda y lanza el motor con el nivel abierto. -->
-    <button class="run" type="button" (click)="proj.run()" title="Guardar y ejecutar el nivel en el motor (F5)">
+    <!-- Guarda y lanza el motor con el nivel abierto, con el motor elegido
+         (selector de al lado). Ver project/engine.controller.ts. -->
+    <button class="run" type="button" (click)="proj.run()" [disabled]="engine.building() !== null"
+            [title]="engine.building() ? 'Compilando el motor…' : 'Guardar y ejecutar el nivel con el motor ' + engine.label(engine.mode()) + ' (F5)'">
       <svg hcIcon="play"></svg>
-      <span>Ejecutar</span>
-      <kbd>F5</kbd>
+      @if (engine.building()) {
+        <span>Compilando {{ engine.progress() }}</span>
+      } @else {
+        <span>Ejecutar</span>
+        <kbd>F5</kbd>
+      }
     </button>
 
     <div class="toolbar__side toolbar__side--end">
+      <!-- Con que motor ejecuta: Debug (desarrollo, con F3 en el juego) o
+           Release (optimizado). Va primero en este lado, pegado a Ejecutar, y
+           no en la columna del centro: ahi le quitaba lugar a las
+           herramientas de la izquierda. El punto marca el que todavia no esta
+           compilado: se compila al ejecutar. -->
+      <div class="seg runmode" role="radiogroup" aria-label="Motor con el que se ejecuta">
+        @for (mode of engine.modes; track mode.id) {
+          <button class="tool" type="button" role="radio" [class.is-active]="engine.mode() === mode.id"
+                  [attr.aria-checked]="engine.mode() === mode.id" [title]="engine.hint(mode.id)"
+                  (click)="engine.setMode(mode.id)">
+            {{ mode.label }}
+            @if (engine.isMissing(mode.id)) {
+              <span class="runmode__missing" aria-label="sin compilar"></span>
+            }
+          </button>
+        }
+      </div>
+
       <div class="zoom" role="group" aria-label="Zoom">
         <button class="tbtn" type="button" (click)="stepZoom(-1)" title="Alejar" aria-label="Alejar">
           <svg hcIcon="zoom-out"></svg>
@@ -448,24 +487,20 @@
       <!-- Dos vistas del mismo lugar: "Escena" es el arbol de entidades del
            nivel abierto; "Proyecto", los archivos de la carpeta del editor
            (levels/, assets/, schema/). -->
-      <div class="tabs" role="tablist" aria-label="Vista de la columna izquierda">
+      <!-- tabs--fit: con la columna angosta las pestañas se achican y cortan
+           su nombre con "…" en vez de salirse de la columna. -->
+      <div class="tabs tabs--fit" role="tablist" aria-label="Vista de la columna izquierda">
         <button class="tab" type="button" role="tab" [class.is-active]="leftEditor() === 'escena'"
                 [attr.aria-selected]="leftEditor() === 'escena'" (click)="setLeftEditor('escena')"
                 title="Entidades del nivel abierto">
-          <svg hcIcon="list-tree"></svg>Escena
+          <svg hcIcon="list-tree"></svg><span class="tab__label">Escena</span>
           <span class="tab__count">{{ entities().length }}</span>
         </button>
         <button class="tab" type="button" role="tab" [class.is-active]="leftEditor() === 'proyecto'"
                 [attr.aria-selected]="leftEditor() === 'proyecto'" (click)="setLeftEditor('proyecto')"
                 title="Archivos de la carpeta del editor">
-          <svg hcIcon="folder"></svg>Proyecto
+          <svg hcIcon="folder"></svg><span class="tab__label">Proyecto</span>
         </button>
-        @if (leftEditor() === 'proyecto') {
-          <button class="ibtn tabs__end" type="button" (click)="explorer.refreshTree()"
-                  title="Releer la carpeta del proyecto" aria-label="Releer la carpeta del proyecto">
-            <svg hcIcon="refresh-cw"></svg>
-          </button>
-        }
       </div>
 
       @if (leftEditor() === 'escena') {
@@ -517,11 +552,20 @@
                     [title]="'Crear una carpeta en ' + (explorer.currentDir() || 'la raíz')">
               <svg hcIcon="folder-plus"></svg>Carpeta…
             </button>
-            <button class="ibtn" type="button" (click)="proj.revealWorkspace()"
-                    [title]="'Abrir en el sistema: ' + (project.projectRoot() ?? '')"
-                    aria-label="Mostrar la carpeta en el sistema">
-              <svg hcIcon="external-link"></svg>
-            </button>
+            <!-- Releer va aca, con las demas acciones de la carpeta, y no en la
+                 fila de pestañas: ahi no entraba y quedaba fuera de la columna,
+                 encima del viewport. -->
+            <span class="filetools__icons">
+              <button class="ibtn" type="button" (click)="explorer.refreshTree()"
+                      title="Releer la carpeta del proyecto" aria-label="Releer la carpeta del proyecto">
+                <svg hcIcon="refresh-cw"></svg>
+              </button>
+              <button class="ibtn" type="button" (click)="proj.revealWorkspace()"
+                      [title]="'Abrir en el sistema: ' + (project.projectRoot() ?? '')"
+                      aria-label="Mostrar la carpeta en el sistema">
+                <svg hcIcon="external-link"></svg>
+              </button>
+            </span>
           </div>
 
           <!-- Una sola lista plana: la sangria la da la profundidad que calculo
@@ -1188,6 +1232,7 @@
                     </div>
                     <p class="hint hint--field">
                       Los cuadros van uno al lado del otro en la imagen, cada uno del ancho del recorte. Con 1 no se anima.
+                      Si el recorte es la imagen entera, cambiarlos la reparte en partes iguales.
                     </p>
 
                     @if (entity.collider; as collider) {
@@ -1663,6 +1708,21 @@
           @case ('salida') {
             <span class="tabs__info">{{ log().length }} mensajes</span>
           }
+          @case ('json') {
+            <span class="tabs__info">{{ json.summary() }}</span>
+            <div class="seg" role="group" aria-label="Qué parte del JSON se muestra">
+              <button class="tool" type="button" [class.is-active]="json.scope() === 'nivel'"
+                      [attr.aria-pressed]="json.scope() === 'nivel'" (click)="json.scope.set('nivel')"
+                      title="El nivel entero, como queda en el archivo">Nivel</button>
+              <button class="tool" type="button" [class.is-active]="json.scope() === 'seleccion'"
+                      [attr.aria-pressed]="json.scope() === 'seleccion'" (click)="json.scope.set('seleccion')"
+                      title="Solo las entidades seleccionadas">Selección ({{ json.selectionCount() }})</button>
+            </div>
+            <button class="btn btn--small" type="button" [disabled]="json.text() === null" (click)="json.copy()"
+                    title="Copiar el JSON al portapapeles">
+              <svg hcIcon="copy"></svg>Copiar
+            </button>
+          }
         }
       }
     </div>
@@ -2014,6 +2074,24 @@
           </div>
         }
 
+        @case ('json') {
+          <div class="dock__body pad">
+            <!-- El nivel en vivo, tal como lo escribe Guardar y lo lee el motor.
+                 Solo lectura: ver debug/json-view.controller.ts. -->
+            @if (json.text() === null) {
+              <div class="empty">
+                <p class="empty__title">No hay nada seleccionado</p>
+                <p>Elige una o varias entidades para ver solo su parte, o vuelve a <b>Nivel</b>.</p>
+              </div>
+            } @else if (json.html(); as html) {
+              <pre class="fileview jsonview" [innerHTML]="html"></pre>
+            } @else {
+              <p class="hint">Nivel grande: se muestra sin colores para no frenar el editor.</p>
+              <pre class="fileview jsonview">{{ json.text() }}</pre>
+            }
+          </div>
+        }
+
         @default {
           <div class="dock__body pad">
             <div class="console" role="log" aria-live="polite">
@@ -2052,6 +2130,7 @@
       <span class="keyhint keyhint--extra"><kbd>Clic derecho</kbd>Configurar</span>
       <span class="keyhint keyhint--extra"><kbd>Shift+D</kbd>Duplicar</span>
       <span class="keyhint keyhint--extra"><kbd>X</kbd>Eliminar</span>
+      <span class="keyhint keyhint--extra"><kbd>Ctrl+Z</kbd>Deshacer</span>
     }
 
     <span class="statusbar__msg" [title]="status()">{{ status() }}</span>

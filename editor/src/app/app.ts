@@ -52,7 +52,11 @@
 // miniaturas bajo demanda), events/ (el panel Eventos y el dialogo de pasar de
 // nivel), dialogs/ (el markup de los dialogos grandes), ui/ (paneles y el
 // dialogo de pedir un nombre), sprites/ (la herramienta de sprites, que ocupa
-// el area central en lugar del viewport cuando se la elige).
+// el area central en lugar del viewport cuando se la elige), debug/ (la pestaña
+// JSON: el nivel en vivo, tal como se guarda).
+//
+// Deshacer y rehacer del nivel estan en services/level-history.service.ts:
+// miran el nivel y anotan cada version, asi que ningun controlador los llama.
 //
 // Todo lo que toca el disco pasa por services/project.service.ts -> preload.js
 // -> ipc/ (proceso principal), siempre dentro de la carpeta del editor (ver
@@ -66,9 +70,11 @@ import {
   ElementRef,
   ViewEncapsulation,
   computed,
+  effect,
   forwardRef,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -111,14 +117,17 @@ import { entityKindStyle } from './core/entity-kinds';
 import { CatalogService } from './services/catalog.service';
 import { ItemLibraryService } from './services/item-library.service';
 import { LevelService } from './services/level.service';
+import { LevelHistoryService } from './services/level-history.service';
 import { SelectionService } from './services/selection.service';
 import { ProjectService } from './services/project.service';
+import { JsonViewController } from './debug/json-view.controller';
 import { SelectionController } from './selection/selection.controller';
 import { PaletteController, Tool } from './palette/palette.controller';
 import { InspectorController } from './inspector/inspector.controller';
 import { EntityOpsController } from './entities/entity-ops.controller';
 import { ViewportController } from './viewport/viewport.controller';
 import { ProjectController } from './project/project.controller';
+import { EngineController } from './project/engine.controller';
 import { TransitionController } from './events/transition.controller';
 import { ItemsPanelController } from './combat/items-panel.controller';
 import { ThemeService } from './services/theme.service';
@@ -131,10 +140,11 @@ import { LevelEntity } from './models/level.model';
 /**
  * Pestaña del dock de abajo, como el cajón de contenido de un motor: "layout"
  * son los recursos para colocar (figuras, personajes, objetos, texturas), y las
- * otras tres el editor de eventos, la consola y el visor de archivos. El nombre
- * interno "layout" quedo de cuando esa pestaña dejaba el viewport a todo alto.
+ * otras el editor de eventos, la consola, el visor de archivos y el JSON del
+ * nivel en vivo. El nombre interno "layout" quedo de cuando esa pestaña dejaba
+ * el viewport a todo alto.
  */
-type Workspace = 'layout' | 'eventos' | 'salida' | 'archivo';
+type Workspace = 'layout' | 'eventos' | 'salida' | 'archivo' | 'json';
 
 /** Categoria del explorador de recursos del dock. */
 type AssetTab = 'figuras' | 'personajes' | 'objetos' | 'texturas';
@@ -186,6 +196,8 @@ const WORKSPACE_LABELS: Record<Workspace, string> = {
   // No "Archivo": se confundia con el menu Archivo. Muestra el archivo elegido
   // en Proyecto, sin editarlo.
   archivo: 'Vista previa',
+  // El nivel tal como se guarda, en vivo: para depurar (ver debug/json-view.controller.ts).
+  json: 'JSON',
 };
 
 /**
@@ -217,6 +229,7 @@ const DOCK_TABS: readonly { id: Workspace; icon: IconName }[] = [
   { id: 'eventos', icon: 'zap' },
   { id: 'salida', icon: 'terminal' },
   { id: 'archivo', icon: 'file-text' },
+  { id: 'json', icon: 'file-json' },
 ];
 
 /** Cuanto mueve cada flecha del teclado, en celdas de la grilla. */
@@ -279,6 +292,9 @@ export class App {
   readonly presetsService = inject(CharacterPresetService);
 
   readonly itemLibrary = inject(ItemLibraryService);
+
+  /** Deshacer y rehacer del nivel. Ver services/level-history.service.ts. */
+  readonly history = inject(LevelHistoryService);
 
   // --- Estado del shell -----------------------------------------------------
   //
@@ -443,6 +459,7 @@ export class App {
   readonly inspector: InspectorController = new InspectorController(
     () => this.dirty.set(true),
     (message) => this.note(message),
+    (texture) => this.tex.textureAssets()[textureName(texture)] ?? null,
   );
 
   /** El selector de imagen de Apariencia, desplegado o no. */
@@ -558,6 +575,17 @@ export class App {
   );
 
   /**
+   * Con que motor se ejecuta: Debug (desarrollo, con F3) o Release
+   * (optimizado). Ver project/engine.controller.ts.
+   */
+  readonly engine: EngineController = new EngineController({
+    note: (message) => this.note(message),
+    status: (message) => this.status.set(message),
+    log: (line) => this.log.update((entries) => [...entries.slice(-200), line]),
+    hasFileSystem: this.hasFileSystem,
+  });
+
+  /**
    * El nivel como documento: abrir, crear, guardar, ejecutar. Ver
    * project/project.controller.ts.
    */
@@ -571,12 +599,75 @@ export class App {
     view: this.view,
     ev: this.ev,
     prompt: this.prompt,
+    engine: this.engine,
   });
+
+  /** La pestaña JSON del panel de abajo. Ver debug/json-view.controller.ts. */
+  readonly json: JsonViewController = new JsonViewController((message) => this.note(message));
 
   constructor() {
     // La carpeta del editor se abre sola al arrancar: ya no hay que elegir
     // ninguna (ver ipc/project-root.js).
     void this.proj.openWorkspace();
+    // Para marcar en la barra el motor que todavia no esta compilado.
+    void this.engine.refresh();
+
+    // Sin cambios pendientes = el nivel de ahora es el del disco (se guardo o
+    // se abrio). El historial lo recuerda para que deshacer hasta ahi apague
+    // el aviso de "Sin guardar".
+    effect(() => {
+      if (!this.dirty()) {
+        untracked(() => this.history.markClean());
+      }
+    });
+  }
+
+  // --- Deshacer y rehacer -----------------------------------------------------
+  //
+  // Los mismos botones, menu y atajos para las dos areas centrales: en Sprites
+  // deshacen el dibujo, en el mapa el nivel.
+
+  readonly canUndo = computed(() => (this.centerMode() === 'sprites' ? this.sprite.canUndo() : this.history.canUndo()));
+
+  readonly canRedo = computed(() => (this.centerMode() === 'sprites' ? this.sprite.canRedo() : this.history.canRedo()));
+
+  /** "Deshacer: mover player_1", para el boton y el menu Editar. */
+  readonly undoText = computed(() => {
+    const label = this.centerMode() === 'mapa' ? this.history.undoLabel() : '';
+    return 'Deshacer' + (label ? ': ' + label : '');
+  });
+
+  readonly redoText = computed(() => {
+    const label = this.centerMode() === 'mapa' ? this.history.redoLabel() : '';
+    return 'Rehacer' + (label ? ': ' + label : '');
+  });
+
+  undo(): void {
+    if (this.centerMode() === 'sprites') {
+      this.sprite.undo();
+      return;
+    }
+    const label = this.history.undo();
+    if (label === null) {
+      this.note('No hay nada que deshacer.');
+      return;
+    }
+    this.dirty.set(!this.history.isClean());
+    this.note('Deshecho: ' + label + '.');
+  }
+
+  redo(): void {
+    if (this.centerMode() === 'sprites') {
+      this.sprite.redo();
+      return;
+    }
+    const label = this.history.redo();
+    if (label === null) {
+      this.note('No hay nada que rehacer.');
+      return;
+    }
+    this.dirty.set(!this.history.isClean());
+    this.note('Rehecho: ' + label + '.');
   }
 
   // --- Datos para la plantilla ----------------------------------------------
@@ -708,6 +799,21 @@ export class App {
         id: 'editar',
         label: 'Editar',
         items: [
+          {
+            kind: 'action',
+            label: this.undoText(),
+            shortcut: 'Ctrl+Z',
+            disabled: !this.canUndo(),
+            run: () => this.undo(),
+          },
+          {
+            kind: 'action',
+            label: this.redoText(),
+            shortcut: 'Ctrl+Y',
+            disabled: !this.canRedo(),
+            run: () => this.redo(),
+          },
+          separator,
           { kind: 'action', label: 'Duplicar', shortcut: 'Shift+D', disabled: nothingSelected, run: () => this.entityOps.duplicateSelected() },
           { kind: 'action', label: 'Eliminar', shortcut: 'X', disabled: nothingSelected, run: () => this.entityOps.deleteSelected() },
           separator,
@@ -745,7 +851,7 @@ export class App {
             kind: 'submenu',
             label: 'Pestaña del panel inferior',
             emptyLabel: '',
-            items: (['layout', 'eventos', 'salida', 'archivo'] as const).map((workspace) => ({
+            items: DOCK_TABS.map(({ id: workspace }) => ({
               kind: 'action' as const,
               label: WORKSPACE_LABELS[workspace],
               checked: this.workspace() === workspace,
@@ -922,7 +1028,35 @@ export class App {
       {
         id: 'ejecutar',
         label: 'Ejecutar',
-        items: [{ kind: 'action', label: 'Ejecutar nivel', shortcut: 'F5', run: () => void this.proj.run() }],
+        items: [
+          {
+            kind: 'action',
+            label: 'Ejecutar nivel (' + this.engine.label(this.engine.mode()) + ')',
+            shortcut: 'F5',
+            disabled: this.engine.building() !== null,
+            run: () => void this.proj.run(),
+          },
+          separator,
+          // Con que motor: la version de desarrollo (con F3) o la optimizada.
+          ...this.engine.modes.map((mode) => ({
+            kind: 'action' as const,
+            label:
+              'Motor ' + mode.label + (mode.id === 'debug' ? ': desarrollo, con F3' : ': optimizado') +
+              (this.engine.isMissing(mode.id) ? ' (sin compilar)' : ''),
+            checked: this.engine.mode() === mode.id,
+            run: () => this.engine.setMode(mode.id),
+          })),
+          separator,
+          ...this.engine.modes.map((mode) => ({
+            kind: 'action' as const,
+            label:
+              this.engine.building() === mode.id
+                ? 'Compilando motor ' + mode.label + '… ' + this.engine.progress()
+                : 'Compilar motor ' + mode.label,
+            disabled: this.engine.building() !== null || !this.hasFileSystem,
+            run: () => void this.engine.build(mode.id),
+          })),
+        ],
       },
     ];
   });
@@ -999,6 +1133,7 @@ export class App {
    * Atajos de teclado, con el mismo reparto que Blender:
    *   Inicio    encuadrar todo         Supr / X   borrar el objeto activo
    *   Shift+D   duplicar               Ctrl+S     guardar
+   *   Ctrl+Z    deshacer               Ctrl+Y     rehacer
    *
    * El primer if es la parte importante: si el foco esta en un campo de texto
    * el atajo no corre. Sin eso, escribir una "x" en el id de una entidad la
@@ -1078,6 +1213,20 @@ export class App {
     // los atajos de la ventana: los del nivel no tienen nada que tocar ahi.
     if (this.centerMode() === 'sprites' && this.sprite.onKeyDown(event)) {
       event.preventDefault();
+      return;
+    }
+
+    // Ctrl+Z deshace y Ctrl+Y (o Ctrl+Shift+Z) rehace, las mismas teclas que
+    // en Sprites. Con el foco en un campo no se llega hasta aca (ver el primer
+    // if): ahi Ctrl+Z deshace lo escrito en el campo, como en cualquier lado.
+    const key = event.key.toLowerCase();
+    if (event.ctrlKey && (key === 'z' || key === 'y')) {
+      event.preventDefault();
+      if (key === 'y' || event.shiftKey) {
+        this.redo();
+      } else {
+        this.undo();
+      }
       return;
     }
 

@@ -440,6 +440,47 @@ app-puzzle-dialog {
 
 /* Ejecutar: el boton mas visible de la ventana. Guarda y lanza el nivel en el
    motor, que es lo que cierra el ciclo editar, probar, corregir. */
+/* Con que motor ejecuta: Debug o Release. Primero del lado derecho y empujando
+   el resto: queda pegado a Ejecutar. */
+.runmode {
+  flex: none;
+  margin-right: auto;
+
+  > .tool {
+    height: 26px;
+    padding: 0 9px;
+  }
+
+  /* El motor que todavia no esta compilado: un punto, no un color, para que no
+     dependa de distinguir tonos. */
+  &__missing {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+  }
+}
+
+/* Ventana angosta: Grilla y Colisiones se quedan con el icono (el nombre sigue
+   en su title) antes que pasar por debajo de Ejecutar. */
+@media (max-width: 1400px) {
+  .toolbar .tbtn--label > span {
+    display: none;
+  }
+}
+
+/* Mas angosta todavia (la ventana se puede achicar por debajo de los 1280 con
+   que arranca): sin separadores y con los grupos mas juntos. */
+@media (max-width: 1100px) {
+  .toolbar__side {
+    gap: 4px;
+  }
+
+  .toolbar__sep {
+    display: none;
+  }
+}
+
 .run {
   display: inline-flex;
   align-items: center;
@@ -481,6 +522,13 @@ app-puzzle-dialog {
 
   &:focus-visible {
     outline-offset: 2px;
+  }
+
+  /* Compilando el motor: se ve igual, pero no responde hasta que termine. */
+  &:disabled {
+    cursor: progress;
+    opacity: 0.75;
+    transform: none;
   }
 }
 
@@ -613,9 +661,40 @@ app-puzzle-dialog {
 
     > .btn,
     > .ibtn,
+    > .seg,
     > .tabs__info {
       align-self: center;
       margin-left: 6px;
+    }
+
+    > .seg > .tool {
+      height: 24px;
+    }
+  }
+
+  /* En una columna angosta las pestañas se achican antes de salirse de ella:
+     el nombre se corta con "…" y el icono y el contador quedan enteros. */
+  &--fit {
+    overflow: hidden;
+
+    > .tab {
+      flex: 0 1 auto;
+      min-width: 0;
+      /* Mas juntas que las del dock: asi al ancho de arranque (220px) entran
+         enteras, y solo se cortan si la columna se angosta mas. */
+      gap: 5px;
+      padding: 0 8px;
+    }
+
+    .tab__label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon,
+    .tab__count {
+      flex: none;
     }
   }
 }
@@ -763,6 +842,8 @@ app-puzzle-dialog {
 
 .filetools {
   display: flex;
+  /* Con la columna angosta, los iconos bajan a otra fila en vez de salirse. */
+  flex-wrap: wrap;
   gap: 6px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--line-soft);
@@ -770,6 +851,13 @@ app-puzzle-dialog {
   > .btn {
     flex: 1;
     white-space: nowrap;
+  }
+
+  &__icons {
+    display: flex;
+    flex: none;
+    gap: 2px;
+    margin-left: auto;
   }
 }
 
@@ -1974,6 +2062,26 @@ app-puzzle-dialog {
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
+
+  /* El JSON del nivel (pestaña JSON): los colores de cada token salen del tema. */
+  &.jsonview {
+    white-space: pre;
+    word-break: normal;
+    overflow-x: auto;
+
+    .j-key {
+      color: var(--detail);
+    }
+    .j-str {
+      color: var(--ok);
+    }
+    .j-num {
+      color: var(--badge-action);
+    }
+    .j-lit {
+      color: var(--warn);
+    }
+  }
 
   &--image {
     display: grid;

@@ -28,15 +28,21 @@
 // recompilar. Eso es lo que hace que el editor NoCode tenga sentido.
 //
 // Uso:  engine.exe [ruta/al/nivel.json]     (por defecto: levels/test_level.json)
+//       engine.exe <nivel> --bench <segundos>   mide los FPS sin tope y sale
+//       ... --sin-recorte                       dibuja todo, aunque no se vea
 // Teclas: flechas o WASD = mover | clic izquierdo, Espacio o J = atacar hacia
 //         el mouse | Q = habilidad | Shift = esquivar | clic derecho o K =
 //         defender | 1-9 o rueda = elegir arma | E = cambiar arma / tienda |
-//         F1 = ver grilla | F2 = ver hitboxes | F11 = pantalla completa
+//         F11 = pantalla completa
+//         Solo en Debug: F3 = herramientas de administrador (F1 grilla, F2
+//         hitboxes y las demas: ver game/DevTools.hpp)
 // =============================================================================
 
+#include <algorithm>
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <string>
 
 #include "game/GameSession.hpp"
 
@@ -82,10 +88,36 @@ int main(int argc, char *argv[])
         }
     }
 
+    // "--bench <segundos>" despues del nivel: medir en vez de jugar (ver
+    // GameSession::Benchmark). "--sin-recorte" dibuja todo el nivel, aunque
+    // no se vea: es para medir cuanto ahorra el recorte por camara.
+    float benchSeconds = 0.0f;
+    bool culling = true;
+    for (int i = 2; i < argc; ++i)
+    {
+        const std::string option = argv[i];
+        if (option == "--bench" && i + 1 < argc)
+        {
+            benchSeconds = std::max(1.0f, std::stof(argv[i + 1]));
+        }
+        else if (option == "--sin-recorte")
+        {
+            culling = false;
+        }
+    }
+
     try
     {
         GameSession session(levelPath);
-        session.Run();
+        session.SetCulling(culling);
+        if (benchSeconds > 0.0f)
+        {
+            session.Benchmark(benchSeconds);
+        }
+        else
+        {
+            session.Run();
+        }
     }
     catch (const std::exception &error)
     {

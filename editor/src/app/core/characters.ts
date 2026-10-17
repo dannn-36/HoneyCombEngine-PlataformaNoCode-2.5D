@@ -72,9 +72,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
     texture: 'textures/player.png',
     sourceRect: { ...SPRITE },
     collider: { width: 16, height: 16 },
-    // Los mismos dos cuadros de 0.4 s que tenia escrito a mano main.cpp.
-    frames: 2,
-    frameDuration: 0.4,
+    // Un cuadro, como los demas tipos. Antes eran 2 (los de main.cpp), y ese 2
+    // se arrastraba a cualquier imagen que se le eligiera al jugador: una
+    // imagen suelta pedia un segundo cuadro que no tiene y en el juego se veia
+    // cortada o no se veia. Los cuadros los pone la imagen al elegirla (ver
+    // core/sprite-frames.ts).
+    frames: 1,
+    frameDuration: 0.15,
     stats: { health: 100, damage: 10, speed: 3 },
     color: entityKindStyle('player').color,
     icon: entityKindStyle('player').icon,

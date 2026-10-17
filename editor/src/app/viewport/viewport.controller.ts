@@ -16,7 +16,8 @@ import { blocksOverlap, entitySpan } from '../core/entity-blocks';
 import { CanvasPoint, CanvasRect, CanvasScene, IsoCanvasRenderer, VIEW_TOP_MARGIN } from '../core/iso-canvas-renderer';
 import { GridCoord, IsoProjection } from '../core/iso-projection';
 import { SHAPE_SHEET_DATA_URL, ShapeId, shapeDef } from '../core/iso-shapes';
-import { GridPosition } from '../models/level.model';
+import { stripRect } from '../core/sprite-frames';
+import { GridPosition, LevelEntity } from '../models/level.model';
 
 // Presets de zoom de la barra: enteros, porque en pixel art un zoom fraccionario
 // reparte mal los pixeles del sprite (unos de 1px y otros de 2px) y arruina la
@@ -760,22 +761,45 @@ export class ViewportController {
    */
   /**
    * Le pone a una entidad una textura de la biblioteca, con el recorte del
-   * tamano real de la imagen. Lo usan soltar una textura sobre la entidad y el
-   * selector de imagen del inspector.
+   * tamano real de la imagen y los cuadros que trae esa imagen. Lo usan soltar
+   * una textura sobre la entidad y el selector de imagen del inspector.
+   *
+   * Los cuadros se reemplazan SIEMPRE, aunque queden en 1: los de la imagen
+   * anterior no le sirven a esta. Un jugador de 2 cuadros con una imagen
+   * suelta le pedia al motor un segundo cuadro fuera de la imagen.
    */
   async applyTexture(id: string, name: string): Promise<void> {
-    const sourceRect = await this.sourceRectFor(name);
-    this.levels.updateEntity(id, { texture: 'textures/' + name, sourceRect });
+    const look = await this.lookFor(name);
+    this.levels.updateEntity(id, {
+      texture: 'textures/' + name,
+      sourceRect: look.sourceRect,
+      frames: look.frames,
+      frameDuration: look.frameDuration,
+      animation: undefined,
+    });
     this.sel.selectEntity(id);
     this.markDirty();
     this.note('"' + id + '" ahora usa ' + name + '.');
   }
 
-  private async sourceRectFor(name: string): Promise<{ x: number; y: number; width: number; height: number }> {
+  /**
+   * El recorte y la animacion de una textura: la imagen partida en los cuadros
+   * que dice tener (ver core/sprite-frames.ts). Con un solo cuadro no lleva
+   * frames ni frameDuration, que es el default del schema.
+   */
+  private async lookFor(name: string): Promise<Pick<LevelEntity, 'sourceRect' | 'frames' | 'frameDuration'>> {
     const asset = await this.tex.ensureAsset(name);
-    return asset && asset.width > 0
-      ? { x: 0, y: 0, width: asset.width, height: asset.height }
-      : { ...FALLBACK_SOURCE_RECT };
+    if (!asset || asset.width <= 0) {
+      return { sourceRect: { ...FALLBACK_SOURCE_RECT } };
+    }
+    const look: Pick<LevelEntity, 'sourceRect' | 'frames' | 'frameDuration'> = {
+      sourceRect: stripRect(asset.width, asset.height, asset.frames),
+    };
+    if (asset.frames > 1) {
+      look.frames = asset.frames;
+      look.frameDuration = asset.frameDuration;
+    }
+    return look;
   }
 
   private async dropTexture(event: DragEvent, name: string): Promise<void> {
@@ -787,7 +811,7 @@ export class ViewportController {
       return;
     }
 
-    const sourceRect = await this.sourceRectFor(name);
+    const look = await this.lookFor(name);
 
     const grid = this.grid();
     if (!coord || !new IsoProjection(grid.tileWidth, grid.tileHeight).isValidCoord(coord, grid.width, grid.height)) {
@@ -799,7 +823,7 @@ export class ViewportController {
       position: { col: coord.col, row: coord.row },
       // Prefijo "textures/": las rutas del nivel son relativas a assets/.
       texture: 'textures/' + name,
-      sourceRect,
+      ...look,
     });
   }
 

@@ -1,5 +1,6 @@
 import { inject, signal, untracked } from '@angular/core';
 
+import { DEFAULT_FRAME_DURATION, readSpriteFrames } from '../core/sprite-frames';
 import { decodeImage, fitTextureSize, renderPng, usesNearestNeighbor, TextureAsset } from '../core/texture-fit';
 import { ProjectService } from '../services/project.service';
 
@@ -147,12 +148,16 @@ export class TexturesController {
       }
       const image = await decodeImage(data.dataUrl);
       const thumb = fitTextureSize(image.naturalWidth, image.naturalHeight, THUMBNAIL_SIDE);
+      // Los cuadros se leen del original: la miniatura es otro PNG y no los trae.
+      const strip = readSpriteFrames(data.dataUrl);
       const entry: TextureAsset = {
         dataUrl: thumb.scaled
           ? renderPng(image, thumb, usesNearestNeighbor(image.naturalWidth, thumb))
           : data.dataUrl,
         width: image.naturalWidth,
         height: image.naturalHeight,
+        frames: strip?.frames ?? 1,
+        frameDuration: strip?.frameDuration ?? DEFAULT_FRAME_DURATION,
       };
       if (generation !== this.generation) {
         return null;

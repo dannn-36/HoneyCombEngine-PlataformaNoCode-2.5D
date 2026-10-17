@@ -36,6 +36,7 @@ import {
   stripPixels,
   uniqueColors,
 } from '../core/sprite-doc';
+import { readSpriteFrames, withSpriteFrames } from '../core/sprite-frames';
 import { decodeImage } from '../core/texture-fit';
 import { ProjectService } from '../services/project.service';
 import type { IconName } from '../ui/icons.generated';
@@ -360,8 +361,10 @@ export class SpriteEditorController {
 
   /**
    * Abre una textura del proyecto para retocarla. "frames" la parte en cuadros
-   * iguales (una tira de animacion). Se guarda como textura nueva: la original
-   * solo se pisa si se elige su mismo nombre y se confirma.
+   * iguales (una tira de animacion); con 1, se usan los que la imagen dice
+   * tener si la guardo esta herramienta (ver core/sprite-frames.ts). Se guarda
+   * como textura nueva: la original solo se pisa si se elige su mismo nombre y
+   * se confirma.
    */
   async openTexture(name: string, frames = 1): Promise<void> {
     if (!this.deps.hasFileSystem) {
@@ -378,8 +381,12 @@ export class SpriteEditorController {
         throw new Error(data.kind === 'binary' && data.reason === 'too-large' ? 'pesa demasiado' : 'no es una imagen');
       }
       const image = await decodeImage(data.dataUrl);
-      const doc = docFromImage(readPixels(image), image.naturalWidth, image.naturalHeight, frames);
+      const strip = frames > 1 ? null : readSpriteFrames(data.dataUrl);
+      const doc = docFromImage(readPixels(image), image.naturalWidth, image.naturalHeight, strip?.frames ?? frames);
       this.load(doc, name);
+      if (strip) {
+        this.frameDuration.set(strip.frameDuration);
+      }
       const detail = doc.frames.length > 1 ? `${doc.frames.length} cuadros de ${doc.width}×${doc.height}` : `${doc.width}×${doc.height}`;
       this.deps.note(`Abierta ${name} (${detail}). Al guardar se pide un nombre: la original no se toca.`);
     } catch (error) {
@@ -455,7 +462,9 @@ export class SpriteEditorController {
     }
     this.busy.set(true);
     try {
-      const png = encodePng(doc);
+      // Los cuadros van dentro del PNG: al elegirlo para un personaje o una
+      // entidad, el editor los pone solo (ver core/sprite-frames.ts).
+      const png = withSpriteFrames(encodePng(doc), { frames: doc.frames.length, frameDuration: this.frameDuration() });
       let result = await this.project.writeTexture(name, png, overwrite);
       let replaced = overwrite;
       if (result.status === 'exists') {
@@ -480,7 +489,7 @@ export class SpriteEditorController {
       this.deps.note(
         doc.frames.length > 1
           ? `Guardado assets/textures/${result.target}: ${doc.frames.length} cuadros de ${doc.width}×${doc.height}. ` +
-              `En la entidad: recorte de ${doc.width}×${doc.height}, Cuadros ${doc.frames.length} y Segundos por cuadro ${this.frameDuration()}.`
+              `Al elegirlo para un personaje o una entidad se anima solo, a ${this.frameDuration()} s por cuadro.`
           : `Guardado assets/textures/${result.target} (${doc.width}×${doc.height}).`,
       );
     } catch (error) {

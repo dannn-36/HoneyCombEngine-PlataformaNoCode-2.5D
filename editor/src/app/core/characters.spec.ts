@@ -51,6 +51,12 @@ describe('entityFromPreset', () => {
     expect(entityFromPreset(player, { col: 0, row: 0 }, new Set(['player_1'])).id).toBe('player_2');
   });
 
+  it('el jugador base arranca con un cuadro: los cuadros los pone la imagen', () => {
+    const player = presetFromArchetype(CHARACTERS[0]);
+    expect(player.frames).toBe(1);
+    expect('frames' in entityFromPreset(player, { col: 0, row: 0 }, new Set())).toBe(false);
+  });
+
   it('un tipo base no deja referencia a ningun personaje guardado', () => {
     const base = presetFromArchetype(CHARACTERS[1]);
     expect('preset' in entityFromPreset(base, { col: 0, row: 0 }, new Set())).toBe(false);
