@@ -63,13 +63,15 @@ export class TexturesController {
 
   /**
    * Relee assets/textures/ despues de escribir texturas nuevas: la lista, el
-   * explorador y el panel Recursos. La usan el convertidor y la importacion de
-   * niveles.
+   * explorador y el panel Recursos. La usan el convertidor, la importacion de
+   * niveles y la herramienta de sprites; esta ultima con "expand" en false,
+   * porque desplegar Recursos le quitaria alto al lienzo.
    */
-  async reloadLibrary(): Promise<void> {
+  async reloadLibrary(expand = true): Promise<void> {
     this.textures.set(await this.project.listTextures());
     // Las que ya estaban no cambiaron (el convertidor y la importacion de
-    // niveles nunca pisan una textura): solo se olvidan las que ya no estan.
+    // niveles nunca pisan una textura; la herramienta de sprites, cuando pisa
+    // una, llama antes a invalidate()): solo se olvidan las que ya no estan.
     // Las nuevas se cargan solas cuando aparecen en pantalla.
     const present = new Set(this.textures());
     this.textureAssets.update((state) =>
@@ -77,7 +79,9 @@ export class TexturesController {
     );
     await this.reloadDir('assets/textures');
     // Si Recursos estaba plegado, se despliega: es donde esta el resultado.
-    this.expandPanel('side-assets');
+    if (expand) {
+      this.expandPanel('side-assets');
+    }
   }
 
   // --- Miniaturas bajo demanda -----------------------------------------------

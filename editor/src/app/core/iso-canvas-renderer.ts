@@ -28,7 +28,7 @@ import { iconImage } from './cell-image';
 import { characterOf } from './characters';
 import { entityKindStyle } from './entity-kinds';
 import { blockCenter, entitySpan } from './entity-blocks';
-import { legacyTiles, roomCenter, rectBetween } from './dungeon-layout';
+import { elbowRoute, legacyTiles, rectBetween, routeFloor } from './dungeon-layout';
 import { GridCoord, IsoProjection } from './iso-projection';
 import { usesShapeSheet } from './iso-shapes';
 import { CanvasPalette } from './themes';
@@ -73,7 +73,7 @@ export interface CanvasScene {
     | { kind: 'create'; start: GridCoord; end: GridCoord }
     | { kind: 'move'; id: string; grab: GridCoord; origin: GridCoord; delta: GridCoord }
     | null;
-  tunnelTrace(): { from: string; points: GridCoord[] } | null;
+  tunnelTrace(): { from: string; start: GridCoord; points: GridCoord[]; width: number } | null;
   shapeSheet(): HTMLImageElement | null;
   /** Colores del tema actual (ver services/theme.service.ts). */
   palette(): CanvasPalette;
@@ -545,18 +545,23 @@ export class IsoCanvasRenderer {
     }
 
     const trace = scene.tunnelTrace();
-    const traceStart = trace ? level.rooms?.find((room) => room.id === trace.from) : undefined;
-    if (trace && traceStart) {
-      // Con codos en L, como lo va a armar el mapa, y siguiendo al cursor hasta
-      // la celda que se esta apuntando.
-      const points = [roomCenter(traceStart), ...trace.points, ...(hovered ? [hovered] : [])];
-      const first = project(points[0]);
+    if (trace) {
+      // Desde la celda de arranque, por los puntos marcados y hasta el cursor,
+      // con las MISMAS funciones que arman el tunel al terminar (elbowRoute y
+      // routeFloor en core/dungeon-layout.ts): lo que se ve es lo que queda,
+      // piso y ancho incluidos.
+      const route = elbowRoute([trace.start, ...trace.points, ...(hovered ? [hovered] : [])]);
+      ctx.fillStyle = 'rgba(127, 201, 127, 0.22)';
+      for (const cell of routeFloor(route, trace.width)) {
+        diamond(cell);
+        ctx.fill();
+      }
+
+      const first = project(route[0]);
       ctx.beginPath();
       ctx.moveTo(first.x, first.y);
-      for (let index = 1; index < points.length; index += 1) {
-        const bend = project({ col: points[index].col, row: points[index - 1].row });
-        const next = project(points[index]);
-        ctx.lineTo(bend.x, bend.y);
+      for (const cell of route.slice(1)) {
+        const next = project(cell);
         ctx.lineTo(next.x, next.y);
       }
       ctx.strokeStyle = 'rgba(127, 201, 127, 0.95)';
@@ -566,7 +571,7 @@ export class IsoCanvasRenderer {
       ctx.setLineDash([]);
 
       ctx.fillStyle = '#7fc97f';
-      for (const point of trace.points) {
+      for (const point of [trace.start, ...trace.points]) {
         const { x, y } = project(point);
         ctx.fillRect(x - 3, y - 3, 6, 6);
       }

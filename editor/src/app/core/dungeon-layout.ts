@@ -12,6 +12,10 @@
 //     de su sala, o justo afuera del lado elegido, pasa por los puntos que se
 //     trazaron a mano, y termina igual en la otra sala. Entre dos puntos va en
 //     L. Su ancho son celdas CAMINABLES.
+//   - Un tunel trazado a mano en el viewport guarda tambien las celdas donde se
+//     hizo clic para empezar y para terminar, adentro de las salas. Arranca y
+//     termina justo ahi, y entonces los lados no cuentan: queda tal cual se vio
+//     al trazarlo.
 //   - Las paredes van POR FUERA del piso, en cada celda vacia que toca una de
 //     piso (tambien en diagonal, para que las esquinas queden cerradas). Asi un
 //     tunel de 3 deja pasar por 3 celdas, y no por 1 con dos paredes adentro.
@@ -65,6 +69,29 @@ export function oppositeSide(side: RoomSide): RoomSide {
 
 const isColumnSide = (side: RoomSide) => side === 'left' || side === 'right';
 
+/** Si la celda cae adentro del rectangulo de la sala. */
+export function roomContains(room: MapRoom, cell: Cell): boolean {
+  return (
+    cell.col >= room.col && cell.col < room.col + room.width && cell.row >= room.row && cell.row < room.row + room.height
+  );
+}
+
+/**
+ * El recorrido en L por una lista de puntos: entre dos seguidos, primero a lo
+ * ancho (columnas) y despues a lo alto. Es como queda un tunel trazado a mano,
+ * y la vista previa del trazado lo dibuja con esta misma funcion: lo que se ve
+ * mientras se traza es lo que queda.
+ */
+export function elbowRoute(points: readonly Cell[]): Cell[] {
+  const route: Cell[] = points.length > 0 ? [points[0]] : [];
+  for (let index = 1; index < points.length; index += 1) {
+    const p = points[index - 1];
+    const q = points[index];
+    route.push({ col: q.col, row: p.row }, q);
+  }
+  return route;
+}
+
 /**
  * Las esquinas del recorrido de un tunel, en orden: de su extremo en "from",
  * por los puntos trazados a mano, hasta su extremo en "to". Entre dos
@@ -77,24 +104,35 @@ const isColumnSide = (side: RoomSide) => side === 'left' || side === 'right';
  * de la sala en vez de alejarse de ella. Si la salida y la llegada piden
  * tramos distintos en el mismo trecho (derecha a izquierda, a distinta
  * altura), no alcanza una L: se arma una Z con dos codos a mitad de camino.
+ *
+ * Un trazado a mano que empieza adentro de "from" (la celda donde se hizo clic
+ * para empezar) arranca ahi, y uno que termina adentro de "to" llega ahi. En
+ * ese extremo el lado elegido no cuenta: si contara, el tunel saldria del
+ * punto medio del lado y doblaria distinto de como se trazo.
  */
 export function tunnelRoute(
   from: MapRoom,
   to: MapRoom,
   tunnel: Pick<MapTunnel, 'fromSide' | 'toSide' | 'path'>,
 ): Cell[] {
-  const start = tunnel.fromSide ? sideAnchor(from, tunnel.fromSide) : roomCenter(from);
-  const end = tunnel.toSide ? sideAnchor(to, tunnel.toSide) : roomCenter(to);
-  const points: Cell[] = [start, ...(tunnel.path ?? []), end];
+  const path = tunnel.path ?? [];
+  const startsInside = path.length > 0 && roomContains(from, path[0]);
+  const endsInside = path.length > (startsInside ? 1 : 0) && roomContains(to, path[path.length - 1]);
+  const fromSide = startsInside ? undefined : tunnel.fromSide;
+  const toSide = endsInside ? undefined : tunnel.toSide;
+
+  const start = startsInside ? path[0] : fromSide ? sideAnchor(from, fromSide) : roomCenter(from);
+  const end = endsInside ? path[path.length - 1] : toSide ? sideAnchor(to, toSide) : roomCenter(to);
+  const middle = path.slice(startsInside ? 1 : 0, endsInside ? path.length - 1 : path.length);
+  const points: Cell[] = [start, ...middle, end];
   const route: Cell[] = [points[0]];
 
   for (let index = 0; index < points.length - 1; index += 1) {
     const p = points[index];
     const q = points[index + 1];
     // "h" = primero a lo ancho (columnas) y despues a lo alto; "v" al reves.
-    const leaving = index === 0 && tunnel.fromSide ? (isColumnSide(tunnel.fromSide) ? 'h' : 'v') : null;
-    const arriving =
-      index === points.length - 2 && tunnel.toSide ? (isColumnSide(tunnel.toSide) ? 'v' : 'h') : null;
+    const leaving = index === 0 && fromSide ? (isColumnSide(fromSide) ? 'h' : 'v') : null;
+    const arriving = index === points.length - 2 && toSide ? (isColumnSide(toSide) ? 'v' : 'h') : null;
 
     if (leaving && arriving && leaving !== arriving && p.col !== q.col && p.row !== q.row) {
       if (leaving === 'h') {
@@ -123,10 +161,14 @@ export function tunnelFloor(
   to: MapRoom,
   tunnel: Pick<MapTunnel, 'width' | 'fromSide' | 'toSide' | 'path'>,
 ): Cell[] {
-  const span = Math.max(1, Math.round(tunnel.width) || 1);
+  return routeFloor(tunnelRoute(from, to, tunnel), tunnel.width);
+}
+
+/** Las celdas de piso de un recorrido de "width" celdas de ancho. La vista previa del trazado usa la misma. */
+export function routeFloor(route: readonly Cell[], width: number): Cell[] {
+  const span = Math.max(1, Math.round(width) || 1);
   const low = -Math.floor((span - 1) / 2);
   const high = low + span - 1;
-  const route = tunnelRoute(from, to, tunnel);
   const cells: Cell[] = [];
 
   for (let index = 0; index < route.length - 1; index += 1) {
@@ -355,13 +397,7 @@ export function nextFreeId(base: string, taken: Iterable<string>): string {
 
 /** La sala que contiene esa celda, si hay una. */
 export function roomAt(rooms: readonly MapRoom[], cell: Cell): MapRoom | undefined {
-  return rooms.find(
-    (room) =>
-      cell.col >= room.col &&
-      cell.col < room.col + room.width &&
-      cell.row >= room.row &&
-      cell.row < room.row + room.height,
-  );
+  return rooms.find((room) => roomContains(room, cell));
 }
 
 /** El tunel que pasa por esa celda, si hay uno. */
@@ -380,33 +416,6 @@ export function tunnelAt(
       tunnelFloor(from, to, tunnel).some((floor) => floor.col === cell.col && floor.row === cell.row)
     );
   });
-}
-
-/**
- * El lado de una sala que mira hacia un punto. Sirve para deducir por donde
- * sale un tunel trazado a mano: por el lado que da al primer punto marcado.
- * Si el punto cae adentro de la sala, el lado mas cercano.
- */
-export function sideFacing(room: MapRoom, point: Cell): RoomSide {
-  if (point.col < room.col) {
-    return 'left';
-  }
-  if (point.col >= room.col + room.width) {
-    return 'right';
-  }
-  if (point.row < room.row) {
-    return 'top';
-  }
-  if (point.row >= room.row + room.height) {
-    return 'bottom';
-  }
-  const distances: [RoomSide, number][] = [
-    ['left', point.col - room.col],
-    ['right', room.col + room.width - 1 - point.col],
-    ['top', point.row - room.row],
-    ['bottom', room.row + room.height - 1 - point.row],
-  ];
-  return distances.reduce((best, current) => (current[1] < best[1] ? current : best))[0];
 }
 
 /**

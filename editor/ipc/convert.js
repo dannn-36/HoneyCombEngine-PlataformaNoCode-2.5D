@@ -2,8 +2,9 @@
 // Convertidor de imagenes: archivos sueltos PNG, JPG o JPEG a texturas PNG
 // =============================================================================
 //
-// Es la UNICA puerta de entrada de imagenes al proyecto (Recursos > Importar y
-// Herramientas > Convertidor de imagenes llevan aca). Las imagenes se COPIAN a
+// Es la UNICA puerta de entrada de imagenes de afuera al proyecto (Recursos >
+// Importar y Herramientas > Convertidor de imagenes llevan aca; lo que se
+// dibuja en la herramienta de sprites entra por ipc/textures.js). Se COPIAN a
 // assets/textures/ de la carpeta del editor (ver ipc/project-root.js): una
 // textura que viviera fuera se veria en el editor y saldria en negro en el
 // runtime, que la busca relativa al nivel.

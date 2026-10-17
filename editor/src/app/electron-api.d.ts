@@ -63,6 +63,12 @@ export type ConvertSession =
   | { projectRoot: string; canceled: true }
   | { projectRoot: string; canceled: false; items: ConvertItem[] };
 
+/** Lo que paso al guardar una textura de la herramienta de sprites. "target" es el nombre final, ya limpio. */
+export interface TextureWriteResult {
+  status: 'written' | 'exists';
+  target: string;
+}
+
 export interface HoneycombProjectApi {
   /** Abre un nivel con el dialogo; uno de afuera se importa a levels/. */
   open(): Promise<OpenLevelResult>;
@@ -96,6 +102,12 @@ export interface HoneycombProjectApi {
   writeConvertedImage(index: number, pngBase64: string | null): Promise<{ target: string }>;
   /** Olvida el plan del convertidor (al cerrar su ventana). */
   resetConvert(): Promise<void>;
+  /**
+   * Escribe un PNG de la herramienta de sprites en assets/textures/. El nombre
+   * se limpia y termina en .png. Sin overwrite, un nombre ocupado no se pisa y
+   * vuelve "exists".
+   */
+  writeTexture(name: string, pngBase64: string, overwrite: boolean): Promise<TextureWriteResult>;
 
   /**
    * Lanza el runtime con el nivel de esa ruta absoluta. El ejecutable lo

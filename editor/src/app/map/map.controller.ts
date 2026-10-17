@@ -8,7 +8,7 @@ import {
   rectBetween,
   roomAt,
   roomCenter,
-  sideFacing,
+  roomContains,
   zoneIdsOf,
 } from '../core/dungeon-layout';
 import { GridCoord } from '../core/iso-projection';
@@ -124,12 +124,14 @@ export class MapController {
   >(null);
 
   /**
-   * Tunel a medio trazar con la herramienta Tunel: de que grilla sale, los
-   * puntos marcados hasta ahora, el ancho que va a tener, y que tunel se esta
-   * redibujando (null si es uno nuevo).
+   * Tunel a medio trazar con la herramienta Tunel: de que grilla sale, la
+   * celda de esa grilla donde arranca (la del clic, o su centro si se volvio a
+   * trazar desde el menu), los puntos marcados hasta ahora, el ancho que va a
+   * tener, y que tunel se esta redibujando (null si es uno nuevo).
    */
   readonly tunnelTrace = signal<{
     from: string;
+    start: GridCoord;
     points: GridCoord[];
     width: number;
     editId: string | null;
@@ -351,6 +353,23 @@ export class MapController {
     return value === 'top' || value === 'bottom' || value === 'left' || value === 'right' ? value : '';
   }
 
+  /**
+   * Si el trazado a mano ya decide por donde sale el tunel: arranca adentro de
+   * la sala de origen, en la celda donde se hizo clic. Ahi "Sale por" no cuenta
+   * (ver tunnelRoute) y el menu lo muestra apagado.
+   */
+  fromSideLocked(draft: TunnelDraft): boolean {
+    const from = this.rooms().find((room) => room.id === draft.from);
+    return !!from && draft.path.length > 0 && roomContains(from, draft.path[0]);
+  }
+
+  /** Lo mismo para "Entra por": el trazado termina adentro de la sala de destino. */
+  toSideLocked(draft: TunnelDraft): boolean {
+    const to = this.rooms().find((room) => room.id === draft.to);
+    const minimum = this.fromSideLocked(draft) ? 2 : 1;
+    return !!to && draft.path.length >= minimum && roomContains(to, draft.path[draft.path.length - 1]);
+  }
+
   confirmTunnelDialog(): void {
     const draft = this.tunnelDraft();
     if (!draft) {
@@ -362,12 +381,13 @@ export class MapController {
     }
     // Vacio pasa a undefined, no a '' ni a []: asi la clave desaparece del
     // JSON, y al editar un tunel "volver a automatico" borra el trazado viejo.
+    // Un lado que el trazado ya decide tampoco se guarda: no haria nada.
     const tunnel = {
       from: draft.from,
       to: draft.to,
       width: Math.max(1, Math.round(draft.width) || 1),
-      fromSide: draft.fromSide || undefined,
-      toSide: draft.toSide || undefined,
+      fromSide: (!this.fromSideLocked(draft) && draft.fromSide) || undefined,
+      toSide: (!this.toSideLocked(draft) && draft.toSide) || undefined,
       path: draft.path.length > 0 ? draft.path : undefined,
     };
     if (draft.editId) {
@@ -394,9 +414,14 @@ export class MapController {
     if (!draft) {
       return;
     }
+    const from = this.rooms().find((room) => room.id === draft.from);
+    if (!from) {
+      return;
+    }
     this.tunnelDraft.set(null);
     this.setTool('tunnel');
-    this.tunnelTrace.set({ from: draft.from, points: [], width: draft.width, editId: draft.editId });
+    // Desde el menu no hubo clic de arranque: sale del centro de la sala.
+    this.tunnelTrace.set({ from: from.id, start: roomCenter(from), points: [], width: draft.width, editId: draft.editId });
     this.note('Trazando desde "' + draft.from + '": clics para marcar el camino, y clic en la sala de destino.');
   }
 
@@ -475,13 +500,14 @@ export class MapController {
         this.note('Empieza el túnel con un clic dentro de una sala.');
         return;
       }
-      this.tunnelTrace.set({ from: room.id, points: [], width: DEFAULT_TUNNEL_WIDTH, editId: null });
+      // Arranca en la celda del clic: el tunel sale de ahi, no del centro.
+      this.tunnelTrace.set({ from: room.id, start: cell, points: [], width: DEFAULT_TUNNEL_WIDTH, editId: null });
       this.note('Túnel desde "' + room.id + '": clics para marcar el camino, y clic en otra sala para terminar.');
       return;
     }
 
     if (room && room.id !== trace.from) {
-      this.finishTunnelTrace(room.id);
+      this.finishTunnelTrace(room.id, cell);
       return;
     }
     if (room) {
@@ -492,28 +518,31 @@ export class MapController {
   }
 
   /**
-   * Termina el trazado y abre el menu del tunel con todo ya deducido. Los
-   * lados salen de hacia donde se trazo: sale por el lado de "from" que mira
-   * al primer punto marcado, y entra por el lado de "to" que mira al ultimo.
-   * Sin puntos, cada una por el lado que da a la otra.
+   * Termina el trazado en la celda "end" de la sala de destino y abre el menu
+   * del tunel. El trazado se guarda con sus dos puntas -- la celda de arranque
+   * y la del clic final, las dos adentro de sus salas --, y asi el tunel queda
+   * exactamente como se vio al trazarlo (ver tunnelRoute).
+   *
+   * Antes se deducian aca los lados (el de "from" que mira al primer punto,
+   * el de "to" que mira al ultimo) y el tunel salia del punto medio de esos
+   * lados: se corria y doblaba distinto de lo que se habia dibujado.
    */
-  private finishTunnelTrace(toId: string): void {
+  private finishTunnelTrace(toId: string, end: GridCoord): void {
     const trace = this.tunnelTrace();
     const from = this.rooms().find((room) => room.id === trace?.from);
     const to = this.rooms().find((room) => room.id === toId);
     if (!trace || !from || !to) {
       return;
     }
-    const path = trace.points;
     this.tunnelTrace.set(null);
     this.tunnelDraft.set({
       editId: trace.editId,
       from: from.id,
       to: to.id,
       width: trace.width,
-      fromSide: sideFacing(from, path[0] ?? roomCenter(to)),
-      toSide: sideFacing(to, path[path.length - 1] ?? roomCenter(from)),
-      path,
+      fromSide: '',
+      toSide: '',
+      path: [trace.start, ...trace.points, end],
     });
   }
 

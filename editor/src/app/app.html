@@ -70,32 +70,85 @@
        vista a la derecha. -->
   <div class="toolbar" role="toolbar" aria-label="Herramientas">
     <div class="toolbar__side">
-      <div class="tgroup" role="group" aria-label="Herramienta">
-        @for (tool of toolButtons; track tool.id) {
-          <button class="tbtn tbtn--tool" type="button" [class.is-active]="palette.tool() === tool.id"
-                  [attr.aria-pressed]="palette.tool() === tool.id"
-                  [attr.aria-label]="toolLabels[tool.id]" [attr.aria-keyshortcuts]="tool.key"
-                  [title]="tool.hint + ' (' + tool.key + ')'"
-                  (click)="palette.setTool(tool.id)">
-            <svg [hcIcon]="tool.icon"></svg>
-          </button>
-        }
+      <!-- Que muestra el area central: el nivel o la herramienta de sprites. Con
+           Sprites, la barra cambia sus herramientas por las de dibujo. -->
+      <div class="tgroup" role="group" aria-label="Área central">
+        <button class="tbtn" type="button" [class.is-active]="centerMode() === 'mapa'"
+                [attr.aria-pressed]="centerMode() === 'mapa'" (click)="setCenterMode('mapa')"
+                title="Mapa: editar el nivel en el viewport" aria-label="Mapa">
+          <svg hcIcon="map"></svg>
+        </button>
+        <button class="tbtn" type="button" [class.is-active]="centerMode() === 'sprites'"
+                [attr.aria-pressed]="centerMode() === 'sprites'" (click)="setCenterMode('sprites')"
+                title="Sprites: dibujar pixel art con capas y cuadros, o retocar una textura" aria-label="Sprites">
+          <svg hcIcon="brush"></svg>
+        </button>
       </div>
 
       <span class="toolbar__sep" aria-hidden="true"></span>
 
-      <!-- Capas del viewport: se encienden y apagan, como los overlays de un motor. -->
-      <div class="tgroup" role="group" aria-label="Capas del viewport">
-        <button class="tbtn tbtn--label" type="button" [class.is-active]="view.showGrid()"
-                [attr.aria-pressed]="view.showGrid()" (click)="view.toggleGrid()" title="Mostrar la grilla">
-          <svg hcIcon="grid-3x3"></svg><span>Grilla</span>
-        </button>
-        <button class="tbtn tbtn--label" type="button" [class.is-active]="view.showColliders()"
-                [attr.aria-pressed]="view.showColliders()" (click)="view.toggleColliders()"
-                title="Mostrar las colisiones">
-          <svg hcIcon="box-select"></svg><span>Colisiones</span>
-        </button>
-      </div>
+      @if (centerMode() === 'sprites') {
+        <div class="tgroup" role="group" aria-label="Herramienta de dibujo">
+          @for (tool of spriteTools; track tool.id) {
+            <button class="tbtn tbtn--tool" type="button" [class.is-active]="sprite.tool() === tool.id"
+                    [attr.aria-pressed]="sprite.tool() === tool.id" [attr.aria-label]="tool.label"
+                    [attr.aria-keyshortcuts]="tool.key" [title]="tool.hint + ' (' + tool.key + ')'"
+                    (click)="sprite.setTool(tool.id)">
+              <svg [hcIcon]="tool.icon"></svg>
+            </button>
+          }
+        </div>
+
+        <div class="tgroup" role="group" aria-label="Tamaño del pincel">
+          <button class="tbtn" type="button" (click)="sprite.stepBrush(-1)" title="Pincel más chico ([)"
+                  aria-label="Pincel más chico"><svg hcIcon="minus"></svg></button>
+          <span class="zoom__value" title="Lado del pincel">{{ sprite.brushSize() }} px</span>
+          <button class="tbtn" type="button" (click)="sprite.stepBrush(1)" title="Pincel más grande (])"
+                  aria-label="Pincel más grande"><svg hcIcon="plus"></svg></button>
+        </div>
+
+        <span class="toolbar__sep" aria-hidden="true"></span>
+
+        <div class="tgroup" role="group" aria-label="Ayudas del lienzo">
+          <button class="tbtn" type="button" [class.is-active]="sprite.showPixelGrid()"
+                  [attr.aria-pressed]="sprite.showPixelGrid()" (click)="sprite.showPixelGrid.set(!sprite.showPixelGrid())"
+                  title="Cuadrícula de píxeles (se ve desde 600 %)" aria-label="Cuadrícula de píxeles">
+            <svg hcIcon="grid-3x3"></svg>
+          </button>
+          <button class="tbtn" type="button" [class.is-active]="sprite.showIsoGuide()"
+                  [attr.aria-pressed]="sprite.showIsoGuide()" (click)="sprite.showIsoGuide.set(!sprite.showIsoGuide())"
+                  title="Guía isométrica: el rombo de la casilla del nivel" aria-label="Guía isométrica">
+            <svg hcIcon="diamond"></svg>
+          </button>
+        </div>
+      } @else {
+        <div class="tgroup" role="group" aria-label="Herramienta">
+          @for (tool of toolButtons; track tool.id) {
+            <button class="tbtn tbtn--tool" type="button" [class.is-active]="palette.tool() === tool.id"
+                    [attr.aria-pressed]="palette.tool() === tool.id"
+                    [attr.aria-label]="toolLabels[tool.id]" [attr.aria-keyshortcuts]="tool.key"
+                    [title]="tool.hint + ' (' + tool.key + ')'"
+                    (click)="palette.setTool(tool.id)">
+              <svg [hcIcon]="tool.icon"></svg>
+            </button>
+          }
+        </div>
+
+        <span class="toolbar__sep" aria-hidden="true"></span>
+
+        <!-- Capas del viewport: se encienden y apagan, como los overlays de un motor. -->
+        <div class="tgroup" role="group" aria-label="Capas del viewport">
+          <button class="tbtn tbtn--label" type="button" [class.is-active]="view.showGrid()"
+                  [attr.aria-pressed]="view.showGrid()" (click)="view.toggleGrid()" title="Mostrar la grilla">
+            <svg hcIcon="grid-3x3"></svg><span>Grilla</span>
+          </button>
+          <button class="tbtn tbtn--label" type="button" [class.is-active]="view.showColliders()"
+                  [attr.aria-pressed]="view.showColliders()" (click)="view.toggleColliders()"
+                  title="Mostrar las colisiones">
+            <svg hcIcon="box-select"></svg><span>Colisiones</span>
+          </button>
+        </div>
+      }
     </div>
 
     <!-- Guarda y lanza el motor con el nivel abierto. -->
@@ -110,12 +163,12 @@
         <button class="tbtn" type="button" (click)="stepZoom(-1)" title="Alejar" aria-label="Alejar">
           <svg hcIcon="zoom-out"></svg>
         </button>
-        <span class="zoom__value">{{ view.zoomLabel() }}</span>
+        <span class="zoom__value">{{ centerMode() === 'sprites' ? sprite.zoomLabel() : view.zoomLabel() }}</span>
         <button class="tbtn" type="button" (click)="stepZoom(1)" title="Acercar" aria-label="Acercar">
           <svg hcIcon="zoom-in"></svg>
         </button>
-        <button class="tbtn" type="button" (click)="view.frameAll()" title="Encuadrar todo (Inicio)"
-                aria-label="Encuadrar todo">
+        <button class="tbtn" type="button" (click)="centerMode() === 'sprites' ? sprite.fit() : view.frameAll()"
+                title="Encuadrar todo (Inicio)" aria-label="Encuadrar todo">
           <svg hcIcon="scan"></svg>
         </button>
       </div>
@@ -496,8 +549,11 @@
     </section>
     }
 
-    <!-- --------- CENTRO: viewport isometrico --------- -->
-    <section class="viewport" aria-label="Viewport">
+    <!-- --------- CENTRO: viewport isometrico ---------
+         En modo Sprites se esconde (no se destruye: el canvas y su
+         ResizeObserver siguen siendo los mismos al volver) y su lugar en la
+         grilla lo toma la herramienta de sprites, de abajo. -->
+    <section class="viewport" [class.is-hidden]="centerMode() === 'sprites'" aria-label="Viewport">
       <!-- El canvas no tiene width/height en el HTML: se los fija draw() con lo
            que mide el contenedor (ver el ResizeObserver en app.ts). Los eventos
            de puntero cubren seleccionar, colocar y desplazar; la rueda hace
@@ -571,6 +627,17 @@
         </div>
       </div>
     </section>
+
+    <!-- --------- CENTRO en modo Sprites: sprites/sprite-editor.html ---------
+         Se carga aparte la primera vez que se elige Sprites, como los dialogos
+         grandes. Despues queda montada y se esconde sola al volver al mapa. -->
+    @defer (when centerMode() === 'sprites') {
+      <app-sprite-editor />
+    } @loading {
+      <!-- Ocupa la celda mientras baja el codigo: sin esto, con el viewport
+           escondido el inspector se correria a la columna del medio. -->
+      <div class="spritehost"></div>
+    }
 
     <!-- --------- COLUMNA DERECHA: inspector ---------
          Dos pestañas: el objeto activo y la escena (nivel, grilla, camara,
@@ -1564,6 +1631,11 @@
                 </button>
               }
               @case ('texturas') {
+                <button class="btn btn--small" type="button" [disabled]="!palette.activeTexture() || sprite.busy()"
+                        (click)="editTextureInSprites(palette.activeTexture())"
+                        title="Abrir la textura elegida en la herramienta de sprites para retocarla">
+                  <svg hcIcon="brush"></svg>Editar en Sprites
+                </button>
                 <button class="btn btn--small" type="button" [disabled]="converter.busy()"
                         (click)="converter.openAndAdd('files')"
                         title="Elegir imágenes (PNG, JPG, JPEG): se convierten y se copian a assets/textures/ de la carpeta del editor">
@@ -1964,13 +2036,23 @@
        entidades avisa al pasar ENTITY_WARN_THRESHOLD (app.ts): antes de que la
        escena empiece a comprometer los FPS del runtime. -->
   <footer class="statusbar">
-    <span class="keyhint"><kbd>Rueda</kbd>Zoom</span>
-    <span class="keyhint"><kbd>Derecho / Medio</kbd>Desplazar</span>
-    <span class="keyhint"><kbd>Shift+clic</kbd>Sumar</span>
-    <span class="keyhint keyhint--extra"><kbd>Arrastrar</kbd>Mover</span>
-    <span class="keyhint keyhint--extra"><kbd>Clic derecho</kbd>Configurar</span>
-    <span class="keyhint keyhint--extra"><kbd>Shift+D</kbd>Duplicar</span>
-    <span class="keyhint keyhint--extra"><kbd>X</kbd>Eliminar</span>
+    @if (centerMode() === 'sprites') {
+      <span class="keyhint"><kbd>Rueda</kbd>Zoom</span>
+      <span class="keyhint"><kbd>Medio / Espacio</kbd>Desplazar</span>
+      <span class="keyhint"><kbd>Clic derecho</kbd>Color secundario</span>
+      <span class="keyhint keyhint--extra"><kbd>Alt+clic</kbd>Gotero</span>
+      <span class="keyhint keyhint--extra"><kbd>X</kbd>Intercambiar colores</span>
+      <span class="keyhint keyhint--extra"><kbd>Ctrl+Z</kbd>Deshacer</span>
+      <span class="keyhint keyhint--extra"><kbd>Ctrl+S</kbd>Guardar sprite</span>
+    } @else {
+      <span class="keyhint"><kbd>Rueda</kbd>Zoom</span>
+      <span class="keyhint"><kbd>Derecho / Medio</kbd>Desplazar</span>
+      <span class="keyhint"><kbd>Shift+clic</kbd>Sumar</span>
+      <span class="keyhint keyhint--extra"><kbd>Arrastrar</kbd>Mover</span>
+      <span class="keyhint keyhint--extra"><kbd>Clic derecho</kbd>Configurar</span>
+      <span class="keyhint keyhint--extra"><kbd>Shift+D</kbd>Duplicar</span>
+      <span class="keyhint keyhint--extra"><kbd>X</kbd>Eliminar</span>
+    }
 
     <span class="statusbar__msg" [title]="status()">{{ status() }}</span>
 

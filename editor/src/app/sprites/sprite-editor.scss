@@ -1,0 +1,335 @@
+/* Estilos de la herramienta de sprites (sprite-editor.html). Van aparte de
+   app.scss para bajar con el chunk diferido del componente y no con el
+   editor entero. Sin encapsular, como app.scss: usan sus mismas clases
+   (.btn, .tbtn, .field...) y sus variables de tema, que vienen de app-root.
+   Lo que App necesita antes de que esto cargue (.spritehost) queda alla. */
+
+.sprite {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 232px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+
+  /* Los botones de icono y de barra no traen estado apagado propio. */
+  .ibtn:disabled,
+  .tbtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+
+    &:hover {
+      background: transparent;
+      color: var(--text-2);
+    }
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* En una ventana angosta baja a dos filas antes de cortar Guardar. */
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    min-height: 36px;
+    padding: 4px 8px 4px 12px;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--surface-2);
+  }
+
+  &__title {
+    min-width: 6em;
+    overflow: hidden;
+    color: var(--text);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    flex: none;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  /* El lienzo y sus pastillas. Es el elemento que mide el ResizeObserver. */
+  &__stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    cursor: crosshair;
+    touch-action: none;
+
+    &.is-picker {
+      cursor: copy;
+    }
+    &.is-pan {
+      cursor: grab;
+    }
+    &.is-panning {
+      cursor: grabbing;
+    }
+  }
+
+  /* Pantalla de arranque: nuevo sprite o abrir una textura, sobre el lienzo. */
+  &__start {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    overflow: auto;
+    background: color-mix(in srgb, var(--viewport) 88%, transparent);
+  }
+
+  &__card {
+    width: min(520px, 100%);
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-1);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+
+    h2 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+  }
+
+  &__presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  &__form {
+    align-items: flex-end;
+    margin-bottom: 4px;
+
+    > .field {
+      margin-bottom: 0;
+    }
+
+    > .btn {
+      flex: none;
+    }
+  }
+
+  &__form-wide {
+    flex: 3 !important;
+  }
+
+  &__start-actions {
+    margin-top: 14px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  /* Abajo: reproducir, los cuadros y lo que se hace con ellos. */
+  &__timeline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--line-soft);
+    background: var(--surface-2);
+  }
+
+  &__frames {
+    display: flex;
+    flex: 1;
+    gap: 3px;
+    min-width: 80px;
+    overflow-x: auto;
+  }
+
+  &__frame {
+    flex: none;
+    min-width: 28px;
+    height: 26px;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-3);
+    color: var(--text-2);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface-4);
+      color: var(--text);
+    }
+    &.is-active {
+      border-color: var(--detail-line);
+      background: var(--surface-4);
+      color: var(--text);
+      font-weight: 600;
+    }
+  }
+
+  &__duration {
+    width: 64px;
+    height: 26px;
+  }
+
+  /* A la derecha: color, capas y guia. */
+  &__side {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    border-left: 1px solid var(--line-soft);
+    background: var(--surface-1);
+  }
+
+  &__panel {
+    padding: 2px 12px 12px;
+    border-bottom: 1px solid var(--line-soft);
+
+    > .subhead {
+      margin-top: 10px;
+    }
+
+    .field {
+      grid-template-columns: minmax(56px, 34%) minmax(0, 1fr);
+    }
+  }
+
+  &__colors {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  /* El selector nativo de color, como una muestra cuadrada. */
+  &__swatch {
+    position: relative;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    cursor: pointer;
+
+    input {
+      position: absolute;
+      inset: -6px;
+      width: calc(100% + 12px);
+      height: calc(100% + 12px);
+      padding: 0;
+      border: 0;
+      cursor: pointer;
+    }
+
+    &--back {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  &__hex {
+    flex: 1;
+    height: 26px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  &__palette {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 3px;
+    margin-bottom: 8px;
+  }
+
+  &__chip {
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--line-strong);
+    }
+    &.is-active {
+      outline: 2px solid var(--accent-line);
+      outline-offset: 1px;
+    }
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+
+    &--icons {
+      gap: 2px;
+    }
+  }
+
+  &__layers {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 200px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  &__layer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 30px;
+    padding: 0 6px 0 2px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface-3);
+    }
+    &.is-active {
+      border-color: var(--detail-line);
+      background: var(--surface-3);
+    }
+
+    .ibtn.is-off {
+      opacity: 0.55;
+    }
+  }
+
+  &__layer-name {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

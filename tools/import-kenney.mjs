@@ -123,7 +123,9 @@ for (let direction = 0; direction < 8; direction += 1) {
       const inputs = frames.flatMap((file) => ['-i', join(characterDir, file)]);
       const result = spawnSync(
         'ffmpeg',
-        ['-loglevel', 'error', '-y', ...inputs, '-filter_complex', `hstack=inputs=${frames.length}`, out],
+        // -pix_fmt rgba: los cuadros vienen con paleta (pal8) y la transparencia
+        // en ella; sin pedirlo, hstack los junta en rgb24 y el fondo sale opaco.
+        ['-loglevel', 'error', '-y', ...inputs, '-filter_complex', `hstack=inputs=${frames.length}`, '-pix_fmt', 'rgba', out],
         { stdio: 'inherit' },
       );
       if (result.status !== 0) {

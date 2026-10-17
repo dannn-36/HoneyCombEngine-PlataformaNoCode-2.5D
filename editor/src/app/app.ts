@@ -51,7 +51,8 @@
 // y sus ventanas; en textures/ tambien el convertidor de imagenes y las
 // miniaturas bajo demanda), events/ (el panel Eventos y el dialogo de pasar de
 // nivel), dialogs/ (el markup de los dialogos grandes), ui/ (paneles y el
-// dialogo de pedir un nombre).
+// dialogo de pedir un nombre), sprites/ (la herramienta de sprites, que ocupa
+// el area central en lugar del viewport cuando se la elige).
 //
 // Todo lo que toca el disco pasa por services/project.service.ts -> preload.js
 // -> ipc/ (proceso principal), siempre dentro de la carpeta del editor (ver
@@ -122,6 +123,8 @@ import { TransitionController } from './events/transition.controller';
 import { ItemsPanelController } from './combat/items-panel.controller';
 import { ThemeService } from './services/theme.service';
 import { THEMES } from './core/themes';
+import { SPRITE_TOOLS, SpriteEditorController } from './sprites/sprite-editor.controller';
+import { SpriteEditor } from './sprites/sprite-editor';
 import { textureName } from './core/sprite-style';
 import { LevelEntity } from './models/level.model';
 
@@ -151,6 +154,14 @@ type InspectorTab = 'objeto' | 'escena';
  * "proyecto", el organizador de archivos de la carpeta abierta.
  */
 type LeftEditor = 'escena' | 'proyecto';
+
+/**
+ * Lo que muestra el area central: el viewport del nivel ("mapa") o la
+ * herramienta de sprites. Es el mismo mecanismo que LeftEditor: el area no se
+ * mueve, cambia lo que tiene adentro. Los costados y el dock siguen siendo los
+ * del nivel.
+ */
+type CenterMode = 'mapa' | 'sprites';
 
 // Umbral de la matriz de riesgos ("Degradacion de Rendimiento por Usuario"):
 // el editor avisa antes de que la escena comprometa los FPS del runtime.
@@ -234,6 +245,7 @@ const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
     TransitionDialog,
     ConverterDialog,
     PuzzleDialog,
+    SpriteEditor,
   ],
   // Los dialogos llegan a App por este token (ver dialogs/dialog-base.ts).
   providers: [{ provide: EDITOR_HOST, useExisting: forwardRef(() => App) }],
@@ -294,6 +306,8 @@ export class App {
   readonly inspectorTab = signal<InspectorTab>('objeto');
 
   readonly leftEditor = signal<LeftEditor>('escena');
+
+  readonly centerMode = signal<CenterMode>('mapa');
 
   // --- El canvas ------------------------------------------------------------
   //
@@ -379,6 +393,21 @@ export class App {
     refreshProject: () => this.proj.refreshProject(),
     reloadLibrary: () => this.tex.reloadLibrary(),
     tileWidth: () => this.grid().tileWidth,
+    hasFileSystem: this.hasFileSystem,
+  });
+
+  /**
+   * Herramientas > Herramienta de sprites: pixel art con capas y cuadros en el
+   * area central. Ver sprites/sprite-editor.controller.ts.
+   */
+  readonly sprite: SpriteEditorController = new SpriteEditorController({
+    note: (message) => this.note(message),
+    describe: (error) => this.describe(error),
+    ask: (request) => this.prompt.ask(request),
+    // Sin desplegar Recursos: le quitaria alto al lienzo, y el mensaje ya dice donde quedo.
+    reloadLibrary: () => this.tex.reloadLibrary(false),
+    invalidateTextures: () => this.tex.invalidate(),
+    tile: () => ({ width: this.grid().tileWidth, height: this.grid().tileHeight }),
     hasFileSystem: this.hasFileSystem,
   });
 
@@ -571,6 +600,8 @@ export class App {
   readonly toolButtons = TOOL_BUTTONS;
 
   readonly toolLabels = TOOL_LABELS;
+
+  readonly spriteTools = SPRITE_TOOLS;
 
   readonly assetTabs = ASSET_TABS;
 
@@ -871,26 +902,21 @@ export class App {
         label: 'Herramientas',
         items: [
           {
-            kind: 'submenu',
-            label: 'Convertidor de imágenes',
-            emptyLabel: '',
-            items: [
-              { kind: 'action', label: 'Abrir convertidor…', run: () => this.converter.open() },
-              separator,
-              {
-                kind: 'action',
-                label: 'Convertir imágenes (PNG, JPG, JPEG)…',
-                disabled: this.converter.busy(),
-                run: () => void this.converter.openAndAdd('files'),
-              },
-              {
-                kind: 'action',
-                label: 'Convertir los JPG del proyecto…',
-                disabled: this.converter.busy(),
-                run: () => void this.converter.openAndAdd('project-jpg'),
-              },
-            ],
+            kind: 'action',
+            label: 'Herramienta de sprites',
+            checked: this.centerMode() === 'sprites',
+            run: () => this.setCenterMode(this.centerMode() === 'sprites' ? 'mapa' : 'sprites'),
           },
+          {
+            kind: 'action',
+            label: 'Editar la textura elegida en sprites',
+            disabled: !this.palette.activeTexture() || this.sprite.busy(),
+            run: () => this.editTextureInSprites(this.palette.activeTexture()),
+          },
+          separator,
+          // Una sola entrada: agregar imagenes o los JPG del proyecto se hace
+          // desde la ventana del convertidor.
+          { kind: 'action', label: 'Convertidor de imágenes…', run: () => this.converter.open() },
         ],
       },
       {
@@ -903,10 +929,59 @@ export class App {
 
   /** Recarga la interfaz. Si hay cambios sin guardar pregunta antes, porque recargar los pierde. */
   reloadWindow(): void {
-    if (this.dirty() && !window.confirm('Hay cambios sin guardar en el nivel. ¿Recargar igual y perderlos?')) {
+    const unsaved = [this.dirty() ? 'el nivel' : '', this.sprite.dirty() ? 'el sprite' : ''].filter(Boolean).join(' y ');
+    if (unsaved && !window.confirm(`Hay cambios sin guardar en ${unsaved}. ¿Recargar igual y perderlos?`)) {
       return;
     }
     window.location.reload();
+  }
+
+  /** Como estaban los paneles en el mapa, para devolverlos al volver de Sprites. */
+  private mapPanels: { sidebar: boolean; inspector: boolean; dock: boolean } | null = null;
+
+  /**
+   * Cambia lo que muestra el area central.
+   *
+   * Sprites se queda con el cuerpo entero: la escena, el inspector y Recursos
+   * son del nivel y ahi solo le quitarian lugar al lienzo. Se esconden al
+   * entrar (siguen a mano en sus botones y en Ctrl+B / Ctrl+J) y vuelven como
+   * estaban al volver al mapa. Al salir tambien se corta la animacion y el
+   * trazo a medias; el sprite queda abierto para cuando se vuelva.
+   */
+  setCenterMode(mode: CenterMode): void {
+    if (mode === this.centerMode()) {
+      return;
+    }
+    if (mode === 'sprites') {
+      this.mapPanels = {
+        sidebar: this.panels.sidebarVisible(),
+        inspector: this.panels.inspectorVisible(),
+        dock: this.panels.dockOpen(),
+      };
+      this.panels.sidebarVisible.set(false);
+      this.panels.inspectorVisible.set(false);
+      this.panels.dockOpen.set(false);
+    } else {
+      this.sprite.stopPlayback();
+      this.sprite.cancelStroke();
+      this.sprite.spaceHeld.set(false);
+      if (this.mapPanels) {
+        this.panels.sidebarVisible.set(this.mapPanels.sidebar);
+        this.panels.inspectorVisible.set(this.mapPanels.inspector);
+        this.panels.dockOpen.set(this.mapPanels.dock);
+        this.mapPanels = null;
+      }
+    }
+    this.centerMode.set(mode);
+  }
+
+  /** Abre una textura del proyecto en la herramienta de sprites (Recursos › Texturas o el menu Herramientas). */
+  editTextureInSprites(name: string | null): void {
+    if (!name) {
+      return;
+    }
+    this.setCenterMode('sprites');
+    void this.sprite.openTexture(name);
   }
 
   toggleDevTools(): void {
@@ -997,6 +1072,15 @@ export class App {
       return;
     }
 
+    // En la herramienta de sprites las teclas son primero las suyas (ver
+    // SpriteEditorController.onKeyDown): Ctrl+S guarda el sprite, Ctrl+Z
+    // deshace un trazo, B es el lapiz. Lo que no toma sigue abajo, pero solo
+    // los atajos de la ventana: los del nivel no tienen nada que tocar ahi.
+    if (this.centerMode() === 'sprites' && this.sprite.onKeyDown(event)) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.ctrlKey && event.key.toLowerCase() === 's') {
       event.preventDefault();
       // Ctrl+Shift+S fuerza el dialogo aunque ya se sepa donde va el archivo.
@@ -1037,15 +1121,19 @@ export class App {
       this.panels.toggleDock();
       return;
     }
-    if (event.ctrlKey && event.key.toLowerCase() === 'a') {
-      event.preventDefault();
-      this.sel.selectAllEntities();
-      return;
-    }
     // F5: probar el nivel, como en cualquier entorno de desarrollo.
     if (event.key === 'F5') {
       event.preventDefault();
       void this.proj.run();
+      return;
+    }
+    // De aca para abajo, todo es sobre las entidades del viewport.
+    if (this.centerMode() === 'sprites') {
+      return;
+    }
+    if (event.ctrlKey && event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      this.sel.selectAllEntities();
       return;
     }
     if (event.key === 'Home') {
@@ -1138,6 +1226,11 @@ export class App {
 
   /** Un paso de zoom hacia adentro (+1) o hacia afuera (-1), entre los de la escala fija. */
   stepZoom(direction: 1 | -1): void {
+    // Los botones de zoom de la barra son del area central: en Sprites, del lienzo.
+    if (this.centerMode() === 'sprites') {
+      this.sprite.zoomAt(direction);
+      return;
+    }
     const current = this.view.zoom();
     const steps = [...this.view.zoomSteps];
     const next = direction > 0 ? steps.find((step) => step > current) : steps.reverse().find((step) => step < current);

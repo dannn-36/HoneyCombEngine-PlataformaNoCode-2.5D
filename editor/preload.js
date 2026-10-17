@@ -39,6 +39,10 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   readConvertImage: (index) => ipcRenderer.invoke('convert:readImage', index),
   writeConvertedImage: (index, pngBase64) => ipcRenderer.invoke('convert:writeImage', { index, pngBase64 }),
   resetConvert: () => ipcRenderer.invoke('convert:reset'),
+  // El PNG de la herramienta de sprites, a assets/textures/ (ver ipc/textures.js).
+  // Recibe un nombre, nunca una ruta.
+  writeTexture: (name, pngBase64, overwrite) =>
+    ipcRenderer.invoke('textures:write', { name, pngBase64, overwrite }),
 
   // Lanza el runtime con un nivel ya guardado. Recibe la ruta del nivel y no
   // la del ejecutable: quien decide que binario correr es el proceso principal,

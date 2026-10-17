@@ -28,6 +28,7 @@ const ipcWorkspace = require('./ipc/workspace');
 const ipcLevels = require('./ipc/levels');
 const ipcFiles = require('./ipc/files');
 const ipcConvert = require('./ipc/convert');
+const ipcTextures = require('./ipc/textures');
 const ipcRun = require('./ipc/run');
 const { initWorkspace } = require('./ipc/project-root');
 
@@ -143,6 +144,7 @@ app.whenReady().then(async () => {
   ipcLevels.register();
   ipcFiles.register();
   ipcConvert.register();
+  ipcTextures.register();
   ipcRun.register();
 
   createWindow();

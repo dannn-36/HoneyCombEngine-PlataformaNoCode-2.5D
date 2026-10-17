@@ -109,26 +109,29 @@ app-root {
   color-scheme: dark;
 }
 
-/* Pastel: claro, crema con miel mantequilla, un poco apagado para que no
-   encandile. La miel para texto se oscurece para pasar 4.5:1 sobre el crema. */
+/* Pastel: claro, grises calidos de una sola gama (de #060606 a #fdf0da, en
+   pasos parejos), con miel mantequilla. Las superficies son los tonos mas
+   claros, uno por escalon; el texto, los mas oscuros. La miel para texto se
+   oscurece para pasar 4.5:1 sobre el crema. */
 app-root[data-theme='pastel'] {
-  --ground: #e0d8ca;
-  --surface-1: #efeae2;
-  --surface-2: #e7e0d5;
-  --surface-3: #ddd5c7;
-  --surface-4: #d2c8b8;
+  --ground: #d2c8b6;
+  --surface-1: #f4e8d3;
+  --surface-2: #ece0cc;
+  --surface-3: #e3d8c4;
+  --surface-4: #dbd0bd;
   --surface-cool: #d9dce3;
-  --viewport: #e5ded2;
-  --line: #c8bdab;
-  --line-strong: #ada08b;
-  --line-soft: #dcd4c6;
+  --viewport: #e3d8c4;
+  --line: #c1b8a7;
+  --line-strong: #a8a091;
+  --line-soft: #dbd0bd;
 
-  --text: #2b2419;
-  --text-2: #5a5040;
+  /* 10.0:1 y 4.9:1 o mas sobre todas las superficies, el suelo incluido. */
+  --text: #201e1c;
+  --text-2: #534f48;
 
   --honey: #f3c969;
   --honey-hi: #f7d688;
-  --honey-ink: #2b1d03;
+  --honey-ink: #171614;
   --honey-text: #734a00;
   --honey-wash: rgba(243, 201, 105, 0.38);
   --honey-line: rgba(160, 112, 20, 0.6);
@@ -143,10 +146,10 @@ app-root[data-theme='pastel'] {
   --ok: #2b5a17;
   --danger: #9c2923;
 
-  --vp-pill-bg: rgba(239, 234, 226, 0.92);
-  --vp-pill-line: rgba(173, 160, 139, 0.9);
-  --checker-a: #d8cfc0;
-  --checker-b: #e5ded2;
+  --vp-pill-bg: rgba(244, 232, 211, 0.92);
+  --vp-pill-line: rgba(168, 160, 145, 0.9);
+  --checker-a: #d2c8b6;
+  --checker-b: #e3d8c4;
 
   --badge-trigger-bg: #f6e2b8;
   --badge-trigger: #6b4500;
@@ -479,6 +482,11 @@ app-puzzle-dialog {
   &:focus-visible {
     outline-offset: 2px;
   }
+}
+
+/* Un valor entre botones dentro de una bandeja (el pincel de Sprites). */
+.tgroup > .zoom__value {
+  align-self: center;
 }
 
 .zoom {
@@ -1147,6 +1155,14 @@ app-puzzle-dialog {
   &:focus {
     border-color: var(--line-strong);
     outline: none;
+  }
+
+  /* Apagado: que se note que no se puede cambiar (un lado de tunel que ya
+     decide el trazado, por ejemplo). */
+  &:disabled {
+    border-color: var(--line-soft);
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   &::placeholder {
@@ -2447,6 +2463,23 @@ app-puzzle-dialog {
     color: var(--text-2);
     font-size: 12px;
   }
+}
+
+/* ---------- Herramienta de sprites ----------
+   Ocupa la celda del viewport cuando el area central esta en Sprites. El
+   viewport se esconde con .is-hidden y no se destruye; la herramienta, una vez
+   cargada, tampoco: se esconde por su host. El resto de sus estilos baja con
+   ella, en sprites/sprite-editor.scss. */
+.viewport.is-hidden,
+.spritehost.is-hidden {
+  display: none;
+}
+
+.spritehost {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  background: var(--viewport);
 }
 
 /* ---------- Barras de desplazamiento ---------- */

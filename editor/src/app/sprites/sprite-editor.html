@@ -1,0 +1,298 @@
+<!-- Herramienta de sprites: lo que muestra el area central en modo Sprites (ver
+     sprites/sprite-editor.controller.ts). Arriba el sprite abierto y sus
+     acciones, al medio el lienzo, abajo los cuadros y a la derecha el color,
+     las capas y la guia isometrica. Las herramientas de dibujo estan en la
+     barra de herramientas del editor (app.html), en el lugar de las del mapa. -->
+<div class="sprite">
+  <div class="sprite__main">
+    <div class="sprite__head">
+      <span class="sprite__title" [title]="sprite.title()">{{ sprite.title() }}</span>
+      @if (sprite.doc(); as doc) {
+        <span class="sprite__meta">
+          {{ doc.width }}×{{ doc.height }} · {{ doc.frames.length === 1 ? '1 cuadro' : doc.frames.length + ' cuadros' }}
+        </span>
+      }
+      @if (sprite.dirty()) {
+        <span class="dirty" title="El sprite tiene cambios sin guardar (Ctrl+S)">
+          <span class="dirty__dot" aria-hidden="true"></span>Sin guardar
+        </span>
+      }
+      <div class="sprite__spacer"></div>
+      <button class="ibtn" type="button" [disabled]="!sprite.canUndo()" (click)="sprite.undo()"
+              title="Deshacer (Ctrl+Z)" aria-label="Deshacer"><svg hcIcon="undo-2"></svg></button>
+      <button class="ibtn" type="button" [disabled]="!sprite.canRedo()" (click)="sprite.redo()"
+              title="Rehacer (Ctrl+Y)" aria-label="Rehacer"><svg hcIcon="redo-2"></svg></button>
+      <button class="btn btn--small" type="button" [disabled]="sprite.busy()" (click)="sprite.showStart()"
+              title="Crear un sprite nuevo o abrir una textura del proyecto">
+        <svg hcIcon="file-plus"></svg>Nuevo o abrir…
+      </button>
+      <button class="btn btn--small" type="button" [disabled]="!sprite.doc() || sprite.busy()" (click)="sprite.saveAs()"
+              title="Guardar con otro nombre en assets/textures/ (Ctrl+Shift+S)">Guardar como…</button>
+      <button class="btn btn--small btn--primary" type="button" [disabled]="!sprite.doc() || sprite.busy()"
+              (click)="sprite.save()" title="Guardar en assets/textures/ (Ctrl+S)">
+        <svg hcIcon="save"></svg>Guardar
+      </button>
+    </div>
+
+    <!-- Rueda: zoom al cursor. Medio o Espacio + arrastrar: desplazar.
+         Izquierdo: color principal; derecho: secundario. -->
+    <div class="sprite__stage">
+      <canvas
+        #spriteCanvas
+        class="sprite__canvas"
+        [class.is-pan]="sprite.spaceHeld()"
+        [class.is-panning]="panning()"
+        [class.is-picker]="sprite.tool() === 'picker'"
+        (pointerdown)="onPointerDown($event)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp($event)"
+        (pointercancel)="onPointerUp($event)"
+        (pointerleave)="onPointerLeave()"
+        (wheel)="onWheel($event)"
+        (contextmenu)="$event.preventDefault()"
+      ></canvas>
+
+      @if (sprite.doc()) {
+        <div class="vp-chips">
+          @if (sprite.hoverPixel(); as pixel) {
+            <span>Píxel {{ pixel.x }}, {{ pixel.y }}</span>
+          }
+          <span>{{ sprite.activeLayer()?.name }} · Cuadro {{ sprite.activeFrame() + 1 }}</span>
+          <span>{{ sprite.zoomLabel() }}</span>
+        </div>
+      }
+
+      @if (!sprite.doc() || sprite.startOpen()) {
+        <div class="sprite__start">
+          <section class="sprite__card" aria-labelledby="sprite-start-title">
+            <h2 id="sprite-start-title">Herramienta de sprites</h2>
+            <p class="hint">
+              Pixel art con capas y cuadros de animación. Lo que guardas va a assets/textures/ como PNG y
+              aparece en Recursos › Texturas, listo para ponerlo en el nivel.
+            </p>
+
+            <h3 class="subhead">Nuevo sprite</h3>
+            <div class="sprite__presets">
+              @for (preset of sprite.presets(); track preset.label) {
+                <button class="tool" type="button" [title]="preset.hint"
+                        (click)="sprite.newSprite(preset.width, preset.height)">
+                  {{ preset.label }} {{ preset.width }}×{{ preset.height }}
+                </button>
+              }
+            </div>
+            <div class="field-row sprite__form">
+              <label class="field">
+                <span>Ancho (px)</span>
+                <input class="input" type="number" min="1" max="1024" step="1" [value]="newWidth()"
+                       (change)="newWidth.set(int($event))" />
+              </label>
+              <label class="field">
+                <span>Alto (px)</span>
+                <input class="input" type="number" min="1" max="1024" step="1" [value]="newHeight()"
+                       (change)="newHeight.set(int($event))" />
+              </label>
+              <button class="btn btn--primary" type="button" (click)="createCustom()">Crear</button>
+            </div>
+
+            <h3 class="subhead">Editar una textura</h3>
+            <div class="field-row sprite__form">
+              <label class="field sprite__form-wide">
+                <span>Textura</span>
+                <select class="input" [value]="openName()" (change)="openName.set(str($event))">
+                  <option value="" [selected]="openName() === ''" disabled>Elegir textura</option>
+                  @for (texture of tex.textures(); track texture) {
+                    <option [value]="texture" [selected]="openName() === texture">{{ texture }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuadros</span>
+                <input class="input" type="number" min="1" max="64" step="1" [value]="openFrames()"
+                       (change)="openFrames.set(int($event))" />
+              </label>
+              <button class="btn" type="button" [disabled]="!openName() || sprite.busy()" (click)="openSelected()">Abrir</button>
+            </div>
+            <p class="hint">
+              Una tira de animación (los cuadros uno al lado del otro) se abre con su número de cuadros.
+              La textura original no se toca: al guardar se pide otro nombre.
+            </p>
+
+            @if (sprite.doc()) {
+              <div class="modal__actions sprite__start-actions">
+                <button class="btn" type="button" (click)="sprite.closeStart()">Volver al sprite</button>
+              </div>
+            }
+          </section>
+        </div>
+      }
+    </div>
+
+    @if (sprite.doc(); as doc) {
+      <div class="sprite__timeline" role="toolbar" aria-label="Cuadros">
+        <div class="tgroup" role="group" aria-label="Reproducción">
+          <button class="tbtn" type="button" (click)="sprite.stepFrame(-1)" title="Cuadro anterior (,)" aria-label="Cuadro anterior">
+            <svg hcIcon="chevron-left"></svg>
+          </button>
+          <button class="tbtn" type="button" [class.is-active]="sprite.playing()" [attr.aria-pressed]="sprite.playing()"
+                  (click)="sprite.togglePlay()" title="Reproducir o pausar la animación (Enter)" aria-label="Reproducir">
+            <svg [hcIcon]="sprite.playing() ? 'pause' : 'play'"></svg>
+          </button>
+          <button class="tbtn" type="button" (click)="sprite.stepFrame(1)" title="Cuadro siguiente (.)" aria-label="Cuadro siguiente">
+            <svg hcIcon="chevron-right"></svg>
+          </button>
+        </div>
+
+        <div class="sprite__frames" role="group" aria-label="Cuadros del sprite">
+          @for (frame of doc.frames; track frame.id; let index = $index) {
+            <button class="sprite__frame" type="button" [class.is-active]="sprite.activeFrame() === index"
+                    [attr.aria-pressed]="sprite.activeFrame() === index" (click)="sprite.selectFrame(index)"
+                    [title]="'Cuadro ' + (index + 1)">{{ index + 1 }}</button>
+          }
+        </div>
+
+        <div class="tgroup" role="group" aria-label="Editar cuadros">
+          <button class="tbtn" type="button" (click)="sprite.addFrame(true)" title="Duplicar el cuadro" aria-label="Duplicar el cuadro">
+            <svg hcIcon="copy"></svg>
+          </button>
+          <button class="tbtn" type="button" (click)="sprite.addFrame(false)" title="Cuadro vacío después de este" aria-label="Cuadro vacío">
+            <svg hcIcon="plus"></svg>
+          </button>
+          <button class="tbtn" type="button" [disabled]="sprite.activeFrame() === 0" (click)="sprite.moveFrame(-1)"
+                  title="Mover el cuadro a la izquierda" aria-label="Mover a la izquierda"><svg hcIcon="arrow-left"></svg></button>
+          <button class="tbtn" type="button" [disabled]="sprite.activeFrame() === doc.frames.length - 1"
+                  (click)="sprite.moveFrame(1)" title="Mover el cuadro a la derecha" aria-label="Mover a la derecha">
+            <svg hcIcon="arrow-right"></svg>
+          </button>
+          <button class="tbtn" type="button" [disabled]="doc.frames.length < 2" (click)="sprite.removeFrame()"
+                  title="Quitar el cuadro" aria-label="Quitar el cuadro"><svg hcIcon="trash-2"></svg></button>
+        </div>
+
+        <label class="field field--inline" title="Segundos por cuadro en la vista previa: el mismo valor va en la entidad">
+          <span>s/cuadro</span>
+          <input class="input sprite__duration" type="number" min="0.05" max="2" step="0.01" [value]="sprite.frameDuration()"
+                 (change)="sprite.setFrameDuration(num($event))" />
+        </label>
+
+        <button class="tbtn tbtn--label" type="button" [class.is-active]="sprite.onionSkin()"
+                [attr.aria-pressed]="sprite.onionSkin()" (click)="sprite.onionSkin.set(!sprite.onionSkin())"
+                title="Ver el cuadro anterior transparente debajo del actual">
+          <svg hcIcon="ghost"></svg><span>Papel cebolla</span>
+        </button>
+
+        @if (doc.frames.length === 1) {
+          <button class="btn btn--small" type="button" (click)="sprite.splitFrames()"
+                  title="La imagen era una tira: partirla a lo ancho en cuadros iguales">Separar en cuadros…</button>
+        }
+      </div>
+    }
+  </div>
+
+  <aside class="sprite__side" aria-label="Color, capas y guía">
+    <section class="sprite__panel">
+      <h3 class="subhead">Color</h3>
+      <div class="sprite__colors">
+        <label class="sprite__swatch" title="Color principal (clic izquierdo)">
+          <input type="color" [value]="sprite.primaryHex()" (input)="sprite.setColor('primary', str($event))"
+                 aria-label="Color principal" />
+        </label>
+        <label class="sprite__swatch sprite__swatch--back" title="Color secundario (clic derecho)">
+          <input type="color" [value]="sprite.secondaryHex()" (input)="sprite.setColor('secondary', str($event))"
+                 aria-label="Color secundario" />
+        </label>
+        <button class="ibtn" type="button" (click)="sprite.swapColors()" title="Intercambiar los colores (X)"
+                aria-label="Intercambiar los colores"><svg hcIcon="arrow-left-right"></svg></button>
+        <input class="input sprite__hex" [value]="sprite.primaryHex()" spellcheck="false"
+               (change)="sprite.setColor('primary', str($event))" aria-label="Color principal en hexadecimal" />
+      </div>
+
+      <div class="sprite__palette" role="group" aria-label="Paleta">
+        @for (hex of sprite.palette(); track hex) {
+          <button class="sprite__chip" type="button" [style.background]="hex" [class.is-active]="hex === sprite.primaryHex()"
+                  [title]="hex + ': clic para el principal, clic derecho para el secundario'" [attr.aria-label]="hex"
+                  (click)="sprite.setColor('primary', hex)"
+                  (contextmenu)="$event.preventDefault(); sprite.setColor('secondary', hex)"></button>
+        }
+      </div>
+      <div class="sprite__row">
+        <button class="btn btn--small" type="button" [disabled]="sprite.palette().includes(sprite.primaryHex())"
+                (click)="sprite.addToPalette()" title="Sumar el color principal a la paleta"><svg hcIcon="plus"></svg>Sumar</button>
+        <button class="btn btn--small" type="button" [disabled]="!sprite.palette().includes(sprite.primaryHex())"
+                (click)="sprite.removeFromPalette(sprite.primaryHex())" title="Quitar el color principal de la paleta">Quitar</button>
+        <button class="btn btn--small" type="button" [disabled]="!sprite.doc()" (click)="sprite.paletteFromSprite()"
+                title="Armar la paleta con los colores del sprite">Del sprite</button>
+        <button class="btn btn--small" type="button" (click)="sprite.resetPalette()"
+                title="Volver a la paleta de entrada (DB16)">DB16</button>
+      </div>
+    </section>
+
+    <section class="sprite__panel">
+      <h3 class="subhead">Capas</h3>
+      @if (sprite.doc()) {
+        <ul class="sprite__layers" aria-label="Capas, de arriba hacia abajo">
+          @for (layer of layersTopFirst(); track layer.id) {
+            <li class="sprite__layer" [class.is-active]="layer.id === sprite.activeLayerId()"
+                (click)="sprite.selectLayer(layer.id)" (dblclick)="sprite.renameLayer(layer.id)"
+                title="Doble clic para renombrar">
+              <button class="ibtn" type="button" [class.is-off]="!layer.visible"
+                      (click)="$event.stopPropagation(); sprite.toggleLayerVisible(layer.id)"
+                      [title]="layer.visible ? 'Ocultar la capa (no se guarda oculta)' : 'Mostrar la capa'"
+                      [attr.aria-label]="(layer.visible ? 'Ocultar ' : 'Mostrar ') + layer.name">
+                <svg [hcIcon]="layer.visible ? 'eye' : 'eye-off'"></svg>
+              </button>
+              <span class="sprite__layer-name">{{ layer.name }}</span>
+            </li>
+          }
+        </ul>
+        <div class="sprite__row sprite__row--icons">
+          <button class="ibtn" type="button" (click)="sprite.addLayer()" title="Capa nueva encima de la elegida" aria-label="Capa nueva">
+            <svg hcIcon="plus"></svg>
+          </button>
+          <button class="ibtn" type="button" (click)="sprite.duplicateLayer()" title="Duplicar la capa" aria-label="Duplicar la capa">
+            <svg hcIcon="copy"></svg>
+          </button>
+          <button class="ibtn" type="button" (click)="sprite.moveLayer(1)" title="Subir la capa" aria-label="Subir la capa">
+            <svg hcIcon="arrow-up"></svg>
+          </button>
+          <button class="ibtn" type="button" (click)="sprite.moveLayer(-1)" title="Bajar la capa" aria-label="Bajar la capa">
+            <svg hcIcon="arrow-down"></svg>
+          </button>
+          <button class="ibtn" type="button" (click)="sprite.renameLayer(sprite.activeLayerId())" title="Renombrar la capa"
+                  aria-label="Renombrar la capa"><svg hcIcon="pencil"></svg></button>
+          <button class="ibtn" type="button" (click)="sprite.removeLayer()" title="Quitar la capa" aria-label="Quitar la capa">
+            <svg hcIcon="trash-2"></svg>
+          </button>
+        </div>
+        <div class="sprite__row">
+          <button class="btn btn--small" type="button" (click)="sprite.flip('horizontal')"
+                  title="Espejar de izquierda a derecha la capa en este cuadro: la vista opuesta de una pieza isométrica">
+            <svg hcIcon="flip-horizontal-2"></svg>Espejar
+          </button>
+          <button class="btn btn--small" type="button" (click)="sprite.flip('vertical')"
+                  title="Dar vuelta de arriba abajo la capa en este cuadro">
+            <svg hcIcon="flip-vertical-2"></svg>Voltear
+          </button>
+          <button class="btn btn--small" type="button" (click)="sprite.clearCel()" title="Vaciar la capa en este cuadro (Supr)">Vaciar</button>
+        </div>
+      } @else {
+        <p class="hint">Crea o abre un sprite para ver sus capas.</p>
+      }
+    </section>
+
+    <section class="sprite__panel">
+      <h3 class="subhead">Guía isométrica</h3>
+      <label class="field">
+        <span>Apoyo</span>
+        <select class="input" (change)="sprite.isoAnchor.set(anchor($event))">
+          <option value="pies" [selected]="sprite.isoAnchor() === 'pies'">Entidad</option>
+          <option value="base" [selected]="sprite.isoAnchor() === 'base'">Bloque con bajada</option>
+          <option value="centro" [selected]="sprite.isoAnchor() === 'centro'">Tile de piso</option>
+        </select>
+      </label>
+      <p class="hint">
+        El rombo es la casilla del nivel abierto ({{ grid().tileWidth }}×{{ grid().tileHeight }} px). Una textura puesta
+        como entidad se apoya por su borde de abajo en el centro de la casilla: eso es «Entidad». «Bloque con bajada» es
+        como se apoyan las figuras y las piezas de Kenney, que bajan medio tile (groundOffset en el nivel).
+      </p>
+    </section>
+  </aside>
+</div>

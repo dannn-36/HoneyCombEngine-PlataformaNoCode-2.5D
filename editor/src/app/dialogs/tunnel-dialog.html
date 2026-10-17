@@ -32,26 +32,44 @@
           </label>
         </div>
 
+        <!-- Un trazado a mano que arranca o termina adentro de una sala ya
+             decide por donde sale o entra: ese lado no haria nada, y se apaga
+             (ver tunnelRoute en core/dungeon-layout.ts). -->
+        @let fromLocked = map.fromSideLocked(draft);
+        @let toLocked = map.toSideLocked(draft);
         <div class="field-row">
           <label class="field">
             <span>Sale por</span>
-            <select class="input" [value]="draft.fromSide" (change)="map.patchTunnelDraft({ fromSide: map.sideValue($event) })">
-              <option value="" [selected]="draft.fromSide === ''">Automático (centro)</option>
-              @for (side of map.roomSides; track side.value) {
-                <option [value]="side.value" [selected]="draft.fromSide === side.value">{{ side.label }}</option>
+            <select class="input" [value]="draft.fromSide" [disabled]="fromLocked"
+                    (change)="map.patchTunnelDraft({ fromSide: map.sideValue($event) })">
+              @if (fromLocked) {
+                <option value="" selected>Donde empezó el trazado</option>
+              } @else {
+                <option value="" [selected]="draft.fromSide === ''">Automático (centro)</option>
+                @for (side of map.roomSides; track side.value) {
+                  <option [value]="side.value" [selected]="draft.fromSide === side.value">{{ side.label }}</option>
+                }
               }
             </select>
           </label>
           <label class="field">
             <span>Entra por</span>
-            <select class="input" [value]="draft.toSide" (change)="map.patchTunnelDraft({ toSide: map.sideValue($event) })">
-              <option value="" [selected]="draft.toSide === ''">Automático (centro)</option>
-              @for (side of map.roomSides; track side.value) {
-                <option [value]="side.value" [selected]="draft.toSide === side.value">{{ side.label }}</option>
+            <select class="input" [value]="draft.toSide" [disabled]="toLocked"
+                    (change)="map.patchTunnelDraft({ toSide: map.sideValue($event) })">
+              @if (toLocked) {
+                <option value="" selected>Donde terminó el trazado</option>
+              } @else {
+                <option value="" [selected]="draft.toSide === ''">Automático (centro)</option>
+                @for (side of map.roomSides; track side.value) {
+                  <option [value]="side.value" [selected]="draft.toSide === side.value">{{ side.label }}</option>
+                }
               }
             </select>
           </label>
         </div>
+        @if (fromLocked || toLocked) {
+          <p class="hint hint--field">El túnel sale y llega por las celdas donde hiciste clic al trazarlo. Para elegir los lados, vuelve a automático.</p>
+        }
 
         <label class="field">
           <span>Ancho (celdas caminables)</span>
@@ -62,7 +80,7 @@
         <div class="fieldblock">
           <span class="fieldblock__label">Trazado</span>
           @if (draft.path.length > 0) {
-            <p class="hint">A mano, pasando por {{ draft.path.length }} puntos marcados.</p>
+            <p class="hint">A mano, tal como se trazó en el viewport ({{ draft.path.length }} puntos).</p>
           } @else {
             <p class="hint">Automático: tramos rectos entre sus dos extremos.</p>
           }

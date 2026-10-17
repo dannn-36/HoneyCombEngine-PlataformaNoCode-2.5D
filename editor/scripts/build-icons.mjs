@@ -29,6 +29,10 @@ const ICONS = [
   'move-right', 'circle-dot', 'radar', 'arrow-up-right', 'crosshair', 'bomb',
   // Lienzo y dialogos
   'crown', 'heart-pulse',
+  // Herramienta de sprites
+  'brush', 'eraser', 'paint-bucket', 'pipette', 'slash', 'square', 'diamond', 'minus', 'undo-2', 'redo-2',
+  'file-plus', 'save', 'chevron-left', 'pause', 'arrow-left', 'arrow-right', 'arrow-up', 'arrow-down',
+  'arrow-left-right', 'ghost', 'eye', 'eye-off', 'flip-horizontal-2', 'flip-vertical-2',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));

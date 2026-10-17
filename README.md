@@ -323,6 +323,7 @@ Hay dos carpetas distintas, y no hay que confundirlas:
 │   │   ├── core/                    # Lógica pura con tests (iso-projection.ts, texture-fit.ts...)
 │   │   ├── services/                # ProjectService, CatalogService, LevelService...
 │   │   ├── textures/                # Biblioteca de texturas, miniaturas bajo demanda, convertidor
+│   │   ├── sprites/                 # Herramienta de sprites (pixel art con capas y cuadros, @defer)
 │   │   ├── project/                 # El nivel como documento y el explorador de archivos
 │   │   ├── viewport/ entities/ map/ selection/ palette/ inspector/
 │   │   ├── characters/ combat/ events/ ui/ menu-bar/
@@ -333,6 +334,7 @@ Hay dos carpetas distintas, y no hay que confundirlas:
 │   │   ├── levels.js                # Abrir / importar niveles
 │   │   ├── files.js                 # Leer, escribir, listar, crear carpetas
 │   │   ├── convert.js               # Importar imágenes (PNG, JPG, JPEG → PNG)
+│   │   ├── textures.js              # Guardar el PNG de la herramienta de sprites
 │   │   ├── run.js                   # Lanzar engine.exe
 │   │   └── names.js / media-types.js
 │   ├── main.js                      # Proceso principal de Electron (ventana y registro de IPC)

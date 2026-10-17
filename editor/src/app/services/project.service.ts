@@ -8,6 +8,7 @@ import type {
   LevelImport,
   ProjectFileData,
   ProjectNode,
+  TextureWriteResult,
   WorkspaceInfo,
 } from '../electron-api';
 import { CharacterPreset } from '../models/character-preset.model';
@@ -166,6 +167,11 @@ export class ProjectService {
 
   async resetConvert(): Promise<void> {
     return window.honeycombProject.resetConvert();
+  }
+
+  /** El PNG de la herramienta de sprites, a assets/textures/ (ver ipc/textures.js). */
+  async writeTexture(name: string, pngBase64: string, overwrite: boolean): Promise<TextureWriteResult> {
+    return window.honeycombProject.writeTexture(name, pngBase64, overwrite);
   }
 
   /**
