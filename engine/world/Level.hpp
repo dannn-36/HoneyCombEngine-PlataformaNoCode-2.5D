@@ -134,4 +134,8 @@ struct LoadedLevel {
     // quieta en la ventana. nullptr = solo el color.
     const Texture2D* backgroundTexture = nullptr;
     BackgroundFit backgroundFit = BackgroundFit::Cover;
+    // Musica del nivel ("music"): ruta relativa a assets/, como la de la
+    // portada en game.json. Vacia = el nivel no tiene, y se juega en silencio.
+    // No se carga aca: es un stream, y lo maneja GameSession al empezar el nivel.
+    std::string music;
 };

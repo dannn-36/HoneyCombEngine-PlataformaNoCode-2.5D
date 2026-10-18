@@ -34,11 +34,15 @@ const API_ESPERADA = [
   'beginConvert',
   'buildEngine',
   'changeWorkspace',
+  'checkLevel',
+  'clearRecovery',
   'clearSave',
   'createDir',
+  'createProject',
   'engineStatus',
   'ensureRoot',
   'exportGame',
+  'importSounds',
   'listDir',
   'listEntries',
   'onEngineBuildLog',
@@ -47,6 +51,7 @@ const API_ESPERADA = [
   'readEventCatalog',
   'readFile',
   'readFileData',
+  'readRecovery',
   'resetConvert',
   'revealExport',
   'revealWorkspace',
@@ -54,6 +59,7 @@ const API_ESPERADA = [
   'workspaceInfo',
   'writeConvertedImage',
   'writeFile',
+  'writeRecovery',
   'writeTexture',
 ];
 
@@ -140,7 +146,7 @@ describe('cada funcion invoca un canal fijo', () => {
       const canales = new Set(casos.flatMap((args) => canalesDe(api, nombre, args)));
       assert.equal(canales.size, 1, `${nombre} invoco ${[...canales].join(', ')}`);
       const [canal] = canales;
-      assert.match(canal, /^(project|workspace|convert|textures|game|engine):[A-Za-z]+$/);
+      assert.match(canal, /^(project|workspace|convert|textures|sounds|level|recovery|game|engine):[A-Za-z]+$/);
     });
   }
 

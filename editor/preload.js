@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   // ipc/project-root.js): cual es, cambiarla, y mostrarla en el sistema.
   workspaceInfo: () => ipcRenderer.invoke('workspace:info'),
   changeWorkspace: () => ipcRenderer.invoke('workspace:change'),
+  // Archivo > Nuevo proyecto: una carpeta vacia con la estructura y las
+  // imagenes basicas, que pasa a ser la carpeta del editor.
+  createProject: () => ipcRenderer.invoke('workspace:createProject'),
   revealWorkspace: () => ipcRenderer.invoke('workspace:reveal'),
   // El catalogo de eventos es del programa, no del proyecto: se lee de la instalacion.
   readEventCatalog: () => ipcRenderer.invoke('workspace:readEventCatalog'),
@@ -43,6 +46,17 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   // Recibe un nombre, nunca una ruta.
   writeTexture: (name, pngBase64, overwrite) =>
     ipcRenderer.invoke('textures:write', { name, pngBase64, overwrite }),
+  // Importar sonidos a assets/sounds/ con el dialogo del sistema (ver ipc/sounds.js).
+  importSounds: () => ipcRenderer.invoke('sounds:import'),
+
+  // Revisar un nivel ya guardado contra el schema: solo avisa (ver ipc/level-check.js).
+  checkLevel: (contents) => ipcRenderer.invoke('level:check', contents),
+
+  // Guardado automatico del nivel sin guardar, para recuperarlo si el editor
+  // se cierra de golpe (ver ipc/recovery.js). Fuera de la carpeta del editor.
+  writeRecovery: (payload) => ipcRenderer.invoke('recovery:write', payload),
+  readRecovery: () => ipcRenderer.invoke('recovery:read'),
+  clearRecovery: () => ipcRenderer.invoke('recovery:clear'),
 
   // Lanza el runtime con un nivel ya guardado. Recibe la ruta del nivel y no
   // la del ejecutable: quien decide que binario correr es el proceso principal,

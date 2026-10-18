@@ -5,7 +5,8 @@
 // Archivo > Exportar juego. Arma, en la carpeta que se elija con el dialogo:
 //
 //   <Juego>/
-//     <Juego>.exe              el motor Release, renombrado y sin consola
+//     <Juego>.exe              el motor Release, renombrado, sin consola y con el
+//                              icono del juego (el de game.json; ver ipc/exe-icon.js)
 //     *.dll                    las que el motor necesita (SDL2, MinGW)
 //     game.json                la configuracion del juego, con su nivel inicial
 //     levels/ assets/          los de la carpeta del editor, sin .bak ni .tmp
@@ -36,6 +37,7 @@ const { INSTALL_ROOT, ensureProjectRoot, isInside } = require('./project-root');
 const { findEngineExecutable } = require('./engine-modes');
 const { collectAssetRefs } = require('./levels');
 const { zipDirectory, zipEntryNames } = require('./zip');
+const { iconImagesFrom, setExeIcon, countIconImages } = require('./exe-icon');
 
 const MARKER_FILE = 'honeycomb-export.json';
 
@@ -91,6 +93,38 @@ async function makeWindowedExe(exePath) {
     return subsystem;
   } finally {
     await handle.close();
+  }
+}
+
+/**
+ * Le pone al .exe exportado el icono del juego ("icon" de game.json, una
+ * imagen de assets/). Sin icono en game.json queda el de HoneyComb, que el
+ * motor ya trae. Devuelve true si lo puso, o el aviso de por que no: no frena
+ * la exportacion, el juego anda igual con el icono de HoneyComb.
+ */
+async function applyGameIcon(root, gameConfig, exePath) {
+  const icon = gameConfig?.icon;
+  if (typeof icon !== 'string' || !icon) return false;
+  const assetsDir = path.join(root, 'assets');
+  const iconPath = path.join(assetsDir, ...icon.split('/'));
+  if (!isInside(assetsDir, iconPath) || !fsSync.existsSync(iconPath)) {
+    return `El ícono del juego (assets/${icon}) no está: el .exe quedó con el de HoneyComb.`;
+  }
+  // Un motor compilado antes de que trajera su icono no tiene donde ponerlo:
+  // la API de Windows falla con esos ejecutables.
+  if (countIconImages(await fs.readFile(exePath)) === 0) {
+    return 'El motor Release es de una versión anterior y no puede llevar el ícono del juego: compílalo de nuevo (Ejecutar › Compilar motor Release) y vuelve a exportar.';
+  }
+  const { nativeImage } = require('electron');
+  const images = nativeImage ? iconImagesFrom(nativeImage, iconPath) : null;
+  if (!images) {
+    return `No se pudo leer el ícono del juego (assets/${icon}): el .exe quedó con el de HoneyComb.`;
+  }
+  try {
+    await setExeIcon(exePath, images);
+    return true;
+  } catch (err) {
+    return `No se pudo poner el ícono del juego en el .exe (${err.message}): quedó con el de HoneyComb.`;
   }
 }
 
@@ -386,6 +420,9 @@ async function exportGame(event, request) {
     const exeName = `${folderName}.exe`;
     await fs.copyFile(engine, path.join(staging, exeName));
     await makeWindowedExe(path.join(staging, exeName));
+    const warnings = [];
+    const iconResult = await applyGameIcon(root, gameConfig, path.join(staging, exeName));
+    if (typeof iconResult === 'string') warnings.push(iconResult);
     const engineDir = path.dirname(engine);
     for (const file of await fs.readdir(engineDir)) {
       if (file.toLowerCase().endsWith('.dll')) await fs.copyFile(path.join(engineDir, file), path.join(staging, file));
@@ -423,7 +460,7 @@ async function exportGame(event, request) {
     const license = path.join(INSTALL_ROOT, 'LICENSE');
     if (fsSync.existsSync(license)) await fs.copyFile(license, path.join(staging, 'LICENCIA.txt'));
 
-    const warnings = await findMissing(staging, gameConfig);
+    warnings.push(...(await findMissing(staging, gameConfig)));
 
     // --- Recien ahora se reemplaza la anterior ------------------------------------------
     await fs.rm(outDir, { recursive: true, force: true });
@@ -432,11 +469,20 @@ async function exportGame(event, request) {
     const { size } = await fs.stat(zipPath);
 
     lastExport = { folder: outDir, zip: zipPath };
-    return { ok: true, folder: outDir, zip: zipPath, exe: exeName, files, zipBytes: size, warnings };
+    return {
+      ok: true,
+      folder: outDir,
+      zip: zipPath,
+      exe: exeName,
+      files,
+      zipBytes: size,
+      gameIcon: iconResult === true,
+      warnings,
+    };
   } catch (err) {
     await fs.rm(staging, { recursive: true, force: true }).catch(() => {});
     throw err;
   }
 }
 
-module.exports = { register, safeFolderName, makeWindowedExe, MARKER_FILE };
+module.exports = { register, safeFolderName, makeWindowedExe, applyGameIcon, MARKER_FILE };

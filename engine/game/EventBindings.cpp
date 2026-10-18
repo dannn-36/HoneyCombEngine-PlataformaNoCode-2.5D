@@ -1,8 +1,10 @@
 #include "EventBindings.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <iostream>
+#include <unordered_map>
 
 #include "game/Combat.hpp"
 #include "game/Movement.hpp"
@@ -74,6 +76,30 @@ bool Compare(float left, const std::string &op, float right)
 }
 
 }  // namespace
+
+int KeyFromName(const std::string &name)
+{
+    // Las que ofrece el catalogo ("key" de "Al pulsar una tecla"). No estan las
+    // que ya usa el juego para moverse, pelear o elegir arma: un evento en esas
+    // dispararia con cada paso o cada golpe.
+    static const std::unordered_map<std::string, int> kKeys{
+        {"E", KEY_E}, {"F", KEY_F}, {"R", KEY_R}, {"T", KEY_T}, {"G", KEY_G}, {"Z", KEY_Z},
+        {"X", KEY_X}, {"C", KEY_C}, {"V", KEY_V}, {"B", KEY_B}, {"ENTER", KEY_ENTER}, {"TAB", KEY_TAB},
+    };
+    const auto it = kKeys.find(name);
+    return it == kKeys.end() ? KEY_NULL : it->second;
+}
+
+bool InInteractReach(const LevelEntity &player, const LevelEntity &entity)
+{
+    if (!Combat::IsActive(entity) || &player == &entity)
+    {
+        return false;
+    }
+    const Vector2 a = Movement::BoxCenter(player);
+    const Vector2 b = Movement::BoxCenter(entity);
+    return std::hypot(a.x - b.x, a.y - b.y) <= kInteractReach + (static_cast<float>(entity.span) - 1.0f) / 2.0f;
+}
 
 void RegisterAll(EventSystem &events, Context &ctx)
 {
@@ -363,15 +389,134 @@ void RegisterAll(EventSystem &events, Context &ctx)
     events.RegisterAction("show_message", [&showMessage](const nlohmann::json &params)
                           { showMessage(StringParam(params, "text"), kMessageSeconds); });
 
+    // --- Tiempo, teclas, dialogos, musica y camara ------------------------------
+
+    // Trigger "on_level_start": se cumple siempre, asi que dispara una vez, en
+    // el primer cuadro del nivel (EventSystem ejecuta al PASAR a cumplirse).
+    // Vuelve a disparar si el nivel empieza de nuevo: al perder, al recargarlo
+    // o al continuar la partida.
+    events.RegisterTrigger("on_level_start", [](const nlohmann::json &) -> bool
+                           { return true; });
+
+    // Trigger "on_timer": a los "seconds" segundos de juego en el nivel. Con
+    // "repeat", cada "seconds" segundos: dispara solo en el cuadro en que el
+    // reloj cruza un multiplo, y en el siguiente ya no se cumple, asi que
+    // EventSystem lo ve empezar de nuevo cada vez.
+    events.RegisterTrigger("on_timer", [&ctx](const nlohmann::json &params) -> bool
+                           {
+        if (!ctx.levelTime || !ctx.frameTime) {
+            return false;
+        }
+        const float seconds = NumberParam(params, "seconds", 5.0f);
+        if (!(seconds > 0.0f)) {
+            return false;
+        }
+        const float now = *ctx.levelTime;
+        if (!BoolParam(params, "repeat")) {
+            return now >= seconds;
+        }
+        // Un periodo mas corto que un cuadro se toma como un cuadro: no puede
+        // disparar dos veces en el mismo.
+        const float period = std::max(seconds, 0.05f);
+        const float before = now - *ctx.frameTime;
+        return now >= period && std::floor(now / period) > std::floor(before / period); });
+
+    // Trigger "on_key_pressed": la tecla esta apretada. Dispara al apretarla
+    // (EventSystem ejecuta cuando PASA a cumplirse) y, para volver a disparar,
+    // hay que soltarla.
+    events.RegisterTrigger("on_key_pressed", [](const nlohmann::json &params) -> bool
+                           {
+        const int key = KeyFromName(StringParam(params, "key"));
+        return key != KEY_NULL && IsKeyDown(key); });
+
+    // Trigger "on_interact": el jugador aprieta E junto a la entidad. Es el
+    // "hablar con un NPC": con "Mostrar dialogo" arma una conversacion.
+    events.RegisterTrigger("on_interact", [&ctx, &player, &entityById](const nlohmann::json &params) -> bool
+                           {
+        if (!ctx.interactPressed || !*ctx.interactPressed || !player || !Combat::IsActive(*player)) {
+            return false;
+        }
+        const auto it = entityById.find(StringParam(params, "entity"));
+        return it != entityById.end() && InInteractReach(*player, *it->second); });
+
+    // Accion "show_dialog": un cuadro de dialogo abajo, con quien habla. El
+    // juego espera a que se lea (E, Enter, Espacio o clic); varios seguidos en
+    // un mismo evento se muestran de a uno, en orden.
+    events.RegisterAction("show_dialog", [&ctx](const nlohmann::json &params)
+                          {
+        const std::string text = StringParam(params, "text");
+        if (ctx.showDialog && !text.empty()) {
+            ctx.showDialog(StringParam(params, "speaker"), text);
+        } });
+
+    // Accion "wait": la espera la hace EventSystem (ver kWaitAction): corta las
+    // acciones del evento ahi, y las que siguen corren solas despues de
+    // "seconds". Se registra para que el catalogo y el motor declaren los
+    // mismos bloques; esta funcion no se llega a llamar.
+    events.RegisterAction("wait", [](const nlohmann::json &) {});
+
+    // Acciones "play_music" y "stop_music": cambia la musica que suena (la del
+    // nivel, si tenia). Una pista que ya esta sonando no vuelve a empezar.
+    events.RegisterAction("play_music", [&ctx](const nlohmann::json &params)
+                          {
+        if (ctx.playMusic) {
+            ctx.playMusic(StringParam(params, "music"));
+        } });
+    events.RegisterAction("stop_music", [&ctx](const nlohmann::json &)
+                          {
+        if (ctx.playMusic) {
+            ctx.playMusic("");
+        } });
+
+    // Accion "shake_camera": la imagen tiembla y se calma (ver CameraSystem::Shake).
+    events.RegisterAction("shake_camera", [&ctx](const nlohmann::json &params)
+                          {
+        if (ctx.shakeCamera) {
+            ctx.shakeCamera(NumberParam(params, "intensity", 8.0f), NumberParam(params, "seconds", 0.4f));
+        } });
+
+    // Accion "move_entity": lleva la entidad a esa casilla, de una. Si ahi no
+    // puede estar (una pared, otra cosa solida), no se mueve: dejar al jugador
+    // adentro de una pared lo trabaria.
+    events.RegisterAction("move_entity", [&level, &entityById](const nlohmann::json &params)
+                          {
+        const auto it = entityById.find(StringParam(params, "entity"));
+        if (it == entityById.end() || it->second->destroyed) {
+            return;
+        }
+        LevelEntity &entity = *it->second;
+        const Vector2 target{std::round(NumberParam(params, "col", entity.precisePosition.x)),
+                             std::round(NumberParam(params, "row", entity.precisePosition.y))};
+        if (!Movement::CanOccupy(level, entity, target)) {
+            std::cerr << "move_entity: '" << entity.id << "' no puede estar en (" << target.x << ", " << target.y
+                      << "); no se mueve." << std::endl;
+            return;
+        }
+        entity.precisePosition = target;
+        entity.position = GridCoord{static_cast<int>(target.x), static_cast<int>(target.y)}; });
+
+    // Accion "spawn_entity": una copia de otra entidad del nivel (la
+    // "plantilla", que puede estar oculta) en esa casilla. Sirve para que
+    // aparezcan enemigos, objetos o NPCs. La crea GameSession, que es quien
+    // lleva los indices de entidades.
+    events.RegisterAction("spawn_entity", [&ctx](const nlohmann::json &params)
+                          {
+        if (ctx.spawnEntity) {
+            ctx.spawnEntity(StringParam(params, "template"),
+                            Vector2{std::round(NumberParam(params, "col", 0.0f)), std::round(NumberParam(params, "row", 0.0f))});
+        } });
+
     // Recompensas que no se repiten al continuar una partida (ver
     // EventSystem::SetNonRepeatable). Los triggers son los que, en una misma
     // partida, solo pueden cumplirse una vez: lo vencido sigue vencido y lo
     // juntado sigue juntado. Solo vuelven a cumplirse porque al continuar los
     // enemigos reaparecen. Las acciones son las que dan algo que se guarda con
     // la partida: repetirlas duplicaria objetos, monedas o contadores.
+    // "Al empezar el nivel" y "Al pasar un tiempo" (sin repetir) entran aca por
+    // lo mismo: al continuar, el nivel vuelve a empezar y el reloj a cero.
     events.SetNonRepeatable(
         {"on_entity_destroyed", "on_all_enemies_defeated", "on_boss_defeated", "on_zone_cleared",
-         "on_items_collected"},
+         "on_items_collected", "on_level_start", "on_timer"},
         {"give_item", "add_coins", "add_variable"});
 }
 

@@ -649,3 +649,37 @@ describe('dibujo del viewport', () => {
     expect(colTip[1]).toBeCloseTo(rowTip[1]);
   });
 });
+
+describe('la guia del editor', () => {
+  const guide = (changes: Partial<{ visible: boolean; margin: number; opacity: number }> = {}) => () => ({
+    visible: true,
+    margin: 3,
+    opacity: 0.4,
+    ...changes,
+  });
+
+  it('dibuja las lineas de la grilla del nivel que siguen margin casillas por lado, tenues y detras del piso', () => {
+    const { calls } = draw(scene({ guide: guide() }));
+    const strokeIndex = calls.findIndex((call) => call.op === 'stroke' && call.globalAlpha === 0.4);
+    expect(strokeIndex).toBeGreaterThan(-1);
+    const lastBegin = calls.slice(0, strokeIndex).map((call) => call.op).lastIndexOf('beginPath');
+    const moves = calls.slice(lastBegin, strokeIndex).filter((call) => call.op === 'moveTo');
+    expect(moves).toHaveLength(GRID.width + 2 * 3 + 1 + GRID.height + 2 * 3 + 1);
+    // Antes del suelo de la grilla: el piso del nivel queda encima.
+    const firstFill = calls.findIndex((call) => call.op === 'fill');
+    expect(strokeIndex).toBeLessThan(firstFill);
+  });
+
+  it('oculta, o sin guia en la escena, no dibuja nada de mas', () => {
+    const base = ofOp(draw(scene()).calls, 'stroke').length;
+    expect(ofOp(draw(scene({ guide: guide({ visible: false }) })).calls, 'stroke')).toHaveLength(base);
+    expect(ofOp(draw(scene({ guide: guide() })).calls, 'stroke')).toHaveLength(base + 1);
+  });
+
+  it('no cambia el nivel', () => {
+    const lvl = level();
+    const before = JSON.stringify(lvl);
+    draw(scene({ lvl, guide: guide({ margin: 20 }) }));
+    expect(JSON.stringify(lvl)).toBe(before);
+  });
+});

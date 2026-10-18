@@ -1,5 +1,5 @@
 {
-  "$comment": "Catalogo de bloques disponibles para armar eventos en el editor. Es la lista de piezas del NoCode: el editor genera los formularios del panel de eventos leyendo esto, sin nada hardcodeado, asi que sumar un bloque aca lo hace aparecer en la interfaz sin tocar codigo Angular. Del lado del motor, cada 'type' necesita ademas su implementacion registrada una vez en C++ (RegisterTrigger / RegisterCondition / RegisterAction, ver engine/main.cpp). Un type declarado aca pero no registrado alla simplemente no hace nada: el nivel sigue corriendo. Un evento ejecuta sus acciones UNA vez, cuando su trigger y sus condiciones pasan a cumplirse; para repetirse tiene que dejar de cumplirse primero. Tipos de parametro: entity_ref (entidad del nivel), level_ref (archivo de levels/), item_ref (objeto de 'items' del nivel; vacio = cualquiera), zone_ref (sala o zona del nivel), variable_ref (variable de la partida, declarada en game.json), choice (una de las \"options\" del parametro), string, number, boolean. Un parametro puede traer \"default\": el valor con que arranca al agregar el bloque.",
+  "$comment": "Catalogo de bloques disponibles para armar eventos en el editor. Es la lista de piezas del NoCode: el editor genera los formularios del panel de eventos leyendo esto, sin nada hardcodeado, asi que sumar un bloque aca lo hace aparecer en la interfaz sin tocar codigo Angular. Del lado del motor, cada 'type' necesita ademas su implementacion registrada una vez en C++ (RegisterTrigger / RegisterCondition / RegisterAction, ver engine/main.cpp). Un type declarado aca pero no registrado alla simplemente no hace nada: el nivel sigue corriendo. Un evento ejecuta sus acciones UNA vez, cuando su trigger y sus condiciones pasan a cumplirse; para repetirse tiene que dejar de cumplirse primero. Tipos de parametro: entity_ref (entidad del nivel), level_ref (archivo de levels/), item_ref (objeto de 'items' del nivel; vacio = cualquiera), zone_ref (sala o zona del nivel), variable_ref (variable de la partida, declarada en game.json), sound_ref (archivo de sonido de assets/, como \"sounds/golpe.wav\"), choice (una de las \"options\" del parametro), string, number, boolean. Un parametro puede traer \"default\": el valor con que arranca al agregar el bloque.",
   "triggers": [
     {
       "type": "on_collision",
@@ -61,6 +61,54 @@
       "description": "Se dispara cuando el jugador lanza la habilidad de un arma.",
       "params": {
         "item": { "type": "item_ref", "description": "Arma; vacio = cualquiera" }
+      }
+    },
+    {
+      "type": "on_level_start",
+      "label": "Al empezar el nivel",
+      "description": "Se dispara una vez, apenas empieza el nivel. Vuelve a dispararse si el nivel empieza de nuevo: al perder, al recargarlo o al continuar la partida (sin repetir lo que da objetos o monedas).",
+      "params": {}
+    },
+    {
+      "type": "on_timer",
+      "label": "Al pasar un tiempo",
+      "description": "Se dispara a los segundos indicados de juego en el nivel (la pausa y los diálogos no cuentan). Con 'repeat', cada esa cantidad de segundos.",
+      "params": {
+        "seconds": { "type": "number", "description": "Segundos", "default": 5 },
+        "repeat": { "type": "boolean", "description": "Repetir cada esa cantidad de segundos" }
+      }
+    },
+    {
+      "type": "on_key_pressed",
+      "label": "Al pulsar una tecla",
+      "description": "Se dispara al apretar la tecla; para volver a dispararse hay que soltarla. No están las teclas que ya usa el juego para moverse, pelear o elegir arma.",
+      "params": {
+        "key": {
+          "type": "choice",
+          "description": "Tecla",
+          "options": [
+            { "value": "E", "label": "E" },
+            { "value": "F", "label": "F" },
+            { "value": "R", "label": "R" },
+            { "value": "T", "label": "T" },
+            { "value": "G", "label": "G" },
+            { "value": "Z", "label": "Z" },
+            { "value": "X", "label": "X" },
+            { "value": "C", "label": "C" },
+            { "value": "V", "label": "V" },
+            { "value": "B", "label": "B" },
+            { "value": "ENTER", "label": "Enter" },
+            { "value": "TAB", "label": "Tab" }
+          ]
+        }
+      }
+    },
+    {
+      "type": "on_interact",
+      "label": "Al hablar con una entidad",
+      "description": "Se dispara cuando el jugador aprieta E junto a la entidad; cerca de ella se ve 'E: hablar'. Con 'Mostrar diálogo' arma una conversación con un NPC.",
+      "params": {
+        "entity": { "type": "entity_ref", "description": "Entidad a la que se le habla" }
       }
     }
   ],
@@ -133,7 +181,7 @@
       "label": "Reproducir sonido",
       "description": "Reproduce un archivo de audio una vez.",
       "params": {
-        "soundPath": { "type": "string", "description": "Ruta al archivo de sonido" }
+        "soundPath": { "type": "sound_ref", "description": "Sonido de assets/" }
       }
     },
     {
@@ -231,6 +279,66 @@
       "description": "Muestra un texto en el centro de la pantalla unos segundos.",
       "params": {
         "text": { "type": "string", "description": "Mensaje" }
+      }
+    },
+    {
+      "type": "show_dialog",
+      "label": "Mostrar diálogo",
+      "description": "Muestra un cuadro de diálogo abajo, con el nombre de quien habla. El juego espera hasta que se lea (E, Enter, Espacio o clic). Varios seguidos en el mismo evento se muestran de a uno, en orden.",
+      "params": {
+        "speaker": { "type": "string", "description": "Quién habla; vacío = sin nombre" },
+        "text": { "type": "string", "description": "Lo que dice" }
+      }
+    },
+    {
+      "type": "wait",
+      "label": "Esperar",
+      "description": "Espera esos segundos antes de seguir con las acciones que vienen después en este evento. Con varias esperas se arma una secuencia: mensaje, esperar 2, abrir la puerta.",
+      "params": {
+        "seconds": { "type": "number", "description": "Segundos", "default": 1 }
+      }
+    },
+    {
+      "type": "play_music",
+      "label": "Cambiar la música",
+      "description": "Cambia la música que suena (la del nivel, si tenía) por otra, que se repite. Si ya está sonando, sigue sin volver a empezar.",
+      "params": {
+        "music": { "type": "sound_ref", "description": "Música de assets/" }
+      }
+    },
+    {
+      "type": "stop_music",
+      "label": "Detener la música",
+      "description": "Deja de sonar la música.",
+      "params": {}
+    },
+    {
+      "type": "shake_camera",
+      "label": "Sacudir la cámara",
+      "description": "La pantalla tiembla y se va calmando: para un golpe fuerte, una explosión o un temblor.",
+      "params": {
+        "intensity": { "type": "number", "description": "Fuerza, en píxeles", "default": 8 },
+        "seconds": { "type": "number", "description": "Segundos", "default": 0.4 }
+      }
+    },
+    {
+      "type": "move_entity",
+      "label": "Mover entidad",
+      "description": "Lleva la entidad a esa casilla, de una. Si ahí no puede estar (una pared u otra cosa sólida), no se mueve.",
+      "params": {
+        "entity": { "type": "entity_ref", "description": "Entidad a mover" },
+        "col": { "type": "number", "description": "Columna" },
+        "row": { "type": "number", "description": "Fila" }
+      }
+    },
+    {
+      "type": "spawn_entity",
+      "label": "Crear entidad",
+      "description": "Crea una copia de otra entidad del nivel en esa casilla, con un id nuevo (plantilla_1, plantilla_2…). La plantilla puede estar oculta: así aparecen enemigos, objetos o NPCs.",
+      "params": {
+        "template": { "type": "entity_ref", "description": "Entidad a copiar" },
+        "col": { "type": "number", "description": "Columna" },
+        "row": { "type": "number", "description": "Fila" }
       }
     },
     {

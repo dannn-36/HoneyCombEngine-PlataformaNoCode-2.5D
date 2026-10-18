@@ -17,4 +17,5 @@ export class ItemEditorDialog extends DialogBase {
   readonly itemEditor = this.app.itemEditor;
   readonly items = this.app.items;
   readonly tex = this.app.tex;
+  readonly hasFileSystem = this.app.hasFileSystem;
 }

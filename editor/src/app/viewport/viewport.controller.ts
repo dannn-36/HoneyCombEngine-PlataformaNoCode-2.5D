@@ -18,6 +18,7 @@ import { CanvasPoint, CanvasRect, CanvasScene, IsoCanvasRenderer, VIEW_TOP_MARGI
 import { GridCoord, IsoProjection } from '../core/iso-projection';
 import { SHAPE_SHEET_DATA_URL, ShapeId, shapeDef } from '../core/iso-shapes';
 import { stripRect } from '../core/sprite-frames';
+import { EditorGuide, sanitizeGuide, storeGuide, storedGuide } from '../core/editor-guide';
 import { GridPosition, LevelEntity } from '../models/level.model';
 
 // Presets de zoom de la barra: enteros, porque en pixel art un zoom fraccionario
@@ -212,6 +213,19 @@ export class ViewportController {
 
   /** Lineas de la grilla por encima de las entidades (como F1 en el runtime) o debajo. */
   readonly gridOnTop = signal(false);
+
+  /**
+   * La guia alrededor del nivel (ver core/editor-guide.ts): solo del editor,
+   * no se guarda en el nivel. Se recuerda en este equipo.
+   */
+  readonly guide = signal<EditorGuide>(storedGuide());
+
+  /** Cambia la guia (Propiedades › Nivel › Guía del editor), llevando los valores a rango. */
+  patchGuide(changes: Partial<EditorGuide>): void {
+    const next = sanitizeGuide({ ...this.guide(), ...changes });
+    this.guide.set(next);
+    storeGuide(next);
+  }
 
   /** Desplazamiento de camara en pixeles de pantalla (boton medio o shift-arrastre). */
   readonly pan = signal({ x: 0, y: 0 });
@@ -1057,6 +1071,7 @@ export class ViewportController {
     hovered: () => this.hovered(),
     showGrid: () => this.showGrid(),
     gridOnTop: () => this.gridOnTop(),
+    guide: () => this.guide(),
     showColliders: () => this.showColliders(),
     roomDraft: () => this.map.roomDraft(),
     roomDrag: () => this.map.roomDrag(),

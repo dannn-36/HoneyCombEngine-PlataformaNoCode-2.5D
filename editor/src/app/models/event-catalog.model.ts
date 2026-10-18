@@ -12,14 +12,17 @@
 // renderizador dinamico cae a un campo de texto simple.
 // level_ref es el nombre de un archivo de levels/ (para "Pasar a otro nivel"):
 // se elige de una lista, igual que entity_ref, para no escribir uno que no existe.
-// variable_ref es una variable de la partida, de las declaradas en game.json; y
-// choice, una de las "options" que trae el propio parametro.
+// variable_ref es una variable de la partida, de las declaradas en game.json;
+// sound_ref, un sonido de assets/ ("sounds/golpe.wav"), que se elige de la
+// lista de Recursos › Sonidos y se puede escuchar ahi mismo; y choice, una de
+// las "options" que trae el propio parametro.
 export type CatalogParamType =
   | 'entity_ref'
   | 'level_ref'
   | 'zone_ref'
   | 'item_ref'
   | 'variable_ref'
+  | 'sound_ref'
   | 'choice'
   | 'string'
   | 'number'

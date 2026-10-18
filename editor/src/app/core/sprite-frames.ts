@@ -63,7 +63,7 @@ const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
 let crcTable: Uint32Array | null = null;
 
 /** CRC-32 de PNG (el mismo de zlib), sobre el tipo y los datos del bloque. */
-function crc32(bytes: Uint8Array): number {
+export function crc32(bytes: Uint8Array): number {
   if (!crcTable) {
     crcTable = new Uint32Array(256);
     for (let n = 0; n < 256; n += 1) {
@@ -81,7 +81,7 @@ function crc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function base64ToBytes(base64: string): Uint8Array {
+export function base64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
@@ -90,7 +90,7 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
+export function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);
@@ -102,7 +102,7 @@ function isPng(bytes: Uint8Array): boolean {
   return bytes.length >= AFTER_IHDR && PNG_SIGNATURE.every((byte, index) => bytes[index] === byte);
 }
 
-function readUint32(bytes: Uint8Array, offset: number): number {
+export function readUint32(bytes: Uint8Array, offset: number): number {
   return ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
 }
 

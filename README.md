@@ -74,7 +74,7 @@ El piso se arma en tres capas, y cada una pisa a la anterior: **todo el nivel**,
 
 | En la carpeta | Qué es |
 | :--- | :--- |
-| `<Juego>.exe` | El motor **Release** renombrado. Abre sin ventana de consola y arranca en la portada. |
+| `<Juego>.exe` | El motor **Release** renombrado. Abre sin ventana de consola, arranca en la portada y lleva el **ícono del juego** (el de *Configuración del juego › General › Ícono*; sin ícono, el de HoneyComb). |
 | `*.dll` | Lo que necesita para correr en una PC sin nada instalado (SDL2 y el runtime de MinGW). |
 | `game.json`, `levels/`, `assets/` | Todo lo de la carpeta del editor, menos los respaldos `.bak` y los temporales. |
 | `LEEME.txt`, `AVISOS-DE-TERCEROS.txt` | Cómo se juega, y las licencias de raylib, SDL2 y nlohmann-json. |
@@ -83,6 +83,44 @@ El piso se arma en tres capas, y cada una pisa a la anterior: **todo el nivel**,
 Empieza en el nivel inicial de *Configuración del juego › General* o, si no hay, en el nivel abierto. Si hay cambios, guarda antes. Si el motor Release no está compilado, ofrece compilarlo. Avisa en la Consola de lo que falte: imágenes o sonidos que un nivel usa y no están, o niveles de *Pasar de nivel* que no existen. La partida del juego exportado se guarda en `%APPDATA%\<Juego>\saves`, no junto al juego. Exportar de nuevo reemplaza la exportación anterior, pero nunca una carpeta que no sea una exportación. Por ahora solo para Windows.
 
 **Nivel o Portada al ejecutar.** Junto a *Debug / Release* hay un segundo selector, **Nivel / Portada** (también en el menú *Ejecutar*), que se recuerda entre sesiones. Con **Nivel**, *Ejecutar* y `F5` abren directo el nivel que se está editando, para probarlo rápido. Con **Portada** arrancan como el juego terminado: la portada, y *Nueva partida* empieza en el nivel inicial. `Shift+F5` arranca en el que no está elegido, sin cambiar el selector.
+
+#### Sonidos y música
+
+*Recursos › Sonidos › Importar sonidos…* trae archivos **WAV, OGG o MP3** (los que lee raylib) y los copia a `assets/sounds/` con un nombre que el motor pueda abrir; el original no se toca. Solo entra lo que de verdad es audio: un archivo renombrado a `.ogg` se rechaza. Clic en un sonido lo escucha en el editor.
+
+Cada nivel puede tener su **música** (*Nivel › Básico › Música*, o *Usar como música del nivel* en Recursos; `music` en el JSON). Suena en bucle mientras se juega el nivel; si el siguiente tiene la misma, sigue sin cortarse. La portada sigue usando la de *Configuración del juego*. En los eventos, los sonidos se eligen de la misma lista y se escuchan desde ahí (*Reproducir sonido*, *Cambiar la música*).
+
+#### Bloques de eventos
+
+Además de los de combate, objetos y puzzles, hay bloques para armar escenas:
+
+| Bloque | Qué hace |
+| :--- | :--- |
+| *Al empezar el nivel* | Dispara una vez, apenas empieza (y de nuevo si el nivel vuelve a empezar). |
+| *Al pasar un tiempo* | A los N segundos de juego en el nivel, o cada N segundos con *repeat*. La pausa y los diálogos no cuentan. |
+| *Al pulsar una tecla* | E, F, R, T, G, Z, X, C, V, B, Enter o Tab: las que el juego no usa para moverse o pelear. |
+| *Al hablar con una entidad* | El jugador aprieta E junto a ella; cerca se ve «E: hablar». |
+| *Mostrar diálogo* | Un cuadro abajo con quién habla y su texto. El juego espera a que se lea (E, Enter, Espacio o clic); varios seguidos se muestran de a uno. |
+| *Esperar* | Las acciones que siguen en el evento corren después de N segundos: mensaje, esperar 2, abrir la puerta. |
+| *Cambiar la música* / *Detener la música* | Cambia la del nivel por otra, o la corta. |
+| *Sacudir la cámara* | La pantalla tiembla y se calma (fuerza en píxeles y segundos). Apuntar con el mouse no tiembla. |
+| *Mover entidad* | La lleva a una casilla; si ahí no puede estar, no se mueve. |
+| *Crear entidad* | Una copia de otra entidad del nivel (puede estar oculta) en una casilla, con un id nuevo. Hasta 256 por nivel. |
+
+#### Guardado: lo que no se pierde
+
+- **Guardado automático.** Con cambios sin guardar, el editor guarda una copia del nivel cada pocos segundos fuera de la carpeta del editor (en la carpeta de datos de Electron). Si se cierra de golpe, al volver a abrirlo pregunta si se quieren recuperar los cambios; se abren sin guardar, y guardarlos sigue siendo decisión de quien edita. Elegir *Salir sin guardar* o recargar descartando los cambios borra la copia.
+- **Escritura segura.** Los niveles, `game.json`, `items.json`, `characters.json`, las texturas que guarda la herramienta de sprites y la configuración del editor (`honeycomb-settings.json`, la carpeta que se usa) se escriben primero en un temporal y recién después reemplazan al archivo, con la versión anterior en `.bak`. Si `honeycomb-settings.json` se rompe, el editor usa el `.bak` y no se olvida de la carpeta. Los `.tmp` que quedan de un guardado cortado se borran al arrancar.
+- **Cambios de afuera.** Si `game.json`, `items.json`, `characters.json` o un nivel cambiaron en el disco desde que el editor los leyó (otro programa, git, una copia del proyecto), guardar pregunta antes de pisarlos.
+- **Revisión contra el schema.** Al guardar un nivel, el editor lo revisa contra `schema/level.schema.json` y avisa en la Consola lo que el motor rechazaría al cargarlo («a entities[3] le falta "position"»). Solo avisa: el nivel ya se guardó.
+- **Un objeto en todos los niveles.** Cada nivel guarda su propia copia de los objetos que usa. En *Combate › Objetos y armas…*, *Actualizar en todos los niveles* pone al día esa copia en cada nivel que la tiene (el abierto queda sin guardar, para no pisar lo que se está editando).
+- **Capas de los sprites.** La herramienta de sprites guarda las capas dentro del mismo PNG: al volver a abrir la textura siguen separadas, ocultas incluidas. El juego usa la imagen compuesta, como siempre. Si otro programa cambia la imagen, se abre aplanada.
+
+**Guía del editor.** En *Nivel › Guía del editor* (barra derecha) se prende una grilla de referencia que sigue unas casillas más allá del nivel (cuántas, y qué tan visible, se elige ahí), para ver el espacio donde se pueden dibujar salas y ubicar cosas. Es solo del editor: no se guarda en el nivel, no cambia su tamaño ni lo que ve el motor, y la elección se recuerda en el equipo, como el tema.
+
+**Proyecto nuevo.** *Archivo › Nuevo proyecto…* pide una carpeta vacía, le arma la estructura (`levels/`, `assets/textures/`, `assets/sounds/`) con las imágenes básicas (piso, pared, jugador y figuras) y pasa a trabajar ahí, con el diálogo de nivel nuevo abierto.
+
+**Íconos y logo.** El editor, el motor y el juego exportado tienen el ícono de HoneyComb (la abeja en el hexágono) en vez del de Electron o el genérico de Windows. Salen de dos imágenes: la oscura, `editor/public/favicon.png`, para el ícono de la ventana del editor, del `.exe` del motor y de su ventana, y para el logo de la barra de menús en el tema oscuro; la clara, `tools/brand/logo-claro.png`, para el logo en el tema claro (*Pastel claro*). `node tools/gen-icon.mjs` las recorta al hexágono (lo de afuera queda transparente) y escribe `editor/public/favicon.ico`, `icon.png`, `logo-oscuro.png`, `logo-claro.png` y `engine/resources/honeycomb.ico`, que entra al `.exe` con `engine/resources/engine.rc`. Un motor compilado antes de este cambio no tiene ícono: hay que recompilarlo para que el juego exportado pueda llevar el suyo.
 
 Los niveles, imágenes y bibliotecas que crees con el editor se guardan en **`Documentos/HoneyComb`** (la *carpeta del editor*, ver sección 7.2), no en el repositorio. Se puede cambiar desde *Archivo › Cambiar carpeta del editor…* y abrir con *Archivo › Mostrar carpeta del editor*.
 

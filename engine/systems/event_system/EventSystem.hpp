@@ -48,7 +48,29 @@ public:
     //
     // Las acciones no deben llamar a LoadEvents: reemplazarian la lista que
     // se esta recorriendo. Pasar de nivel se agenda y se hace fuera de Update.
-    void Update();
+    //
+    // "deltaTime" son los segundos desde el Update anterior: es el reloj de
+    // las esperas (ver kWaitAction). Sin el, una espera no avanza nunca.
+    void Update(float deltaTime = 0.0f);
+
+    // --- Esperas ----------------------------------------------------------------
+    //
+    // La accion "wait" ("Esperar", con "seconds") no la ejecuta nadie: es la
+    // forma de decir "lo que sigue, despues". Al llegar a ella se cortan las
+    // acciones del evento, y las que quedaban corren solas cuando pasan esos
+    // segundos (contados con el deltaTime de Update, asi que con el juego
+    // congelado tampoco corren). Un evento con dos esperas arma una secuencia:
+    // mensaje, esperar 2, abrir la puerta, esperar 1, mensaje.
+    //
+    // Cambiar de nivel (LoadEvents) descarta las que estaban pendientes: eran
+    // del nivel anterior.
+    static constexpr const char* kWaitAction = "wait";
+    // Cuantas tandas de acciones estan esperando.
+    std::size_t PendingCount() const { return pending_.size(); }
+
+    // Los eventos cargados, tal como vinieron del nivel. Para quien necesita
+    // saber que piden (ver GameSession: a que entidades se les puede hablar).
+    const std::vector<EventDefinition>& Events() const { return events_; }
 
     // --- Recompensas que no se repiten ----------------------------------------
     //
@@ -77,6 +99,19 @@ public:
 
 private:
     bool IsActive(const EventDefinition& event) const;
+    // Corre las acciones del evento "index" desde "first". Si encuentra una
+    // espera, agenda las que siguen y corta ahi.
+    void RunActions(std::size_t index, std::size_t first, bool skipRewards);
+
+    // Una tanda de acciones esperando: de que evento, desde cual, cuanto falta,
+    // y si se saltean las recompensas (lo decidio el disparo que la agendo).
+    struct Pending {
+        std::size_t event;
+        std::size_t nextAction;
+        float remaining;
+        bool skipRewards;
+    };
+    std::vector<Pending> pending_;
     // Avisa por consola que un bloque del evento "index" lanzo una excepcion.
     // Una sola vez por evento: un trigger roto se evalua en cada frame.
     void ReportFailure(std::size_t index, const std::string& what, const std::exception& error);

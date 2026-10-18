@@ -16,7 +16,7 @@ import { TextureAsset, decodeImage } from '../core/texture-fit';
 import { CharacterPreset } from '../models/character-preset.model';
 import { EntityStats } from '../models/level.model';
 import { CharacterPresetService } from '../services/character-preset.service';
-import { ProjectService } from '../services/project.service';
+import { ProjectService, writeOrConfirm } from '../services/project.service';
 
 /**
  * La ventana "Configurar personajes": la biblioteca de presets del proyecto
@@ -342,12 +342,28 @@ export class CharactersController {
       : [...current, saved];
 
     try {
-      await this.presets.save(list);
+      if (!(await this.saveList(list, 'los personajes del editor'))) {
+        return;
+      }
       this.characterEditor.set({ draft: structuredClone(saved), savedId: id });
       this.note('Personaje "' + name + '" guardado. Ya aparece en el panel Personajes para arrastrarlo.');
     } catch (error) {
       this.note('No se pudo guardar el personaje: ' + this.describe(error));
     }
+  }
+
+  /**
+   * Guarda la lista en characters.json. Si el archivo cambio por fuera y la
+   * persona elige no pisarlo, se relee el del disco (lo que ya estaba en la
+   * ventana sigue en el borrador) y devuelve false.
+   */
+  private async saveList(list: CharacterPreset[], what: string): Promise<boolean> {
+    if (await writeOrConfirm((options) => this.presets.save(list, options), what)) {
+      return true;
+    }
+    await this.presets.load();
+    this.note('No se guardó: characters.json cambió en el disco. Se cargó la versión del disco; el personaje que editabas sigue en la ventana.');
+    return false;
   }
 
   async deleteCharacterPreset(): Promise<void> {
@@ -363,7 +379,9 @@ export class CharactersController {
     }
     const list = this.presets.presets().filter((preset) => preset.id !== editor.savedId);
     try {
-      await this.presets.save(list);
+      if (!(await this.saveList(list, 'la lista sin este personaje'))) {
+        return;
+      }
     } catch (error) {
       this.note('No se pudo eliminar el personaje: ' + this.describe(error));
       return;

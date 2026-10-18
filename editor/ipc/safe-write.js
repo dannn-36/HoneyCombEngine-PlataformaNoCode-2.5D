@@ -66,8 +66,24 @@ async function backupPrevious(targetPath) {
   }
 }
 
-/** Escribe "contents" en "targetPath" de forma atomica, dejando el anterior en .bak. */
-async function writeFileAtomic(targetPath, contents) {
+/** El nombre del temporal de "targetPath": oculto y con un sufijo unico. */
+function tempPathOf(targetPath) {
+  return path.join(path.dirname(targetPath), `.${path.basename(targetPath)}.${randomUUID().slice(0, 8)}.tmp`);
+}
+
+/** Los temporales que deja writeFileAtomic: ".<nombre>.<8 hex>.tmp". */
+const TEMP_FILE_PATTERN = /^\..+\.[0-9a-f]{8}\.tmp$/;
+
+/**
+ * Escribe "contents" (texto o Buffer) en "targetPath" de forma atomica,
+ * dejando el anterior en .bak.
+ *
+ * Con "exclusive" no reemplaza nada: si el archivo ya existe falla con EEXIST,
+ * como fs.writeFile con flag "wx", y no se toca. Es lo que usa quien tiene que
+ * preguntar antes de pisar (la herramienta de sprites). Con "backup" en false
+ * no deja .bak: para lo que ya es una copia (la recuperacion de ipc/recovery.js).
+ */
+async function writeFileAtomic(targetPath, contents, { exclusive = false, backup = true } = {}) {
   const dir = path.dirname(targetPath);
   // mkdir recursivo: guardar el primer nivel de un proyecto recien creado no
   // deberia fallar solo porque todavia no existe la carpeta levels/.
@@ -75,23 +91,77 @@ async function writeFileAtomic(targetPath, contents) {
 
   // Oculto (empieza con punto) y con un sufijo unico: dos guardados seguidos
   // del mismo archivo no se pisan el temporal.
-  const tempPath = path.join(dir, `.${path.basename(targetPath)}.${randomUUID().slice(0, 8)}.tmp`);
+  const tempPath = tempPathOf(targetPath);
   try {
     const handle = await fs.open(tempPath, 'w');
     try {
-      await handle.writeFile(contents, 'utf-8');
+      await handle.writeFile(contents, typeof contents === 'string' ? 'utf-8' : undefined);
       // Sin esto, un corte de luz justo despues del renombrado puede dejar el
       // archivo nuevo vacio: el sistema todavia no lo habia bajado al disco.
       await handle.sync();
     } finally {
       await handle.close();
     }
-    await backupPrevious(targetPath);
+    if (exclusive && (await exists(targetPath))) {
+      throw Object.assign(new Error(`Ya existe ${targetPath}`), { code: 'EEXIST' });
+    }
+    if (!exclusive && backup) {
+      await backupPrevious(targetPath);
+    }
     await renameWithRetry(tempPath, targetPath);
   } catch (err) {
     await fs.rm(tempPath, { force: true }).catch(() => {});
     throw err;
   }
+}
+
+async function exists(file) {
+  try {
+    await fs.access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Borra los temporales que quedaron de un guardado que se corto (el editor se
+ * cerro o se corto la luz justo en ese momento). Recorre "root" hasta "depth"
+ * carpetas de profundidad, sin seguir enlaces.
+ *
+ * Solo los que tienen mas de "minAgeMs": uno reciente puede ser de otra
+ * ventana del editor que esta guardando ahora mismo. Devuelve cuantos borro.
+ * Nunca falla: limpiar es una comodidad, no puede impedir que el editor arranque.
+ */
+async function removeStaleTempFiles(root, { depth = 4, minAgeMs = 10 * 60 * 1000, now = Date.now() } = {}) {
+  let removed = 0;
+  const walk = async (dir, level) => {
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // node_modules no es del proyecto, y recorrerlo tarda segundos.
+        if (level < depth && entry.name !== 'node_modules') await walk(full, level + 1);
+      } else if (entry.isFile() && TEMP_FILE_PATTERN.test(entry.name)) {
+        try {
+          const { mtimeMs } = await fs.stat(full);
+          if (now - mtimeMs >= minAgeMs) {
+            await fs.rm(full, { force: true });
+            removed += 1;
+          }
+        } catch {
+          // Se lo llevo otro, o no se puede borrar: queda para la proxima.
+        }
+      }
+    }
+  };
+  await walk(root, 0);
+  return removed;
 }
 
 /**
@@ -124,4 +194,4 @@ function describeWriteError(err, relativePath) {
   }
 }
 
-module.exports = { writeFileAtomic, backupPathOf, describeWriteError };
+module.exports = { writeFileAtomic, backupPathOf, describeWriteError, removeStaleTempFiles, TEMP_FILE_PATTERN };

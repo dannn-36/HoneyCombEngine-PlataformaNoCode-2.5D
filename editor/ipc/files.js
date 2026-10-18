@@ -20,6 +20,8 @@ const {
   IMAGE_MIME_TYPES,
   TEXT_PREVIEW_LIMIT,
   IMAGE_PREVIEW_LIMIT,
+  AUDIO_MIME_TYPES,
+  AUDIO_LIMIT,
 } = require('./media-types');
 
 function register() {
@@ -146,6 +148,16 @@ function register() {
         size: stats.size,
         dataUrl: `data:${mimeType};base64,${bytes.toString('base64')}`,
       };
+    }
+
+    // Los sonidos, para escucharlos antes de usarlos (Recursos > Sonidos).
+    const audioType = AUDIO_MIME_TYPES.get(extension);
+    if (audioType) {
+      if (stats.size > AUDIO_LIMIT) {
+        return { kind: 'binary', size: stats.size, reason: 'too-large' };
+      }
+      const bytes = await fs.readFile(targetPath);
+      return { kind: 'audio', size: stats.size, dataUrl: `data:${audioType};base64,${bytes.toString('base64')}` };
     }
 
     if (!TEXT_EXTENSIONS.has(extension) && !TEXT_FILE_NAMES.has(name)) {

@@ -23,8 +23,9 @@ export class ItemLibraryService {
     this.items.set(await this.project.readItemLibrary());
   }
 
-  async save(items: ItemDef[]): Promise<void> {
-    await this.project.writeItemLibrary(items);
+  /** Falla con FileChangedOnDiskError si items.json cambio por fuera, salvo con overwrite. */
+  async save(items: ItemDef[], options: { overwrite?: boolean } = {}): Promise<void> {
+    await this.project.writeItemLibrary(items, options);
     this.items.set(items);
   }
 

@@ -25,7 +25,7 @@ import {
 } from '../models/game-config.model';
 import { RgbColor } from '../models/level.model';
 import { GameConfigService } from '../services/game-config.service';
-import { ProjectService } from '../services/project.service';
+import { ProjectService, writeOrConfirm } from '../services/project.service';
 import { NamePromptRequest } from '../ui/name-prompt.controller';
 import type { IconName } from '../ui/icons.generated';
 import { BACKGROUND_MODES } from '../inspector/background-picker.controller';
@@ -185,7 +185,10 @@ export class GameConfigController {
     }
     this.saving.set(true);
     try {
-      await this.service.save(draft);
+      if (!(await writeOrConfirm((options) => this.service.save(draft, options), 'la configuración de esta ventana'))) {
+        this.deps.note('No se guardó: game.json cambió en el disco. Tus cambios siguen en la ventana; ciérrala y vuelve a abrirla para ver la versión del disco.');
+        return;
+      }
       this.original.set(JSON.stringify(draft));
       this.draft.set(null);
       this.imagePicker.set(null);
@@ -432,7 +435,12 @@ export class GameConfigController {
       return null;
     }
     try {
-      await this.service.save({ ...config, variables: { ...config.variables, [name]: 0 } });
+      const next = { ...config, variables: { ...config.variables, [name]: 0 } };
+      if (!(await writeOrConfirm((options) => this.service.save(next, options), 'la configuración con la variable nueva'))) {
+        await this.service.load();
+        this.deps.note('No se creó la variable: game.json cambió en el disco. Se cargó la versión del disco; vuelve a intentarlo.');
+        return null;
+      }
       this.deps.note('Variable "' + name + '" creada en game.json, empezando en 0.');
       return name;
     } catch (error) {

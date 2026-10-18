@@ -477,3 +477,167 @@ TEST_CASE("un parametro de texto escrito como numero no rompe ningun bloque") {
 }
 
 }  // TEST_SUITE
+
+namespace {
+
+// Lo que agregan los bloques de tiempo, teclas, dialogos, musica y camara: el
+// reloj del nivel y lo que piden a GameSession, anotado para revisarlo.
+struct SceneFixture : Fixture {
+    float levelTime = 0.0f;
+    float frameTime = 0.0f;
+    bool interact = false;
+    std::vector<std::string> tracks;
+    std::vector<std::pair<std::string, std::string>> dialogs;
+    std::vector<std::pair<float, float>> shakes;
+    std::vector<std::pair<std::string, Vector2>> spawns;
+
+    SceneFixture() {
+        ctx.levelTime = &levelTime;
+        ctx.frameTime = &frameTime;
+        ctx.interactPressed = &interact;
+        ctx.playMusic = [this](const std::string& path) { tracks.push_back(path); };
+        ctx.showDialog = [this](const std::string& speaker, const std::string& text) { dialogs.emplace_back(speaker, text); };
+        ctx.shakeCamera = [this](float intensity, float seconds) { shakes.emplace_back(intensity, seconds); };
+        ctx.spawnEntity = [this](const std::string& id, Vector2 cell) {
+            spawns.emplace_back(id, cell);
+            return true;
+        };
+    }
+
+    // Un cuadro del reloj del nivel, como GameSession: avanza y evalua.
+    void Tick(float seconds) {
+        frameTime = seconds;
+        levelTime += seconds;
+        events.Update(seconds);
+    }
+};
+
+}  // namespace
+
+TEST_SUITE("eventos: tiempo, teclas, dialogos, musica y camara") {
+
+TEST_CASE("al empezar el nivel dispara una sola vez, en el primer cuadro") {
+    SceneFixture fx;
+    fx.events.LoadEvents({EventDefinition{Step("on_level_start"), {}, {Step("prueba_disparo")}}});
+    fx.events.Update();
+    fx.events.Update();
+    fx.events.Update();
+    CHECK(fx.probes == 1);
+}
+
+TEST_CASE("al pasar un tiempo dispara a los segundos pedidos, una vez") {
+    SceneFixture fx;
+    fx.events.LoadEvents({EventDefinition{Step("on_timer", {{"seconds", 1.0}}), {}, {Step("prueba_disparo")}}});
+    fx.Tick(0.5f);
+    CHECK(fx.probes == 0);
+    fx.Tick(0.5f);
+    CHECK(fx.probes == 1);
+    for (int i = 0; i < 10; ++i) fx.Tick(0.5f);
+    CHECK(fx.probes == 1);
+}
+
+TEST_CASE("al pasar un tiempo con repetir dispara cada esa cantidad de segundos") {
+    SceneFixture fx;
+    fx.events.LoadEvents(
+        {EventDefinition{Step("on_timer", {{"seconds", 1.0}, {"repeat", true}}), {}, {Step("prueba_disparo")}}});
+    // 0.125 es exacto en binario: 32 cuadros son 4 segundos justos, sin el error
+    // que acumularia sumar 0.1 (eso en el juego da igual; en la prueba, no).
+    for (int i = 0; i < 32; ++i) fx.Tick(0.125f);
+    CHECK(fx.probes == 4);
+}
+
+TEST_CASE("al pasar un tiempo sin reloj o con segundos invalidos no dispara") {
+    // De a una fixture por vez: cada una abre y cierra el dispositivo de audio
+    // (ResourceManager), y dos a la vez lo cerrarian dos veces.
+    {
+        Fixture sinReloj;
+        CHECK_FALSE(sinReloj.Fires(Step("on_timer", {{"seconds", 0}})));
+    }
+    SceneFixture fx;
+    fx.levelTime = 100.0f;
+    CHECK_FALSE(fx.Fires(Step("on_timer", {{"seconds", -1}})));
+    CHECK(fx.Fires(Step("on_timer", {{"seconds", "nada"}})));  // sin numero: 5 segundos, y ya pasaron
+}
+
+TEST_CASE("las teclas del catalogo tienen su tecla, y las demas no") {
+    CHECK(EventBindings::KeyFromName("E") == KEY_E);
+    CHECK(EventBindings::KeyFromName("ENTER") == KEY_ENTER);
+    CHECK(EventBindings::KeyFromName("W") == KEY_NULL);
+    CHECK(EventBindings::KeyFromName("") == KEY_NULL);
+}
+
+TEST_CASE("al hablar con una entidad: E, y el jugador cerca") {
+    SceneFixture fx;
+    fx.level.entities.reserve(8);
+    fx.Add("player_1", "player", 2, 2);
+    fx.Add("npc", "npc", 3, 2);
+    fx.Add("lejos", "npc", 7, 7);
+    CHECK_FALSE(fx.Fires(Step("on_interact", {{"entity", "npc"}})));
+    fx.interact = true;
+    CHECK(fx.Fires(Step("on_interact", {{"entity", "npc"}})));
+    CHECK_FALSE(fx.Fires(Step("on_interact", {{"entity", "lejos"}})));
+    CHECK_FALSE(fx.Fires(Step("on_interact", {{"entity", "no_esta"}})));
+    fx.Entity("npc").hidden = true;
+    CHECK_FALSE(fx.Fires(Step("on_interact", {{"entity", "npc"}})));
+}
+
+TEST_CASE("mostrar dialogo pide el dialogo con quien habla; sin texto no") {
+    SceneFixture fx;
+    fx.Run(Step("show_dialog", {{"speaker", "Anciana"}, {"text", "Cuidado con el bosque."}}));
+    fx.Run(Step("show_dialog", {{"speaker", "Anciana"}, {"text", ""}}));
+    REQUIRE(fx.dialogs.size() == 1);
+    CHECK(fx.dialogs[0].first == "Anciana");
+    CHECK(fx.dialogs[0].second == "Cuidado con el bosque.");
+}
+
+TEST_CASE("cambiar y detener la musica") {
+    SceneFixture fx;
+    fx.Run(Step("play_music", {{"music", "sounds/tema.ogg"}}));
+    fx.Run(Step("stop_music"));
+    CHECK(fx.tracks == std::vector<std::string>{"sounds/tema.ogg", ""});
+}
+
+TEST_CASE("sacudir la camara usa los valores pedidos, o los de por defecto") {
+    SceneFixture fx;
+    fx.Run(Step("shake_camera", {{"intensity", 12}, {"seconds", 1}}));
+    fx.Run(Step("shake_camera"));
+    REQUIRE(fx.shakes.size() == 2);
+    CHECK(fx.shakes[0].first == doctest::Approx(12.0f));
+    CHECK(fx.shakes[0].second == doctest::Approx(1.0f));
+    CHECK(fx.shakes[1].first == doctest::Approx(8.0f));
+    CHECK(fx.shakes[1].second == doctest::Approx(0.4f));
+}
+
+TEST_CASE("mover entidad la lleva a la casilla si puede estar ahi") {
+    SceneFixture fx;
+    fx.Add("caja", "obstacle", 1, 1);
+    fx.Run(Step("move_entity", {{"entity", "caja"}, {"col", 5}, {"row", "6"}}));
+    CHECK(fx.Entity("caja").precisePosition.x == doctest::Approx(5.0f));
+    CHECK(fx.Entity("caja").precisePosition.y == doctest::Approx(6.0f));
+    CHECK(fx.Entity("caja").position.col == 5);
+
+    // Fuera de la grilla no hay piso: no se mueve.
+    fx.Run(Step("move_entity", {{"entity", "caja"}, {"col", 40}, {"row", 40}}));
+    CHECK(fx.Entity("caja").precisePosition.x == doctest::Approx(5.0f));
+    CHECK_NOTHROW(fx.Run(Step("move_entity", {{"entity", "no_esta"}, {"col", 1}, {"row", 1}})));
+}
+
+TEST_CASE("crear entidad pide la copia de la plantilla en la casilla, redondeada") {
+    SceneFixture fx;
+    fx.Run(Step("spawn_entity", {{"template", "slime"}, {"col", 2.4}, {"row", 3.6}}));
+    REQUIRE(fx.spawns.size() == 1);
+    CHECK(fx.spawns[0].first == "slime");
+    CHECK(fx.spawns[0].second.x == doctest::Approx(2.0f));
+    CHECK(fx.spawns[0].second.y == doctest::Approx(4.0f));
+}
+
+TEST_CASE("sin GameSession los bloques nuevos no hacen nada ni fallan") {
+    Fixture fx;
+    CHECK_FALSE(fx.Fires(Step("on_interact", {{"entity", "x"}})));
+    CHECK_NOTHROW(fx.Run(Step("show_dialog", {{"text", "hola"}})));
+    CHECK_NOTHROW(fx.Run(Step("play_music", {{"music", "x.ogg"}})));
+    CHECK_NOTHROW(fx.Run(Step("shake_camera")));
+    CHECK_NOTHROW(fx.Run(Step("spawn_entity", {{"template", "x"}})));
+}
+
+}  // TEST_SUITE

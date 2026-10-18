@@ -194,6 +194,11 @@ export class LevelService {
     this.level.update((level) => ({ ...level, camera: sanitizeCamera({ ...cameraOf(level), ...changes }) }));
   }
 
+  /** La musica del nivel (ruta relativa a assets/); null la quita. */
+  setMusic(path: string | null): void {
+    this.level.update(({ music: _, ...level }) => (path ? { ...level, music: path } : level));
+  }
+
   /** Quita el bloque "camera": el nivel vuelve a la camara de siempre. */
   resetCamera(): void {
     this.level.update(({ camera: _, ...level }) => level);

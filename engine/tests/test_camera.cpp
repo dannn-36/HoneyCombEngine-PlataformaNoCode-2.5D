@@ -3,6 +3,7 @@
 
 #include "doctest/doctest.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "systems/camera/CameraSystem.hpp"
@@ -156,6 +157,57 @@ TEST_CASE("sin limites validos la camara sigue al foco") {
     CameraSystem camera = MakeCamera(CameraFraming::Follow, 1.0f, 0.0f, Vector2{0, 0}, true);
     camera.SnapTo(Vector2{-500, -500}, Vector2{0, 0}, kNoBounds);
     CHECK(camera.WorldToScreen(Vector2{-500, -500}).x == doctest::Approx(400.0f));
+}
+
+}  // TEST_SUITE
+
+TEST_SUITE("camara: sacudida") {
+
+TEST_CASE("sacudir mueve el encuadre del dibujo y se calma hasta quedar quieto") {
+    CameraSystem camera = MakeCamera(CameraFraming::Fixed);
+    camera.SnapTo(Vector2{0, 0}, Vector2{0, 0}, kNoBounds);
+    const Vector2 still = camera.GetCamera().offset;
+
+    camera.Shake(10.0f, 0.5f);
+    CHECK(camera.IsShaking());
+    float moved = 0.0f;
+    for (int i = 0; i < 10; ++i) {
+        camera.Update(Vector2{0, 0}, Vector2{0, 0}, kNoBounds, 0.02f);
+        const Vector2 offset = camera.GetCamera().offset;
+        moved = std::max(moved, std::fabs(offset.x - still.x) + std::fabs(offset.y - still.y));
+        CHECK(std::fabs(offset.x - still.x) <= 10.0f);
+        CHECK(std::fabs(offset.y - still.y) <= 10.0f);
+    }
+    CHECK(moved > 0.0f);
+
+    for (int i = 0; i < 30; ++i) camera.Update(Vector2{0, 0}, Vector2{0, 0}, kNoBounds, 0.02f);
+    CHECK_FALSE(camera.IsShaking());
+    CHECK(camera.GetCamera().offset.x == doctest::Approx(still.x));
+    CHECK(camera.GetCamera().offset.y == doctest::Approx(still.y));
+}
+
+TEST_CASE("apuntar con el mouse no tiembla con la sacudida") {
+    CameraSystem camera = MakeCamera(CameraFraming::Fixed);
+    camera.SnapTo(Vector2{0, 0}, Vector2{0, 0}, kNoBounds);
+    const Vector2 before = camera.ScreenToWorld(Vector2{100, 100});
+    camera.Shake(20.0f, 1.0f);
+    camera.Update(Vector2{0, 0}, Vector2{0, 0}, kNoBounds, 0.05f);
+    const Vector2 after = camera.ScreenToWorld(Vector2{100, 100});
+    CHECK(after.x == doctest::Approx(before.x));
+    CHECK(after.y == doctest::Approx(before.y));
+}
+
+TEST_CASE("una sacudida sin fuerza o sin tiempo no hace nada, y la fuerza tiene tope") {
+    CameraSystem camera = MakeCamera(CameraFraming::Fixed);
+    camera.Shake(0.0f, 1.0f);
+    CHECK_FALSE(camera.IsShaking());
+    camera.Shake(5.0f, -1.0f);
+    CHECK_FALSE(camera.IsShaking());
+    camera.Shake(1000.0f, 1.0f);
+    camera.Update(Vector2{0, 0}, Vector2{0, 0}, kNoBounds, 0.01f);
+    const Vector2 shake = camera.ShakeOffset();
+    CHECK(std::fabs(shake.x) <= CameraSystem::kMaxShakeIntensity);
+    CHECK(std::fabs(shake.y) <= CameraSystem::kMaxShakeIntensity);
 }
 
 }  // TEST_SUITE

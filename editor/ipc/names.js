@@ -33,6 +33,14 @@ function safeTextureName(fileName) {
 }
 
 /**
+ * Nombre de sonido seguro: la extension original en minusculas (el motor elige
+ * el decodificador por extension), y el resto como safeStem.
+ */
+function safeSoundName(fileName) {
+  return safeStem(fileName, 'sonido') + path.extname(fileName).toLowerCase();
+}
+
+/**
  * El primer nombre libre a partir de "name": ni en la carpeta ni reservado
  * ("reserved", en minusculas: Windows no distingue mayusculas). "foo.png"
  * ocupado pasa a "foo-2.png", "foo-3.png"...
@@ -48,4 +56,4 @@ function freeName(folder, name, reserved = new Set()) {
   }
 }
 
-module.exports = { safeStem, safeTextureName, freeName };
+module.exports = { safeStem, safeTextureName, safeSoundName, freeName };

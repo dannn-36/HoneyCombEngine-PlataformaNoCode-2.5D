@@ -9,15 +9,17 @@
 import { HoneycombProjectApi, OpenLevelResult, ProjectNode } from '../electron-api';
 import { defaultGameConfig } from '../core/game-config';
 import { levelForDisk } from '../core/floors';
-import { newItemDraft } from '../core/items';
+import { newItemDraft, normalizeItem } from '../core/items';
 import { Level } from '../models/level.model';
 import {
   CHARACTERS_FILE,
+  FileChangedOnDiskError,
   GAME_FILE,
   ITEMS_FILE,
   LevelChangedOnDiskError,
   ProjectService,
   SAVE_FILE,
+  writeOrConfirm,
 } from './project.service';
 
 /** Un proyecto de mentira: archivos en memoria y el resto de la API grabando las llamadas. */
@@ -60,6 +62,12 @@ function fakeProject() {
     writeConvertedImage: vi.fn(async () => ({ target: 'foto.png' })),
     resetConvert: vi.fn(async () => undefined),
     writeTexture: vi.fn(async (name: string) => ({ status: 'written' as const, target: name + '.png' })),
+    createProject: vi.fn(async () => null),
+    importSounds: vi.fn(async () => ({ canceled: true, imported: [], skipped: [] })),
+    checkLevel: vi.fn(async () => []),
+    writeRecovery: vi.fn(async () => undefined),
+    readRecovery: vi.fn(async () => null),
+    clearRecovery: vi.fn(async () => undefined),
     run: vi.fn(async () => ({ ok: true, executable: 'engine.exe' })),
     clearSave: vi.fn(async () => {
       files.delete(SAVE_FILE);
@@ -370,6 +378,121 @@ describe('ProjectService', () => {
       fake.files.set('levels/d.json', JSON.stringify(level('ajeno')));
       await service.saveLevel('d.json', level('del editor'));
       expect(JSON.parse(fake.files.get('levels/d.json')!).name).toBe('del editor');
+    });
+  });
+
+  describe('las bibliotecas que cambiaron en el disco por fuera', () => {
+    const coin = normalizeItem({ id: 'moneda', name: 'Moneda', kind: 'coin' });
+
+    it('items.json que cambio desde que se leyo no se pisa', async () => {
+      fake.files.set(ITEMS_FILE, JSON.stringify({ items: [] }));
+      await service.readItemLibrary();
+      fake.files.set(ITEMS_FILE, JSON.stringify({ items: [coin, { ...coin, id: 'de_git' }] }));
+
+      const error = await service.writeItemLibrary([coin]).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(FileChangedOnDiskError);
+      expect(error).not.toBeInstanceOf(LevelChangedOnDiskError);
+      expect((error as FileChangedOnDiskError).relativePath).toBe(ITEMS_FILE);
+      expect(JSON.parse(fake.files.get(ITEMS_FILE)!).items).toHaveLength(2);
+
+      await service.writeItemLibrary([coin], { overwrite: true });
+      expect(JSON.parse(fake.files.get(ITEMS_FILE)!).items).toHaveLength(1);
+    });
+
+    it('characters.json que no existia y aparecio por fuera tampoco se pisa', async () => {
+      expect(await service.readCharacterPresets()).toEqual([]);
+      fake.files.set(CHARACTERS_FILE, JSON.stringify({ presets: [{ id: 'otro' }] }));
+      await expect(service.writeCharacterPresets([])).rejects.toBeInstanceOf(FileChangedOnDiskError);
+    });
+
+    it('game.json guardado dos veces seguidas no se toma por un cambio de afuera', async () => {
+      await service.readGameConfig();
+      await service.writeGameConfig({ ...defaultGameConfig(), name: 'Uno' });
+      await service.writeGameConfig({ ...defaultGameConfig(), name: 'Dos' });
+      expect(JSON.parse(fake.files.get(GAME_FILE)!).name).toBe('Dos');
+    });
+
+    it('writeOrConfirm pregunta, y con Cancelar no escribe', async () => {
+      fake.files.set(GAME_FILE, JSON.stringify({ name: 'original' }));
+      await service.readGameConfig();
+      fake.files.set(GAME_FILE, JSON.stringify({ name: 'de otro programa' }));
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      const written = await writeOrConfirm((options) => service.writeGameConfig({ ...defaultGameConfig(), name: 'del editor' }, options), 'esto');
+      expect(written).toBe(false);
+      expect(confirm).toHaveBeenCalledOnce();
+      expect(confirm.mock.calls[0][0]).toContain('game.json.bak');
+      expect(JSON.parse(fake.files.get(GAME_FILE)!).name).toBe('de otro programa');
+
+      confirm.mockReturnValue(true);
+      expect(await writeOrConfirm((options) => service.writeGameConfig({ ...defaultGameConfig(), name: 'del editor' }, options), 'esto')).toBe(true);
+      expect(JSON.parse(fake.files.get(GAME_FILE)!).name).toBe('del editor');
+      confirm.mockRestore();
+    });
+  });
+
+  describe('cambiar un nivel del disco sin abrirlo', () => {
+    it('listLevelPaths encuentra tambien los de subcarpetas', async () => {
+      fake.tree.set('levels', [
+        { name: 'mundo2', path: 'levels/mundo2', kind: 'dir' },
+        { name: 'a.json', path: 'levels/a.json', kind: 'file' },
+        { name: 'notas.txt', path: 'levels/notas.txt', kind: 'file' },
+      ]);
+      fake.tree.set('levels/mundo2', [{ name: 'b.json', path: 'levels/mundo2/b.json', kind: 'file' }]);
+      expect(await service.listLevelPaths()).toEqual(['levels/a.json', 'levels/mundo2/b.json']);
+    });
+
+    it('rewriteLevelJson solo escribe si algo cambio, y conserva lo demas tal cual', async () => {
+      const original = { name: 'a', campoQueElEditorNoConoce: { x: 1 }, items: [{ id: 'espada', damage: 1 }] };
+      fake.files.set('levels/a.json', JSON.stringify(original));
+      expect(await service.rewriteLevelJson('levels/a.json', () => false)).toBe(false);
+      expect(fake.files.get('levels/a.json')).toBe(JSON.stringify(original));
+
+      expect(
+        await service.rewriteLevelJson('levels/a.json', (raw) => {
+          (raw['items'] as { damage: number }[])[0].damage = 5;
+          return true;
+        }),
+      ).toBe(true);
+      expect(JSON.parse(fake.files.get('levels/a.json')!)).toEqual({ ...original, items: [{ id: 'espada', damage: 5 }] });
+    });
+
+    it('un archivo que no es JSON se deja como esta', async () => {
+      fake.files.set('levels/roto.json', '{ esto no');
+      expect(await service.rewriteLevelJson('levels/roto.json', () => true)).toBe(false);
+      expect(fake.files.get('levels/roto.json')).toBe('{ esto no');
+    });
+  });
+
+  describe('guardado automatico', () => {
+    it('la copia se lee como un nivel ya revisado', async () => {
+      vi.mocked(fake.api.readRecovery).mockResolvedValueOnce({
+        level: { name: 'x', grid: GRID },
+        fileName: 'x.json',
+        openedPath: null,
+        root: 'C:/proyecto',
+        savedAt: '2026-10-18T10:00:00.000Z',
+      });
+      const recovered = await service.readRecovery();
+      expect(recovered?.level.entities).toEqual([]);
+      expect(recovered?.fileName).toBe('x.json');
+    });
+
+    it('una copia que no es un nivel no se ofrece', async () => {
+      vi.mocked(fake.api.readRecovery).mockResolvedValueOnce({
+        level: { sin: 'grilla' },
+        fileName: null,
+        openedPath: null,
+        root: 'C:/proyecto',
+        savedAt: '',
+      });
+      expect(await service.readRecovery()).toBeNull();
+    });
+
+    it('checkSavedLevel revisa lo que el editor acaba de escribir', async () => {
+      await service.saveLevel('a.json', { name: 'a', grid: GRID, entities: [], events: [] });
+      await service.checkSavedLevel('levels/a.json');
+      expect(fake.api.checkLevel).toHaveBeenCalledWith(fake.files.get('levels/a.json'));
     });
   });
 

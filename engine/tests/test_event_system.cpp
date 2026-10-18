@@ -327,3 +327,82 @@ TEST_CASE("cargar otro nivel olvida lo disparado") {
 }
 
 }  // TEST_SUITE
+
+TEST_SUITE("sistema de eventos: esperas") {
+
+TEST_CASE("una espera corta las acciones y las que siguen corren al pasar el tiempo") {
+    EventFixture fx;
+    fx.armed = true;
+    fx.Load({Event(Step("armado"), {}, {Note("antes"), Step("wait", {{"seconds", 1.0}}), Note("despues")})});
+
+    fx.events.Update(0.0f);
+    CHECK(fx.log == std::vector<std::string>{"antes"});
+    CHECK(fx.events.PendingCount() == 1);
+    fx.events.Update(0.6f);
+    CHECK(fx.log.size() == 1);
+    fx.events.Update(0.5f);
+    CHECK(fx.log == std::vector<std::string>{"antes", "despues"});
+    CHECK(fx.events.PendingCount() == 0);
+}
+
+TEST_CASE("dos esperas arman una secuencia") {
+    EventFixture fx;
+    fx.armed = true;
+    fx.Load({Event(Step("armado"), {},
+                   {Note("1"), Step("wait", {{"seconds", 0.5}}), Note("2"), Step("wait", {{"seconds", 0.5}}), Note("3")})});
+    fx.events.Update(0.0f);
+    fx.events.Update(0.5f);
+    CHECK(fx.log == std::vector<std::string>{"1", "2"});
+    fx.events.Update(0.5f);
+    CHECK(fx.log == std::vector<std::string>{"1", "2", "3"});
+}
+
+TEST_CASE("sin tiempo una espera no avanza, y una de 0 segundos sigue en el cuadro siguiente") {
+    EventFixture fx;
+    fx.armed = true;
+    fx.Load({Event(Step("armado"), {}, {Step("wait", {{"seconds", 2}}), Note("tarde")})});
+    fx.events.Update();
+    fx.events.Update();
+    fx.events.Update();
+    CHECK(fx.log.empty());
+
+    EventFixture cero;
+    cero.armed = true;
+    cero.Load({Event(Step("armado"), {}, {Step("wait", {{"seconds", 0}}), Note("ya")})});
+    cero.events.Update(0.016f);
+    CHECK(cero.log.empty());
+    cero.events.Update(0.016f);
+    CHECK(cero.log == std::vector<std::string>{"ya"});
+}
+
+TEST_CASE("cambiar de nivel descarta las esperas pendientes") {
+    EventFixture fx;
+    fx.armed = true;
+    fx.Load({Event(Step("armado"), {}, {Step("wait", {{"seconds", 1}}), Note("del nivel anterior")})});
+    fx.events.Update(0.0f);
+    fx.Load({});
+    fx.events.Update(5.0f);
+    CHECK(fx.log.empty());
+    CHECK(fx.events.PendingCount() == 0);
+}
+
+TEST_CASE("los segundos de una espera aceptan texto, y lo que no es un numero vale 1") {
+    EventFixture fx;
+    fx.armed = true;
+    fx.Load({Event(Step("armado"), {}, {Step("wait", {{"seconds", "0.5"}}), Note("texto")}),
+             Event(Step("armado"), {}, {Step("wait", {{"seconds", "nada"}}), Note("defecto")})});
+    fx.events.Update(0.0f);
+    fx.events.Update(0.5f);
+    CHECK(fx.log == std::vector<std::string>{"texto"});
+    fx.events.Update(0.5f);
+    CHECK(fx.log == std::vector<std::string>{"texto", "defecto"});
+}
+
+TEST_CASE("Events devuelve los eventos cargados") {
+    EventFixture fx;
+    fx.Load({Event(Step("armado"), {}, {Note("a")}), Event(Step("nunca"), {}, {})});
+    REQUIRE(fx.events.Events().size() == 2);
+    CHECK(fx.events.Events()[1].trigger.type == "nunca");
+}
+
+}  // TEST_SUITE

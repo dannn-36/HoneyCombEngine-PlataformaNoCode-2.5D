@@ -12,6 +12,8 @@
 //     nombre esta ocupado contesta "exists" y la UI pregunta antes de
 //     reemplazarla, porque las entidades que la usan cambian con ella.
 //   - Solo acepta un PNG de verdad (la firma de los primeros 8 bytes).
+//   - Escribe con writeFileAtomic (ver ipc/safe-write.js): reemplazar una
+//     textura nunca la deja a medias, y la anterior queda en .bak.
 
 const path = require('node:path');
 const fs = require('node:fs/promises');
@@ -20,6 +22,7 @@ const { ipcMain } = require('electron');
 const { getProjectRoot, ensureProjectRoot } = require('./project-root');
 const { IMAGE_IMPORT_LIMIT } = require('./media-types');
 const { safeTextureName } = require('./names');
+const { writeFileAtomic, describeWriteError } = require('./safe-write');
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -42,11 +45,15 @@ function register() {
 
     const target = safeTextureName(name);
     try {
-      // "wx" no pisa nunca: si el nombre ya esta, la UI decide.
-      await fs.writeFile(path.join(folder, target), bytes, { flag: overwrite ? 'w' : 'wx' });
+      // Atomica, como los niveles: reemplazar una textura no la puede dejar a
+      // medias si algo se corta, y la anterior queda en .bak. Sin overwrite no
+      // pisa nunca: si el nombre ya esta, la UI decide.
+      await writeFileAtomic(path.join(folder, target), bytes, { exclusive: !overwrite });
     } catch (err) {
       if (err.code === 'EEXIST') return { status: 'exists', target };
-      throw err;
+      const message = describeWriteError(err, `assets/textures/${target}`);
+      if (!message) throw err;
+      throw Object.assign(new Error(message), { code: err.code, cause: err });
     }
     return { status: 'written', target };
   });

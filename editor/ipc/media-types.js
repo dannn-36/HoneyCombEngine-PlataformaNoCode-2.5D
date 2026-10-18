@@ -21,6 +21,15 @@ const IMAGE_MIME_TYPES = new Map([
   ['.gif', 'image/gif'], ['.bmp', 'image/bmp'], ['.webp', 'image/webp'],
 ]);
 
+/**
+ * Los sonidos que lee el motor: raylib trae WAV, OGG y MP3 (ver
+ * SUPPORT_FILEFORMAT_* en su config.h). FLAC viene apagado, asi que no se
+ * ofrece: se importaria y despues no sonaria.
+ */
+const AUDIO_MIME_TYPES = new Map([
+  ['.wav', 'audio/wav'], ['.ogg', 'audio/ogg'], ['.mp3', 'audio/mpeg'],
+]);
+
 /** Tope del texto que se manda a la UI. De sobra para leer un archivo, y evita mandar un log de 50 MB. */
 const TEXT_PREVIEW_LIMIT = 400 * 1024;
 /**
@@ -30,6 +39,12 @@ const TEXT_PREVIEW_LIMIT = 400 * 1024;
 const IMAGE_PREVIEW_LIMIT = 25 * 1024 * 1024;
 /** Tope del original que se acepta importar. */
 const IMAGE_IMPORT_LIMIT = 40 * 1024 * 1024;
+/**
+ * Tope de un sonido, para importarlo y para escucharlo en el editor (viaja
+ * entero en un data: URL). 60 MB es mas de una hora de OGG; un WAV sin
+ * comprimir de cinco minutos pesa unos 50.
+ */
+const AUDIO_LIMIT = 60 * 1024 * 1024;
 
 module.exports = {
   TEXT_FILE_NAMES,
@@ -38,4 +53,6 @@ module.exports = {
   TEXT_PREVIEW_LIMIT,
   IMAGE_PREVIEW_LIMIT,
   IMAGE_IMPORT_LIMIT,
+  AUDIO_MIME_TYPES,
+  AUDIO_LIMIT,
 };

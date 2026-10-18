@@ -17,6 +17,7 @@ export interface ProjectNode {
 export type ProjectFileData =
   | { kind: 'text'; size: number; text: string; truncated: boolean }
   | { kind: 'image'; size: number; dataUrl: string }
+  | { kind: 'audio'; size: number; dataUrl: string }
   | { kind: 'binary'; size: number; reason: 'too-large' | 'unsupported' };
 
 /**
@@ -63,6 +64,35 @@ export type ConvertSession =
   | { projectRoot: string; canceled: true }
   | { projectRoot: string; canceled: false; items: ConvertItem[] };
 
+/**
+ * Lo que paso al importar sonidos (ver ipc/sounds.js). target es la ruta
+ * relativa a assets/ (sounds/tema.ogg), como la guardan los niveles.
+ */
+export interface SoundImportResult {
+  canceled: boolean;
+  imported: { source: string; target: string; size: number }[];
+  skipped: { source: string; reason: string }[];
+}
+
+/**
+ * La copia del guardado automatico (ver ipc/recovery.js): el nivel sin
+ * guardar, como estaba en el editor, y de que archivo era.
+ */
+export interface RecoveryPayload {
+  /** El nivel en el editor, tal cual (no la forma en disco). */
+  level: unknown;
+  /** Archivo dentro de levels/, o null si el nivel nunca se guardo. */
+  fileName: string | null;
+  /** Ruta con que se abrio un nivel de una subcarpeta (ver ProjectController.lastSavedPath). */
+  openedPath: string | null;
+}
+
+/** La copia leida del disco: lo que se mando, y cuando y en que carpeta se escribio. */
+export interface RecoveryData extends RecoveryPayload {
+  root: string;
+  savedAt: string;
+}
+
 /** Lo que paso al guardar una textura de la herramienta de sprites. "target" es el nombre final, ya limpio. */
 export interface TextureWriteResult {
   status: 'written' | 'exists';
@@ -79,6 +109,12 @@ export interface HoneycombProjectApi {
   changeWorkspace(): Promise<string | null>;
   /** Abre la carpeta del editor en el explorador del sistema. */
   revealWorkspace(): Promise<void>;
+  /**
+   * Archivo > Nuevo proyecto: elige una carpeta vacia con el dialogo, le arma
+   * la estructura y las imagenes basicas, y la deja como carpeta del editor.
+   * Null si se cancelo.
+   */
+  createProject(): Promise<{ root: string; copied: string[] } | null>;
   /** schema/event_catalog.json de la instalacion. */
   readEventCatalog(): Promise<string>;
   /** La raiz del proyecto, que es siempre la carpeta del editor. */
@@ -108,6 +144,18 @@ export interface HoneycombProjectApi {
    * vuelve "exists".
    */
   writeTexture(name: string, pngBase64: string, overwrite: boolean): Promise<TextureWriteResult>;
+  /** Copia sonidos elegidos con el dialogo a assets/sounds/ (ver ipc/sounds.js). */
+  importSounds(): Promise<SoundImportResult>;
+
+  /** Lo que el motor rechazaria del nivel (su texto, ya guardado), segun el schema. Vacio = nada. */
+  checkLevel(contents: string): Promise<string[]>;
+
+  /** Guarda la copia del nivel sin guardar (ver ipc/recovery.js). */
+  writeRecovery(payload: RecoveryPayload): Promise<void>;
+  /** La copia que haya de la carpeta del editor de ahora, o null. */
+  readRecovery(): Promise<RecoveryData | null>;
+  /** Borra la copia: el nivel se guardo, o se eligio perder los cambios. */
+  clearRecovery(): Promise<void>;
 
   /**
    * Lanza el runtime con el nivel de esa ruta absoluta, con el motor del modo

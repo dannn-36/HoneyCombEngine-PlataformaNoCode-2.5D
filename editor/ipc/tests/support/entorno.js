@@ -155,6 +155,9 @@ function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}
         eventosApp.get(evento).push(fn);
       },
       quit() {},
+      setAppUserModelId(id) {
+        electron.__prueba.appUserModelId = id;
+      },
     },
     BrowserWindow,
     Menu: { setApplicationMenu() {} },
@@ -333,6 +336,9 @@ async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = fal
   cargar('run.js').register();
   cargar('engine-build.js').register();
   cargar('export.js').register();
+  cargar('recovery.js').register();
+  cargar('sounds.js').register();
+  cargar('level-check.js').register();
 
   const remitente = new WebContentsDePrueba();
   const handlers = electron.__prueba.handlers;

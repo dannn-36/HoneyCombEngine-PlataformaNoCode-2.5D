@@ -536,3 +536,17 @@ TEST_CASE("un nivel sin la clave events no hereda los eventos del anterior") {
 }
 
 }  // TEST_SUITE
+
+TEST_SUITE("cargador de niveles: musica") {
+
+TEST_CASE("la musica del nivel se lee tal cual, y sin ella queda vacia") {
+    LoaderFixture fx;
+    json level = MinimalLevel();
+    CHECK(fx.Load(level).music.empty());
+    level["music"] = "sounds/tema.ogg";
+    CHECK(fx.Load(level).music == "sounds/tema.ogg");
+    level["music"] = 5;
+    CHECK(fx.Load(level).music.empty());
+}
+
+}  // TEST_SUITE

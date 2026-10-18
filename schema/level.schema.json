@@ -30,6 +30,10 @@
         }
       }
     },
+    "music": {
+      "type": "string",
+      "description": "Opcional. Musica del nivel, ruta relativa a assets/ (\"sounds/tema.ogg\"; WAV, OGG o MP3). Suena en bucle mientras se juega el nivel; sin ella, el nivel es silencioso. Si el nivel siguiente tiene la misma, sigue sin cortarse. El evento 'Cambiar la musica' la reemplaza."
+    },
     "camera": {
       "type": "object",
       "description": "Opcional. Como encuadra la camara del runtime. Si falta, la de siempre: fija, con el nivel entero centrado en la ventana y zoom 1.",

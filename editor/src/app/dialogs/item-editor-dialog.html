@@ -237,6 +237,13 @@
               Actualizar en este nivel
             </button>
           }
+          @if (hasFileSystem) {
+            <button class="btn" type="button" (click)="itemEditor.updateInAllLevels()"
+                    [disabled]="itemEditor.updatingLevels()"
+                    title="Cada nivel guarda su propia copia de los objetos que usa: ponerlas todas al día con lo guardado en la biblioteca">
+              {{ itemEditor.updatingLevels() ? 'Actualizando…' : 'Actualizar en todos los niveles' }}
+            </button>
+          }
         }
         <button class="btn" type="button" (click)="itemEditor.close()">Cerrar</button>
         <button class="btn btn--primary" type="button" (click)="itemEditor.save()">Guardar</button>

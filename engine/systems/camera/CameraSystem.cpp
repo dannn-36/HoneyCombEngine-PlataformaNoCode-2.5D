@@ -22,6 +22,10 @@ void CameraSystem::SnapTo(Vector2 focus, Vector2 fixedCenter, Rectangle bounds) 
 }
 
 void CameraSystem::Update(Vector2 focus, Vector2 fixedCenter, Rectangle bounds, float deltaTime) {
+    if (shakeRemaining_ > 0.0f) {
+        shakeRemaining_ = std::max(0.0f, shakeRemaining_ - deltaTime);
+        shakeClock_ += deltaTime;
+    }
     if (settings_.mode == CameraFraming::Fixed) {
         center_ = fixedCenter;
         Recompute();
@@ -63,7 +67,33 @@ Camera2D CameraSystem::GetCamera() const {
     // Target siempre en el origen y todo el encuadre en "offset": con zoom 1
     // la transformacion es una suma, y en modo Fixed es la MISMA suma que
     // hacia el motor antes de tener camara (ver Recompute).
-    return Camera2D{offset_, Vector2{0, 0}, 0.0f, settings_.zoom};
+    const Vector2 shake = ShakeOffset();
+    return Camera2D{Vector2{offset_.x + shake.x, offset_.y + shake.y}, Vector2{0, 0}, 0.0f, settings_.zoom};
+}
+
+void CameraSystem::Shake(float intensity, float seconds) {
+    // Sin NaN y en rango: viene de un parametro de evento, escrito a mano o no.
+    if (!(intensity > 0.0f) || !(seconds > 0.0f)) {
+        shakeRemaining_ = 0.0f;
+        return;
+    }
+    shakeIntensity_ = std::min(intensity, kMaxShakeIntensity);
+    shakeDuration_ = std::min(seconds, kMaxShakeSeconds);
+    shakeRemaining_ = shakeDuration_;
+    shakeClock_ = 0.0f;
+}
+
+Vector2 CameraSystem::ShakeOffset() const {
+    if (shakeRemaining_ <= 0.0f || shakeDuration_ <= 0.0f) {
+        return Vector2{0, 0};
+    }
+    // Dos senos de frecuencias que no son multiplo una de otra: tiembla en
+    // todas direcciones sin repetir un dibujo, y es determinista (la misma
+    // sacudida se ve igual siempre, y se puede probar). Se calma de a poco:
+    // la fuerza baja con lo que falta.
+    const float strength = shakeIntensity_ * (shakeRemaining_ / shakeDuration_);
+    return Vector2{std::round(std::sin(shakeClock_ * 53.0f) * strength),
+                   std::round(std::cos(shakeClock_ * 41.0f) * strength)};
 }
 
 Vector2 CameraSystem::ScreenToWorld(Vector2 screenPoint) const {

@@ -82,6 +82,7 @@ import { NgTemplateOutlet } from '@angular/common';
 
 import { CHARACTERS } from './core/characters';
 import { CAMERA_CULL_MARGIN_MAX } from './core/camera';
+import { GUIDE_MARGIN_MAX, GUIDE_MARGIN_MIN } from './core/editor-guide';
 import { CharacterPresetService } from './services/character-preset.service';
 import type { ProjectNode } from './electron-api';
 import { MenuBar, MenuDef, MenuLeaf } from './menu-bar/menu-bar';
@@ -114,6 +115,7 @@ import { EventsController, StepKind } from './events/events.controller';
 import { TexturesController } from './textures/textures.controller';
 import { TextureThumbDirective } from './textures/texture-thumb.directive';
 import { ImageConverterController } from './textures/image-converter.controller';
+import { SoundsController } from './sounds/sounds.controller';
 import { BackgroundPickerController } from './inspector/background-picker.controller';
 import { PanelsController } from './ui/panels.controller';
 import { NamePromptController } from './ui/name-prompt.controller';
@@ -153,7 +155,7 @@ import { LevelEntity } from './models/level.model';
 type Workspace = 'layout' | 'eventos' | 'salida' | 'archivo' | 'json';
 
 /** Categoria del explorador de recursos del dock. */
-type AssetTab = 'figuras' | 'personajes' | 'objetos' | 'texturas';
+type AssetTab = 'figuras' | 'personajes' | 'objetos' | 'texturas' | 'sonidos';
 
 /**
  * Pestana del editor de propiedades (la columna de iconos a su izquierda, como
@@ -227,6 +229,7 @@ const ASSET_TABS: readonly { id: AssetTab; label: string; icon: IconName }[] = [
   { id: 'personajes', label: 'Personajes', icon: 'users' },
   { id: 'objetos', label: 'Objetos', icon: 'package' },
   { id: 'texturas', label: 'Texturas', icon: 'image' },
+  { id: 'sonidos', label: 'Sonidos', icon: 'music' },
 ];
 
 /** Pestañas del dock con su icono. */
@@ -415,6 +418,17 @@ export class App {
     (path) => this.explorer.reloadDir(path),
     () => this.showAssets('texturas'),
   );
+
+  /**
+   * Los sonidos del proyecto: Recursos › Sonidos, la musica del nivel y los
+   * sonidos de los eventos. Ver sounds/sounds.controller.ts.
+   */
+  readonly snd: SoundsController = new SoundsController({
+    note: (message) => this.note(message),
+    describe: (error) => this.describe(error),
+    hasFileSystem: this.hasFileSystem,
+    reloadDir: (path) => this.explorer.reloadDir(path),
+  });
 
   /** Herramientas > Convertidor de imagenes. Ver textures/image-converter.controller.ts. */
   readonly converter: ImageConverterController = new ImageConverterController({
@@ -626,6 +640,7 @@ export class App {
     ev: this.ev,
     prompt: this.prompt,
     engine: this.engine,
+    sounds: this.snd,
   });
 
   /**
@@ -737,6 +752,11 @@ export class App {
 
   readonly dockTabs = DOCK_TABS;
 
+  /** Rango del campo "Casillas por lado" de Nivel › Guía del editor. */
+  readonly guideMarginMin = GUIDE_MARGIN_MIN;
+
+  readonly guideMarginMax = GUIDE_MARGIN_MAX;
+
   /** Tope del campo "Casillas de margen" de Nivel › Avanzado. */
   readonly cullMarginMax = CAMERA_CULL_MARGIN_MAX;
 
@@ -756,6 +776,8 @@ export class App {
         return this.itemLibrary.items().length;
       case 'texturas':
         return this.tex.textures().length;
+      case 'sonidos':
+        return this.snd.sounds().length;
     }
   }
 
@@ -817,6 +839,7 @@ export class App {
           { kind: 'action', label: 'Configuración del juego…', run: () => void this.game.open() },
           { kind: 'action', label: 'Exportar juego…', run: () => void this.proj.exportGame() },
           separator,
+          { kind: 'action', label: 'Nuevo proyecto…', disabled: !this.hasFileSystem, run: () => void this.proj.newProject() },
           { kind: 'action', label: 'Mostrar carpeta del editor', run: () => void this.proj.revealWorkspace() },
           { kind: 'action', label: 'Cambiar carpeta del editor…', run: () => void this.proj.changeWorkspace() },
           separator,
@@ -920,7 +943,7 @@ export class App {
             })),
           },
           separator,
-          { kind: 'action', label: 'Recargar ventana', shortcut: 'Ctrl+R', run: () => this.reloadWindow() },
+          { kind: 'action', label: 'Recargar ventana', shortcut: 'Ctrl+R', run: () => void this.reloadWindow() },
           {
             kind: 'action',
             label: 'Herramientas de desarrollo',
@@ -1133,10 +1156,14 @@ export class App {
   });
 
   /** Recarga la interfaz. Si hay cambios sin guardar pregunta antes, porque recargar los pierde. */
-  reloadWindow(): void {
+  async reloadWindow(): Promise<void> {
     const unsaved = [this.dirty() ? 'el nivel' : '', this.sprite.dirty() ? 'el sprite' : ''].filter(Boolean).join(' y ');
     if (unsaved && !window.confirm(`Hay cambios sin guardar en ${unsaved}. ¿Recargar igual y perderlos?`)) {
       return;
+    }
+    // Se eligio perderlos: el guardado automatico no los tiene que ofrecer al volver.
+    if (this.dirty()) {
+      await this.proj.discardRecovery();
     }
     // Ya se pregunto: que onBeforeUnload no lo vuelva a hacer con el dialogo del sistema.
     this.leaving = true;
@@ -1200,6 +1227,23 @@ export class App {
       }
     }
     this.centerMode.set(mode);
+  }
+
+  /** El logo de la barra de menus: el claro sobre el tema claro, el oscuro sobre los demas. */
+  readonly brandLogo = computed(() => (this.theme.theme() === 'pastel' ? 'logo-claro.png' : 'logo-oscuro.png'));
+
+  /** La musica del nivel abierto (ruta relativa a assets/), o '' si no tiene. */
+  readonly levelMusic = computed(() => this.levels.level().music ?? '');
+
+  /** Elige la musica del nivel ('' = sin musica). La de antes, si sonaba en el editor, se corta. */
+  setLevelMusic(path: string): void {
+    if ((this.levels.level().music ?? '') === path) {
+      return;
+    }
+    this.snd.stop();
+    this.levels.setMusic(path || null);
+    this.dirty.set(true);
+    this.note(path ? 'Música del nivel: ' + path + '.' : 'El nivel quedó sin música.');
   }
 
   /** Abre una textura del proyecto en la herramienta de sprites (Recursos › Texturas o el menu Herramientas). */
@@ -1354,7 +1398,7 @@ export class App {
     }
     if (event.ctrlKey && event.key.toLowerCase() === 'r') {
       event.preventDefault();
-      this.reloadWindow();
+      void this.reloadWindow();
       return;
     }
     // Ctrl+B esconde la barra lateral y Ctrl+J el panel de abajo, los mismos

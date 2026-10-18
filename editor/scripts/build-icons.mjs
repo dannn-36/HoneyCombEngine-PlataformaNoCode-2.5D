@@ -35,6 +35,8 @@ const ICONS = [
   'arrow-left-right', 'ghost', 'eye', 'eye-off', 'flip-horizontal-2', 'flip-vertical-2',
   // Configuracion del juego y punto de control
   'settings', 'monitor-play', 'scroll-text', 'heart', 'flag',
+  // Sonidos
+  'music',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));

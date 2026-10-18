@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <deque>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -118,6 +120,20 @@ private:
     void BeginTransition(const std::filesystem::path &target, const std::string &title, bool restart);
 
     void ShowMessage(const std::string &text, float seconds);
+
+    // La musica que suena: la del nivel al empezarlo, la de la portada, o la
+    // que pida un evento ("Cambiar la musica"). Vacio = silencio. Una pista que
+    // ya esta sonando sigue, sin volver a empezar (pasar a un nivel con la
+    // misma musica no la corta).
+    void PlayTrack(const std::string &relativePath);
+
+    // "Crear entidad": una copia de "templateId" en "cell", con un id nuevo.
+    // false si no hay plantilla, no se puede estar ahi o ya se crearon
+    // demasiadas (ver kSpawnReserve).
+    bool SpawnEntity(const std::string &templateId, Vector2 cell);
+
+    // El cuadro de dialogo de "Mostrar dialogo", si hay alguno esperando.
+    void DrawDialog();
 
     // Calcula lo que la camara necesita saber del nivel cargado: el centro del
     // encuadre fijo y el rectangulo del mundo que ocupa el mapa.
@@ -250,6 +266,33 @@ private:
     std::string message;
     float messageRemaining = 0.0f;
     std::string prompt;
+
+    // --- Lo que agregan los eventos de tiempo, dialogo y musica --------------
+    // Segundos de juego en el nivel (sin pausas ni pantallas encima) y los del
+    // ultimo cuadro: el reloj de "Al pasar un tiempo". Vuelve a 0 en PrepareLevel.
+    float levelTime = 0.0f;
+    float lastFrameTime = 0.0f;
+    // E se apreto en este cuadro y no la uso una tienda: "Al hablar con".
+    bool interactForEvents = false;
+    // Los dialogos de "Mostrar dialogo" que faltan leer, en orden. Mientras
+    // haya alguno, el juego espera (como con la tienda abierta).
+    struct DialogLine
+    {
+        std::string speaker;
+        std::string text;
+    };
+    std::deque<DialogLine> dialogs;
+    // Las entidades a las que un evento "Al hablar con" escucha: junto a ellas
+    // se muestra "E: hablar". Sale de los eventos del nivel, en PrepareLevel.
+    std::unordered_set<std::string> talkableIds;
+    // La pista que suena ahora (ruta relativa a assets/), o vacio.
+    std::string currentTrack;
+    // Las entidades se guardan en un vector y los eventos, el combate y la
+    // camara les guardan punteros: crear una no puede hacer que el vector se
+    // mude de lugar. Por eso se reserva lugar para estas de mas al cargar el
+    // nivel, y no se crean mas que esas.
+    static constexpr std::size_t kSpawnReserve = 256;
+    std::size_t spawnedCount = 0;
 
     // Se llena en cada frame con lo que devuelve CollisionSystem::Flush(); el
     // trigger on_collision consulta esta lista.

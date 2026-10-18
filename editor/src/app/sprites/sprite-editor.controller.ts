@@ -15,10 +15,12 @@ import {
   compositeFrame,
   createDoc,
   docFromImage,
+  docFromLayers,
   duplicateLayer,
   flipPixels,
   floodFill,
   hexToRgba,
+  layerStripPixels,
   linePoints,
   moveFrame,
   moveLayer,
@@ -37,6 +39,7 @@ import {
   uniqueColors,
 } from '../core/sprite-doc';
 import { readSpriteFrames, withSpriteFrames } from '../core/sprite-frames';
+import { StoredLayers, readSpriteLayers, withSpriteLayers } from '../core/sprite-layers';
 import { decodeImage } from '../core/texture-fit';
 import { ProjectService } from '../services/project.service';
 import type { IconName } from '../ui/icons.generated';
@@ -130,20 +133,69 @@ function readPixels(image: HTMLImageElement): Uint8ClampedArray {
   return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 }
 
-/** Los cuadros del sprite uno al lado del otro, como PNG en base64. */
-function encodePng(doc: SpriteDoc): string {
-  const strip = stripPixels(doc);
+/** Pixeles RGBA como PNG en base64. */
+function encodePixels(pixels: Uint8ClampedArray, width: number, height: number): string {
   const canvas = document.createElement('canvas');
-  canvas.width = strip.width;
-  canvas.height = strip.height;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     throw new Error('el navegador no dio un contexto 2D para armar el PNG');
   }
-  const image = ctx.createImageData(strip.width, strip.height);
-  image.data.set(strip.pixels);
+  const image = ctx.createImageData(width, height);
+  image.data.set(pixels);
   ctx.putImageData(image, 0, 0);
   return canvas.toDataURL('image/png').slice('data:image/png;base64,'.length);
+}
+
+/** Los cuadros del sprite uno al lado del otro, como PNG en base64. */
+function encodePng(doc: SpriteDoc): string {
+  const strip = stripPixels(doc);
+  return encodePixels(strip.pixels, strip.width, strip.height);
+}
+
+/**
+ * Las capas del sprite para guardar dentro del PNG (ver core/sprite-layers.ts),
+ * o null si no hace falta: con una sola capa visible, la imagen ya es esa capa.
+ */
+function storedLayers(doc: SpriteDoc): StoredLayers | null {
+  if (doc.layers.length === 1 && doc.layers[0].visible) {
+    return null;
+  }
+  return {
+    width: doc.width,
+    height: doc.height,
+    frames: doc.frames.length,
+    layers: doc.layers.map((layer) => ({
+      name: layer.name,
+      visible: layer.visible,
+      png: encodePixels(layerStripPixels(doc, layer.id), doc.width * doc.frames.length, doc.height),
+    })),
+  };
+}
+
+/**
+ * El sprite con sus capas, si la imagen las trae (la guardo esta herramienta
+ * y nadie la cambio despues). Null si no, y se abre aplanada.
+ */
+async function docWithStoredLayers(dataUrl: string, image: HTMLImageElement): Promise<SpriteDoc | null> {
+  const stored = readSpriteLayers(dataUrl);
+  if (!stored || stored.width * stored.frames !== image.naturalWidth || stored.height !== image.naturalHeight) {
+    return null;
+  }
+  try {
+    const strips = [];
+    for (const layer of stored.layers) {
+      const decoded = await decodeImage('data:image/png;base64,' + layer.png);
+      if (decoded.naturalWidth !== image.naturalWidth || decoded.naturalHeight !== image.naturalHeight) {
+        return null;
+      }
+      strips.push({ name: layer.name, visible: layer.visible, pixels: readPixels(decoded) });
+    }
+    return docFromLayers(stored.width, stored.height, stored.frames, strips);
+  } catch {
+    return null;
+  }
 }
 
 /** Lo que la herramienta de sprites necesita del editor. */
@@ -382,12 +434,17 @@ export class SpriteEditorController {
       }
       const image = await decodeImage(data.dataUrl);
       const strip = frames > 1 ? null : readSpriteFrames(data.dataUrl);
-      const doc = docFromImage(readPixels(image), image.naturalWidth, image.naturalHeight, strip?.frames ?? frames);
+      // Con sus capas si las trae; partirla a mano en otros cuadros las descarta.
+      const layered = frames > 1 ? null : await docWithStoredLayers(data.dataUrl, image);
+      const doc =
+        layered ?? docFromImage(readPixels(image), image.naturalWidth, image.naturalHeight, strip?.frames ?? frames);
       this.load(doc, name);
       if (strip) {
         this.frameDuration.set(strip.frameDuration);
       }
-      const detail = doc.frames.length > 1 ? `${doc.frames.length} cuadros de ${doc.width}×${doc.height}` : `${doc.width}×${doc.height}`;
+      const detail =
+        (doc.frames.length > 1 ? `${doc.frames.length} cuadros de ${doc.width}×${doc.height}` : `${doc.width}×${doc.height}`) +
+        (doc.layers.length > 1 ? `, ${doc.layers.length} capas` : '');
       this.deps.note(`Abierta ${name} (${detail}). Al guardar se pide un nombre: la original no se toca.`);
     } catch (error) {
       this.deps.note(`No se pudo abrir ${name}: ${this.deps.describe(error)}`);
@@ -447,8 +504,8 @@ export class SpriteEditorController {
       confirmLabel: 'Guardar',
       hint:
         doc.frames.length > 1
-          ? `Va a assets/textures/ como PNG, con los ${doc.frames.length} cuadros uno al lado del otro. Las capas ocultas no se guardan.`
-          : 'Va a assets/textures/ como PNG. Las capas ocultas no se guardan.',
+          ? `Va a assets/textures/ como PNG, con los ${doc.frames.length} cuadros uno al lado del otro. Las capas se guardan adentro: al volver a abrirla siguen separadas, y las ocultas no se ven en el juego.`
+          : 'Va a assets/textures/ como PNG. Las capas se guardan adentro: al volver a abrirla siguen separadas, y las ocultas no se ven en el juego.',
     });
     if (answer) {
       await this.write(withoutPng(answer) + '.png', false);
@@ -464,7 +521,10 @@ export class SpriteEditorController {
     try {
       // Los cuadros van dentro del PNG: al elegirlo para un personaje o una
       // entidad, el editor los pone solo (ver core/sprite-frames.ts).
-      const png = withSpriteFrames(encodePng(doc), { frames: doc.frames.length, frameDuration: this.frameDuration() });
+      // Y las capas, para que al volver a abrirla no lleguen aplanadas.
+      const framed = withSpriteFrames(encodePng(doc), { frames: doc.frames.length, frameDuration: this.frameDuration() });
+      const layers = storedLayers(doc);
+      const png = layers ? withSpriteLayers(framed, layers) : framed;
       let result = await this.project.writeTexture(name, png, overwrite);
       let replaced = overwrite;
       if (result.status === 'exists') {

@@ -8,6 +8,7 @@
 
 #include "EventSystem.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <exception>
 #include <iostream>
@@ -33,6 +34,8 @@ void EventSystem::LoadEvents(std::vector<EventDefinition> events) {
     wasActive_.assign(events_.size(), false);
     fired_.assign(events_.size(), false);
     reported_.assign(events_.size(), false);
+    // Las esperas apuntan a eventos de la lista anterior.
+    pending_.clear();
 }
 
 void EventSystem::SetNonRepeatable(std::unordered_set<std::string> oneShotTriggers,
@@ -138,7 +141,27 @@ bool EventSystem::IsActive(const EventDefinition& event) const {
 // daba igual, pero "Al eliminar una entidad -> pasar de nivel" o "al tocar ->
 // reproducir sonido" se repetian sesenta veces por segundo. Un evento de
 // NoCode se lee como "cuando pase X", y eso es un instante, no un estado.
-void EventSystem::Update() {
+void EventSystem::Update(float deltaTime) {
+    // Primero las esperas que se cumplieron, en el orden en que se agendaron.
+    // Se sacan de la lista ANTES de correrlas: lo que corren puede agendar
+    // otras (una segunda espera del mismo evento), y esas esperan al proximo
+    // cuadro aunque digan 0 segundos.
+    if (!pending_.empty()) {
+        std::vector<Pending> due;
+        for (auto it = pending_.begin(); it != pending_.end();) {
+            it->remaining -= deltaTime;
+            if (it->remaining <= 0.0f) {
+                due.push_back(*it);
+                it = pending_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        for (const Pending& entry : due) {
+            RunActions(entry.event, entry.nextAction, entry.skipRewards);
+        }
+    }
+
     // Por indice y no con for-each: wasActive_ va en paralelo a events_.
     for (std::size_t index = 0; index < events_.size(); ++index) {
         const EventDefinition& event = events_[index];
@@ -162,23 +185,57 @@ void EventSystem::Update() {
         // dar (ver SetNonRepeatable). Se decide ANTES de marcarlo disparado.
         const bool skipRewards = fired_[index] && oneShotTriggers_.count(event.trigger.type) > 0;
         fired_[index] = true;
+        RunActions(index, 0, skipRewards);
+    }
+}
 
-        // Acciones: en el orden en que el usuario las puso en el editor. Una
-        // accion desconocida se saltea sin cortar las siguientes.
-        for (const auto& action : event.actions) {
-            if (skipRewards && rewardActions_.count(action.type) > 0) {
-                continue;
-            }
-            auto actionIt = actions_.find(action.type);
-            if (actionIt == actions_.end()) {
-                continue;
-            }
-            // Lo mismo con una accion: se saltea esa y siguen las demas.
-            try {
-                actionIt->second(action.params);
-            } catch (const std::exception& error) {
-                ReportFailure(index, "la accion \"" + action.type + "\"", error);
-            }
+namespace {
+
+// Los segundos de una espera. Acepta numero o texto con un numero, como los
+// demas parametros numericos (ver NumberParam en game/EventBindings.cpp).
+float WaitSeconds(const nlohmann::json& params) {
+    if (!params.is_object() || !params.contains("seconds")) {
+        return 1.0f;
+    }
+    const auto& value = params.at("seconds");
+    float seconds = 1.0f;
+    if (value.is_number()) {
+        seconds = value.get<float>();
+    } else if (value.is_string()) {
+        try {
+            seconds = std::stof(value.get<std::string>());
+        } catch (const std::exception&) {
+        }
+    }
+    // Sin NaN ni negativos; una hora de tope, para no dejar nada colgado de mas.
+    return seconds > 0.0f ? std::min(seconds, 3600.0f) : 0.0f;
+}
+
+}  // namespace
+
+// Acciones: en el orden en que el usuario las puso en el editor. Una accion
+// desconocida se saltea sin cortar las siguientes; una espera corta ahi y
+// agenda el resto.
+void EventSystem::RunActions(std::size_t index, std::size_t first, bool skipRewards) {
+    const EventDefinition& event = events_[index];
+    for (std::size_t step = first; step < event.actions.size(); ++step) {
+        const EventStep& action = event.actions[step];
+        if (action.type == kWaitAction) {
+            pending_.push_back(Pending{index, step + 1, WaitSeconds(action.params), skipRewards});
+            return;
+        }
+        if (skipRewards && rewardActions_.count(action.type) > 0) {
+            continue;
+        }
+        auto actionIt = actions_.find(action.type);
+        if (actionIt == actions_.end()) {
+            continue;
+        }
+        // Lo mismo con una accion: se saltea esa y siguen las demas.
+        try {
+            actionIt->second(action.params);
+        } catch (const std::exception& error) {
+            ReportFailure(index, "la accion \"" + action.type + "\"", error);
         }
     }
 }

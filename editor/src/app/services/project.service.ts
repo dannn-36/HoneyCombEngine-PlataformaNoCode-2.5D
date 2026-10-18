@@ -13,6 +13,8 @@ import type {
   LevelImport,
   ProjectFileData,
   ProjectNode,
+  RecoveryPayload,
+  SoundImportResult,
   TextureWriteResult,
   WorkspaceInfo,
 } from '../electron-api';
@@ -32,13 +34,54 @@ import { EventCatalog } from '../models/event-catalog.model';
 import { Level } from '../models/level.model';
 
 /**
- * El nivel cambio en el disco desde que el editor lo leyo o lo guardo por
- * ultima vez (ver ProjectService.saveLevel). No se escribio nada.
+ * Un archivo del proyecto cambio en el disco desde que el editor lo leyo o lo
+ * guardo por ultima vez (ver ProjectService.writeChecked). No se escribio nada.
  */
-export class LevelChangedOnDiskError extends Error {
+export class FileChangedOnDiskError extends Error {
   constructor(readonly relativePath: string) {
     super(`${relativePath} cambió en el disco desde que se abrió.`);
+    this.name = 'FileChangedOnDiskError';
+  }
+}
+
+/** El NIVEL cambio en el disco (ver ProjectService.saveLevel). */
+export class LevelChangedOnDiskError extends FileChangedOnDiskError {
+  constructor(relativePath: string) {
+    super(relativePath);
     this.name = 'LevelChangedOnDiskError';
+  }
+}
+
+/** Lo que guarda una biblioteca del proyecto: con overwrite, aunque el archivo haya cambiado en el disco. */
+export type CheckedWrite = (options: { overwrite?: boolean }) => Promise<void>;
+
+/**
+ * Guarda con "write" y, si el archivo cambio en el disco por fuera (otro
+ * programa, una copia del proyecto, git), pregunta antes de pisarlo. Devuelve
+ * true si se escribio y false si la persona eligio no reemplazarlo; cualquier
+ * otro error sigue de largo.
+ *
+ * Es el mismo trato que tiene el nivel al guardar (ver ProjectController), para
+ * las bibliotecas: game.json, items.json y characters.json.
+ */
+export async function writeOrConfirm(write: CheckedWrite, what: string): Promise<boolean> {
+  try {
+    await write({});
+    return true;
+  } catch (error) {
+    if (!(error instanceof FileChangedOnDiskError)) {
+      throw error;
+    }
+    const replace = window.confirm(
+      `${error.relativePath} cambió en el disco desde que el editor lo leyó (otro programa, una copia del ` +
+        `proyecto o git). ¿Reemplazarlo con ${what}?\n\n` +
+        `La versión del disco quedará en ${error.relativePath}.bak.`,
+    );
+    if (!replace) {
+      return false;
+    }
+    await write({ overwrite: true });
+    return true;
   }
 }
 
@@ -129,7 +172,7 @@ export class ProjectService {
       this.projectRoot.set(root);
       // Las rutas son relativas a la carpeta: lo conocido de la anterior no
       // dice nada de los archivos de esta.
-      this.knownLevelText.clear();
+      this.knownText.clear();
     }
     return root;
   }
@@ -137,6 +180,63 @@ export class ProjectService {
   /** Abre la carpeta del editor en el explorador de archivos del sistema. */
   async revealWorkspace(): Promise<void> {
     return window.honeycombProject.revealWorkspace();
+  }
+
+  /**
+   * Archivo › Nuevo proyecto: una carpeta vacia con la estructura y las
+   * imagenes basicas, que pasa a ser la carpeta del editor. Null si se cancelo.
+   */
+  async createProject(): Promise<{ root: string; copied: string[] } | null> {
+    const created = await window.honeycombProject.createProject();
+    if (created) {
+      this.projectRoot.set(created.root);
+      this.knownText.clear();
+    }
+    return created;
+  }
+
+  /** Copia sonidos elegidos con el dialogo a assets/sounds/ (ver ipc/sounds.js). */
+  async importSounds(): Promise<SoundImportResult> {
+    return window.honeycombProject.importSounds();
+  }
+
+  /**
+   * Lo que el motor rechazaria del nivel guardado en "fileName", segun
+   * schema/level.schema.json. Se revisa el texto que el editor acaba de
+   * escribir, sin volver a leerlo. Vacio = cumple el contrato.
+   */
+  async checkSavedLevel(relativePath: string): Promise<string[]> {
+    const contents = this.knownText.get(relativePath);
+    return contents ? window.honeycombProject.checkLevel(contents) : [];
+  }
+
+  // --- Guardado automatico (ver ipc/recovery.js) ------------------------------
+
+  async writeRecovery(payload: RecoveryPayload): Promise<void> {
+    return window.honeycombProject.writeRecovery(payload);
+  }
+
+  /**
+   * La copia del guardado automatico, con el nivel ya revisado como al abrir
+   * un archivo. Null si no hay, o si lo que hay no es un nivel que se pueda abrir.
+   */
+  async readRecovery(): Promise<{ level: Level; fileName: string | null; openedPath: string | null; savedAt: string } | null> {
+    const data = await window.honeycombProject.readRecovery();
+    if (!data) {
+      return null;
+    }
+    try {
+      const level = parseLevel(JSON.stringify(data.level), 'la copia de recuperación');
+      const fileName = typeof data.fileName === 'string' && data.fileName ? data.fileName : null;
+      const openedPath = typeof data.openedPath === 'string' && data.openedPath ? data.openedPath : null;
+      return { level, fileName, openedPath, savedAt: data.savedAt };
+    } catch {
+      return null;
+    }
+  }
+
+  async clearRecovery(): Promise<void> {
+    return window.honeycombProject.clearRecovery();
   }
 
   /** Crea una carpeta dentro de la carpeta del editor. Falla si ya existe. */
@@ -154,6 +254,54 @@ export class ProjectService {
     return names.filter((name) => name.endsWith('.json'));
   }
 
+  /**
+   * Todos los niveles del proyecto, tambien los de subcarpetas de levels/
+   * (hasta tres niveles), como ruta relativa completa: "levels/a.json",
+   * "levels/mundo2/b.json". Para lo que tiene que recorrer el juego entero.
+   */
+  async listLevelPaths(): Promise<string[]> {
+    const paths: string[] = [];
+    // Primero los de cada carpeta y despues sus subcarpetas, como listTextures().
+    const walk = async (dir: string, depth: number): Promise<void> => {
+      const entries = await window.honeycombProject.listEntries(dir);
+      for (const entry of entries) {
+        if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.json')) {
+          paths.push(entry.path);
+        }
+      }
+      for (const entry of entries) {
+        if (entry.kind === 'dir' && depth < 3) {
+          await walk(entry.path, depth + 1);
+        }
+      }
+    };
+    await walk('levels', 0);
+    return paths;
+  }
+
+  /**
+   * Cambia un nivel del disco sin abrirlo en el editor: lee el JSON tal cual,
+   * "change" lo modifica en su lugar y devuelve si cambio algo, y solo entonces
+   * se escribe. Se toca el JSON crudo y no un Level ya normalizado, para que el
+   * archivo quede igual salvo lo que se cambio (el diff en git es solo eso).
+   * Devuelve si se escribio. Un archivo que no es un objeto JSON se deja como esta.
+   */
+  async rewriteLevelJson(relativePath: string, change: (raw: Record<string, unknown>) => boolean): Promise<boolean> {
+    const contents = await window.honeycombProject.readFile(relativePath);
+    this.knownText.set(relativePath, contents);
+    let raw: unknown;
+    try {
+      raw = JSON.parse(contents);
+    } catch {
+      return false;
+    }
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !change(raw as Record<string, unknown>)) {
+      return false;
+    }
+    await this.writeChecked(relativePath, JSON.stringify(raw, null, 2), false, (path) => new LevelChangedOnDiskError(path));
+    return true;
+  }
+
   async readLevel(fileName: string): Promise<Level> {
     return this.readLevelAt(`levels/${fileName}`);
   }
@@ -166,7 +314,7 @@ export class ProjectService {
   async readLevelAt(relativePath: string): Promise<Level> {
     const contents = await window.honeycombProject.readFile(relativePath);
     const level = parseLevel(contents, relativePath);
-    this.knownLevelText.set(relativePath, contents);
+    this.knownText.set(relativePath, contents);
     return level;
   }
 
@@ -222,16 +370,57 @@ export class ProjectService {
       return null;
     }
     const level = parseLevel(result.contents, result.relativePath);
-    this.knownLevelText.set(result.relativePath, result.contents);
+    this.knownText.set(result.relativePath, result.contents);
     return { relativePath: result.relativePath, level, imported: result.imported };
   }
 
   /**
-   * Lo ultimo que el editor leyo o escribio de cada nivel, tal cual estaba en el
-   * disco, por ruta relativa. Es lo que permite darse cuenta, al guardar, de
-   * que el archivo cambio por fuera desde entonces (ver saveLevel).
+   * Lo ultimo que el editor leyo o escribio de cada archivo que guarda (los
+   * niveles y las bibliotecas), tal cual estaba en el disco, por ruta relativa.
+   * null = cuando se leyo, no existia. Es lo que permite darse cuenta, al
+   * guardar, de que el archivo cambio por fuera desde entonces (ver writeChecked).
    */
-  private readonly knownLevelText = new Map<string, string>();
+  private readonly knownText = new Map<string, string | null>();
+
+  /**
+   * Escribe un archivo del proyecto sin pisar cambios hechos por fuera.
+   *
+   * Si el editor ya conocia ese archivo (lo leyo o lo guardo antes) y en el
+   * disco ya no esta igual, NO lo pisa: falla con FileChangedOnDiskError (o
+   * "changedError", para el nivel). Lo pudo cambiar otro programa, una copia
+   * del proyecto o un "git pull", y guardar sin mirar borraria ese trabajo. Con
+   * overwrite se escribe igual: la persona eligio reemplazarlo, y la version
+   * del disco queda en .bak (ver ipc/safe-write.js).
+   *
+   * Un archivo que ya no esta no se pierde por escribirlo de nuevo, asi que
+   * eso no cuenta como cambio. Uno que no existia y ahora si, cuenta.
+   */
+  private async writeChecked(
+    relativePath: string,
+    contents: string,
+    overwrite: boolean,
+    changedError: (path: string) => FileChangedOnDiskError = (path) => new FileChangedOnDiskError(path),
+  ): Promise<void> {
+    const known = this.knownText.get(relativePath);
+    if (known !== undefined && !overwrite) {
+      const onDisk = await this.readTextIfExists(relativePath);
+      if (onDisk !== null && onDisk !== known) {
+        throw changedError(relativePath);
+      }
+    }
+    await window.honeycombProject.writeFile(relativePath, contents);
+    this.knownText.set(relativePath, contents);
+  }
+
+  /**
+   * Lee un archivo de biblioteca y lo anota como conocido. null si no existe
+   * (que tambien se anota: si aparece por fuera antes de guardar, se pregunta).
+   */
+  private async readKnown(relativePath: string): Promise<string | null> {
+    const contents = await this.readTextIfExists(relativePath);
+    this.knownText.set(relativePath, contents);
+    return contents;
+  }
 
   /**
    * Guarda un nivel en levels/.
@@ -247,18 +436,13 @@ export class ProjectService {
    * linea gigante.
    */
   async saveLevel(fileName: string, level: Level, options: { overwrite?: boolean } = {}): Promise<void> {
-    const relativePath = `levels/${fileName}`;
+    await this.saveLevelAt(`levels/${fileName}`, level, options);
+  }
+
+  /** Igual que saveLevel(), con la ruta relativa completa (un nivel de una subcarpeta de levels/). */
+  async saveLevelAt(relativePath: string, level: Level, options: { overwrite?: boolean } = {}): Promise<void> {
     const contents = JSON.stringify(level, null, 2);
-    const known = this.knownLevelText.get(relativePath);
-    if (known !== undefined && !options.overwrite) {
-      const onDisk = await this.readTextIfExists(relativePath);
-      // Un archivo que ya no esta no se pierde por escribirlo de nuevo.
-      if (onDisk !== null && onDisk !== known) {
-        throw new LevelChangedOnDiskError(relativePath);
-      }
-    }
-    await window.honeycombProject.writeFile(relativePath, contents);
-    this.knownLevelText.set(relativePath, contents);
+    await this.writeChecked(relativePath, contents, !!options.overwrite, (path) => new LevelChangedOnDiskError(path));
   }
 
   /** El texto de un archivo del proyecto, o null si no existe. */
@@ -292,14 +476,9 @@ export class ProjectService {
    * guardado pise un archivo que solo no se pudo leer.
    */
   async readCharacterPresets(): Promise<CharacterPreset[]> {
-    let contents: string;
-    try {
-      contents = await window.honeycombProject.readFile(CHARACTERS_FILE);
-    } catch (error) {
-      if (String(error).includes('ENOENT')) {
-        return [];
-      }
-      throw error;
+    const contents = await this.readKnown(CHARACTERS_FILE);
+    if (contents === null) {
+      return [];
     }
 
     let raw: unknown;
@@ -312,8 +491,9 @@ export class ProjectService {
     return Array.isArray(list) ? list.map((preset) => normalizePreset(preset)) : [];
   }
 
-  async writeCharacterPresets(presets: CharacterPreset[]): Promise<void> {
-    await window.honeycombProject.writeFile(CHARACTERS_FILE, JSON.stringify({ presets }, null, 2));
+  /** Falla con FileChangedOnDiskError si characters.json cambio por fuera, salvo con overwrite. */
+  async writeCharacterPresets(presets: CharacterPreset[], options: { overwrite?: boolean } = {}): Promise<void> {
+    await this.writeChecked(CHARACTERS_FILE, JSON.stringify({ presets }, null, 2), !!options.overwrite);
   }
 
   /**
@@ -322,14 +502,9 @@ export class ProjectService {
    * guardado no pise un archivo que solo no se pudo leer.
    */
   async readItemLibrary(): Promise<ItemDef[]> {
-    let contents: string;
-    try {
-      contents = await window.honeycombProject.readFile(ITEMS_FILE);
-    } catch (error) {
-      if (String(error).includes('ENOENT')) {
-        return [];
-      }
-      throw error;
+    const contents = await this.readKnown(ITEMS_FILE);
+    if (contents === null) {
+      return [];
     }
 
     let raw: unknown;
@@ -342,8 +517,9 @@ export class ProjectService {
     return Array.isArray(list) ? list.map((item) => normalizeItem(item)) : [];
   }
 
-  async writeItemLibrary(items: ItemDef[]): Promise<void> {
-    await window.honeycombProject.writeFile(ITEMS_FILE, JSON.stringify({ items }, null, 2));
+  /** Falla con FileChangedOnDiskError si items.json cambio por fuera, salvo con overwrite. */
+  async writeItemLibrary(items: ItemDef[], options: { overwrite?: boolean } = {}): Promise<void> {
+    await this.writeChecked(ITEMS_FILE, JSON.stringify({ items }, null, 2), !!options.overwrite);
   }
 
   /**
@@ -352,14 +528,9 @@ export class ProjectService {
    * characters.json: tratarlo como vacio haria que guardar pise lo que habia.
    */
   async readGameConfig(): Promise<{ config: GameConfig; exists: boolean }> {
-    let contents: string;
-    try {
-      contents = await window.honeycombProject.readFile(GAME_FILE);
-    } catch (error) {
-      if (String(error).includes('ENOENT')) {
-        return { config: normalizeGameConfig(undefined), exists: false };
-      }
-      throw error;
+    const contents = await this.readKnown(GAME_FILE);
+    if (contents === null) {
+      return { config: normalizeGameConfig(undefined), exists: false };
     }
     try {
       return { config: normalizeGameConfig(JSON.parse(contents)), exists: true };
@@ -368,8 +539,9 @@ export class ProjectService {
     }
   }
 
-  async writeGameConfig(config: GameConfig): Promise<void> {
-    await window.honeycombProject.writeFile(GAME_FILE, JSON.stringify(gameConfigForDisk(config), null, 2));
+  /** Falla con FileChangedOnDiskError si game.json cambio por fuera, salvo con overwrite. */
+  async writeGameConfig(config: GameConfig, options: { overwrite?: boolean } = {}): Promise<void> {
+    await this.writeChecked(GAME_FILE, JSON.stringify(gameConfigForDisk(config), null, 2), !!options.overwrite);
   }
 
   /**

@@ -252,6 +252,11 @@ export interface Level {
   backgroundColor?: RgbColor;
   /** Imagen de fondo, encima del color: lo transparente deja ver el color. */
   backgroundImage?: BackgroundImage;
+  /**
+   * Musica del nivel: ruta relativa a assets/ ("sounds/tema.ogg"). Suena en
+   * bucle mientras se juega. Ausente = el nivel no tiene musica.
+   */
+  music?: string;
   /** Camara del runtime. Ausente = fija, con el nivel centrado y zoom 1, como siempre. */
   camera?: CameraConfig;
   grid: GridConfig;

@@ -14,7 +14,8 @@
 //
 // AL GUARDAR, los cuadros van uno al lado del otro en un solo PNG (stripPixels):
 // es como anima el motor ("frames" en schema/level.schema.json, desde
-// sourceRect). Las capas ocultas no se guardan.
+// sourceRect), con las capas visibles compuestas. Las capas, ocultas incluidas,
+// van ademas por separado dentro del mismo PNG (ver core/sprite-layers.ts).
 
 import { hexToRgb, rgbToHex } from './color';
 
@@ -126,6 +127,61 @@ export function docFromImage(pixels: Uint8ClampedArray, width: number, height: n
     cels: { [layer.id]: cropPixels(pixels, width, index * frameWidth, 0, frameWidth, height) },
   }));
   return { width: frameWidth, height, layers: [layer], frames };
+}
+
+/** Una capa con los pixeles de todos sus cuadros uno al lado del otro: como se guarda (ver core/sprite-layers.ts). */
+export interface LayerStrip {
+  name: string;
+  visible: boolean;
+  pixels: Uint8ClampedArray;
+}
+
+/**
+ * Un sprite con sus capas, a partir de las tiras de cada una (cuadros de
+ * width x height, "frameCount" uno al lado del otro). Es lo que se guardo con
+ * la herramienta, de vuelta como estaba. Falla si las tiras no tienen el
+ * tamaño que dicen tener.
+ */
+export function docFromLayers(width: number, height: number, frameCount: number, strips: readonly LayerStrip[]): SpriteDoc {
+  if (width > SPRITE_SIDE_MAX || height > SPRITE_SIDE_MAX || width < 1 || height < 1) {
+    throw new Error(`La herramienta de sprites abre imágenes de hasta ${SPRITE_SIDE_MAX} px por lado.`);
+  }
+  if (frameCount < 1 || frameCount > SPRITE_FRAMES_MAX) {
+    throw new Error(`Un sprite tiene como mucho ${SPRITE_FRAMES_MAX} cuadros.`);
+  }
+  if (strips.length < 1 || strips.length > SPRITE_LAYERS_MAX) {
+    throw new Error(`Un sprite tiene entre 1 y ${SPRITE_LAYERS_MAX} capas.`);
+  }
+  const stripWidth = width * frameCount;
+  const layers = strips.map((strip) => {
+    if (strip.pixels.length !== stripWidth * height * 4) {
+      throw new Error(`La capa «${strip.name}» no tiene el tamaño del sprite.`);
+    }
+    return { id: newId('capa'), name: strip.name || 'Capa', visible: strip.visible };
+  });
+  const frames = Array.from({ length: frameCount }, (_, index) => ({
+    id: newId('cuadro'),
+    cels: Object.fromEntries(
+      layers.map((layer, layerIndex) => [
+        layer.id,
+        cropPixels(strips[layerIndex].pixels, stripWidth, index * width, 0, width, height),
+      ]),
+    ),
+  }));
+  return { width, height, layers, frames };
+}
+
+/** Los pixeles de una capa en todos los cuadros, uno al lado del otro: lo que se guarda de ella. */
+export function layerStripPixels(doc: SpriteDoc, layerId: string): Uint8ClampedArray {
+  const width = doc.width * doc.frames.length;
+  const pixels = blankPixels(width, doc.height);
+  doc.frames.forEach((frame, index) => {
+    const cel = celOf(doc, frame, layerId);
+    for (let row = 0; row < doc.height; row += 1) {
+      pixels.set(cel.subarray(row * doc.width * 4, (row + 1) * doc.width * 4), (row * width + index * doc.width) * 4);
+    }
+  });
+  return pixels;
 }
 
 /**

@@ -11,9 +11,9 @@
 
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { ipcMain, dialog, shell } = require('electron');
+const { ipcMain, dialog, shell, BrowserWindow } = require('electron');
 
-const { INSTALL_ROOT, changeWorkspace, ensureProjectRoot } = require('./project-root');
+const { INSTALL_ROOT, changeWorkspace, createProject, ensureProjectRoot } = require('./project-root');
 
 /**
  * @param startup lo que devolvio initWorkspace() al arrancar. "seeded" se
@@ -38,6 +38,27 @@ function register(startup) {
     });
     if (canceled || filePaths.length === 0) return null;
     return changeWorkspace(filePaths[0]);
+  });
+
+  // Archivo > Nuevo proyecto: elegir (o crear) una carpeta VACIA, armarle la
+  // estructura con las imagenes basicas, y pasar a trabajar ahi. Devuelve la
+  // carpeta y lo que se copio, o null si se cancelo.
+  ipcMain.handle('workspace:createProject', async (event) => {
+    const current = await ensureProjectRoot();
+    const window = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: 'Elegí una carpeta vacía para el proyecto nuevo',
+      buttonLabel: 'Crear el proyecto aquí',
+      defaultPath: path.dirname(current),
+      properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
+    };
+    const { canceled, filePaths } = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options);
+    if (canceled || filePaths.length === 0) return null;
+    const copied = await createProject(filePaths[0]);
+    const root = await changeWorkspace(filePaths[0]);
+    return { root, copied };
   });
 
   ipcMain.handle('workspace:reveal', async () => {

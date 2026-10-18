@@ -32,8 +32,9 @@ export class GameConfigService {
     this.exists.set(exists);
   }
 
-  async save(config: GameConfig): Promise<void> {
-    await this.project.writeGameConfig(config);
+  /** Falla con FileChangedOnDiskError si game.json cambio por fuera, salvo con overwrite. */
+  async save(config: GameConfig, options: { overwrite?: boolean } = {}): Promise<void> {
+    await this.project.writeGameConfig(config, options);
     this.config.set(config);
     this.exists.set(true);
   }

@@ -25,6 +25,7 @@
 // =============================================================================
 
 import { iconImage } from './cell-image';
+import type { EditorGuide } from './editor-guide';
 import { characterOf } from './characters';
 import { entityKindStyle } from './entity-kinds';
 import { blockCenter, entitySpan } from './entity-blocks';
@@ -68,6 +69,12 @@ export interface CanvasScene {
   hovered(): GridCoord | null;
   showGrid(): boolean;
   gridOnTop(): boolean;
+  /**
+   * La guia del editor: lineas de referencia alrededor del nivel (ver
+   * core/editor-guide.ts). Solo se dibuja; no cambia nada del nivel. Sin la
+   * funcion, no hay guia.
+   */
+  guide?(): EditorGuide;
   showColliders(): boolean;
   roomDraft(): { col: number; row: number; width: number; height: number } | null;
   roomDrag():
@@ -293,6 +300,35 @@ export class IsoCanvasRenderer {
     // su base en ese punto -- se vea parada sobre su casilla y no medio tile
     // por encima. Antes el editor lo dibujaba medio tile mas abajo que el
     // juego.
+    // La guia del editor, antes que todo lo del nivel: queda DETRAS del piso, y
+    // se ve solo afuera de el. Lineas de la grilla del nivel que siguen
+    // "margin" casillas por cada lado, en el tono de la grilla y tenues.
+    const guide = scene.guide?.();
+    if (guide?.visible) {
+      const from = -guide.margin;
+      const cols = grid.width + guide.margin;
+      const rows = grid.height + guide.margin;
+      ctx.save();
+      ctx.globalAlpha = guide.opacity;
+      ctx.strokeStyle = palette.gridOver;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let col = from; col <= cols; col += 1) {
+        const a = gridPoint({ col, row: from });
+        const b = gridPoint({ col, row: rows });
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+      }
+      for (let row = from; row <= rows; row += 1) {
+        const a = gridPoint({ col: from, row });
+        const b = gridPoint({ col: cols, row });
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     const diamond = (coord: GridCoord) => {
       const { x, y } = project(coord);
       ctx.beginPath();

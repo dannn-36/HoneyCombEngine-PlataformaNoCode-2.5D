@@ -36,7 +36,7 @@ const SECCIONES = ['triggers', 'conditions', 'actions'] as const;
 type Seccion = (typeof SECCIONES)[number];
 
 // Los tipos que el formulario dinamico sabe editar (CatalogParamType).
-const TIPOS_DE_PARAMETRO = ['entity_ref', 'level_ref', 'zone_ref', 'item_ref', 'variable_ref', 'choice', 'string', 'number', 'boolean'];
+const TIPOS_DE_PARAMETRO = ['entity_ref', 'level_ref', 'zone_ref', 'item_ref', 'variable_ref', 'sound_ref', 'choice', 'string', 'number', 'boolean'];
 
 /** Los type que registra el motor en engine/game/ (RegisterTrigger, RegisterCondition, RegisterAction). */
 function registradosEnMotor(): Record<Seccion, string[]> {

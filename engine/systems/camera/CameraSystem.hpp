@@ -61,8 +61,20 @@ public:
     // el rectangulo del mundo del que no salirse.
     void Update(Vector2 focus, Vector2 fixedCenter, Rectangle bounds, float deltaTime);
 
-    // Lista para GraphicsDevice::BeginWorld.
+    // Lista para GraphicsDevice::BeginWorld. Con una sacudida en curso (ver
+    // Shake), el encuadre tiembla; ScreenToWorld y WorldToScreen no: apuntar
+    // con el mouse no tiene que temblar con la pantalla.
     Camera2D GetCamera() const;
+
+    // "Sacudir la camara": la imagen tiembla "intensity" pixeles de pantalla y
+    // se va calmando hasta quedar quieta en "seconds". Una sacudida nueva
+    // reemplaza a la que hubiera. Avanza con Update.
+    void Shake(float intensity, float seconds);
+    bool IsShaking() const { return shakeRemaining_ > 0.0f; }
+    // Lo que se corre la imagen en este momento, en pixeles de pantalla.
+    Vector2 ShakeOffset() const;
+    static constexpr float kMaxShakeIntensity = 64.0f;
+    static constexpr float kMaxShakeSeconds = 10.0f;
 
     // Las dos direcciones de la transformacion. ScreenToWorld es la que usa
     // apuntar con el mouse; WorldToScreen, lo que se dibuja en pantalla
@@ -80,4 +92,10 @@ private:
     Vector2 center_{0, 0};
     // Ya calculado a partir de center_ (ver Recompute).
     Vector2 offset_{0, 0};
+    // La sacudida en curso: cuanto falta, cuanto duraba, que tan fuerte, y el
+    // reloj que mueve la oscilacion.
+    float shakeRemaining_ = 0.0f;
+    float shakeDuration_ = 0.0f;
+    float shakeIntensity_ = 0.0f;
+    float shakeClock_ = 0.0f;
 };

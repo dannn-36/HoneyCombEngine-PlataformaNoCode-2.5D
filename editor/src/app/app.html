@@ -28,9 +28,9 @@
   <!-- ===================== BARRA DE MENUS ===================== -->
   <header class="menubar">
     <div class="brand" title="HoneyComb Engine">
-      <svg class="brand__mark" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 1.6 21 6.8v10.4L12 22.4 3 17.2V6.8Z" />
-      </svg>
+      <!-- El logo de cada tema (ver brandLogo en app.ts): el claro en Pastel
+           claro, el oscuro en el resto. Los genera tools/gen-icon.mjs. -->
+      <img class="brand__mark" [src]="brandLogo()" alt="" />
       <span class="brand__name">HoneyComb</span>
     </div>
 
@@ -1438,6 +1438,38 @@
                     ejecutar (F5).
                   </p>
 
+                  <!-- Musica del nivel ("music"): suena en bucle mientras se
+                       juega. Los sonidos son los de Recursos › Sonidos; ver
+                       sounds/sounds.controller.ts. -->
+                  <div class="subhead">Música</div>
+                  <div class="appearance">
+                    <select class="input" aria-label="Música del nivel" (change)="setLevelMusic(str($event))">
+                      <option value="" [selected]="!levelMusic()">Sin música</option>
+                      @for (sound of snd.sounds(); track sound) {
+                        <option [value]="sound" [selected]="levelMusic() === sound">{{ sound }}</option>
+                      }
+                      @if (levelMusic() && !snd.sounds().includes(levelMusic())) {
+                        <option [value]="levelMusic()" selected>{{ levelMusic() }} (no está)</option>
+                      }
+                    </select>
+                    @if (levelMusic(); as music) {
+                      <button class="ibtn" type="button" (click)="snd.togglePreview(music)"
+                              [title]="snd.playing() === music ? 'Cortar' : 'Escuchar'"
+                              [attr.aria-label]="snd.playing() === music ? 'Cortar' : 'Escuchar'">
+                        <svg [hcIcon]="snd.playing() === music ? 'square' : 'play'"></svg>
+                      </button>
+                    }
+                  </div>
+                  @if (levelMusic() && hasFileSystem && !snd.sounds().includes(levelMusic())) {
+                    <p class="hint hint--warn hint--field">
+                      <svg hcIcon="triangle-alert"></svg>No se encontró «{{ levelMusic() }}» en assets/. Elige otra.
+                    </p>
+                  }
+                  <p class="hint hint--field">
+                    Suena en bucle mientras se juega el nivel. Si el nivel siguiente tiene la misma, sigue sin cortarse.
+                    Los sonidos se traen desde Recursos › Sonidos.
+                  </p>
+
                   <div class="subhead">Tamaño del mapa</div>
                   <div class="field-row">
                     <label class="field">
@@ -1676,6 +1708,43 @@
               }
             </section>
 
+            <!-- GUIA DEL EDITOR: una grilla de referencia alrededor del nivel,
+                 para ver el espacio donde se pueden dibujar salas y ubicar cosas.
+                 Es solo del editor: no se guarda en el nivel ni cambia lo que
+                 hace el motor. Ver core/editor-guide.ts. -->
+            <section class="panel">
+              <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('editor-guide')"
+                      (click)="panels.togglePanel('editor-guide')">
+                <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('editor-guide')" hcIcon="chevron-down"></svg>
+                Guía del editor
+              </button>
+              @if (!panels.isCollapsed('editor-guide')) {
+                <div class="panel__body">
+                  <label class="check">
+                    <input type="checkbox" [checked]="view.guide().visible"
+                           (change)="view.patchGuide({ visible: checked($event) })" />
+                    <span>Mostrar la guía alrededor del nivel</span>
+                  </label>
+                  @if (view.guide().visible) {
+                    <label class="field">
+                      <span>Casillas por lado</span>
+                      <input class="input" type="number" step="1" [min]="guideMarginMin" [max]="guideMarginMax"
+                             [value]="view.guide().margin" (change)="view.patchGuide({ margin: int($event) })" />
+                    </label>
+                    <label class="field">
+                      <span>Visibilidad</span>
+                      <input type="range" min="10" max="100" step="5" [value]="view.guide().opacity * 100"
+                             (input)="view.patchGuide({ opacity: num($event) / 100 })" />
+                    </label>
+                  }
+                  <p class="hint hint--field">
+                    Muestra el espacio que rodea al nivel, para ubicar salas nuevas o ver hasta dónde se puede crecer.
+                    Es solo del editor: no se guarda en el nivel, no cambia su tamaño y no se ve al jugar.
+                  </p>
+                </div>
+              }
+            </section>
+
             <!-- AVANZADO del nivel: plegado de entrada. Tamaño de casilla y el
                  seguimiento fino de la camara. -->
             <section class="panel">
@@ -1823,6 +1892,13 @@
                         (click)="converter.openAndAdd('files')"
                         title="Elegir imágenes (PNG, JPG, JPEG): se convierten y se copian a assets/textures/ de la carpeta del editor">
                   <svg hcIcon="image-plus"></svg>Importar imágenes…
+                </button>
+              }
+              @case ('sonidos') {
+                <button class="btn btn--small" type="button" [disabled]="snd.busy() || !hasFileSystem"
+                        (click)="snd.importSounds()"
+                        title="Elegir sonidos (WAV, OGG, MP3): se copian a assets/sounds/ de la carpeta del editor">
+                  <svg hcIcon="plus"></svg>Importar sonidos…
                 </button>
               }
             }
@@ -2054,6 +2130,52 @@
                     }
                   </div>
                 }
+
+                @case ('sonidos') {
+                  <!-- Sonidos del proyecto (assets/, WAV, OGG y MP3). Clic los
+                       escucha; con uno elegido, arriba se lo pone de musica del
+                       nivel. En los eventos se eligen de la misma lista
+                       ("Reproducir sonido", "Cambiar la música"). -->
+                  <div class="browser__bar">
+                    @if (snd.selected(); as sound) {
+                      <span class="browser__label"><b>{{ sound }}</b>:</span>
+                      @if (levelMusic() === sound) {
+                        <span class="hint">es la música de este nivel.</span>
+                        <button class="btn btn--small" type="button" (click)="setLevelMusic('')">Quitar la música</button>
+                      } @else {
+                        <button class="btn btn--small" type="button" (click)="setLevelMusic(sound)"
+                                title="Que suene en bucle mientras se juega este nivel">
+                          Usar como música del nivel
+                        </button>
+                      }
+                    } @else {
+                      <p class="hint">
+                        Clic en un sonido para escucharlo. Se usan en los eventos («Reproducir sonido», «Cambiar la música»)
+                        y como música del nivel.
+                      </p>
+                    }
+                  </div>
+                  <div class="tiles">
+                    @for (sound of snd.sounds(); track sound) {
+                      <button class="tile" type="button" [class.is-active]="snd.selected() === sound"
+                              [title]="sound + (snd.playing() === sound ? ': clic para cortar' : ': clic para escuchar')"
+                              (click)="snd.selected.set(sound); snd.togglePreview(sound)">
+                        <span class="tile__art">
+                          <svg class="tile__glyph" [hcIcon]="snd.playing() === sound ? 'square' : 'music'"></svg>
+                          @if (levelMusic() === sound) {
+                            <span class="tile__type">Música del nivel</span>
+                          }
+                        </span>
+                        <span class="tile__name">{{ snd.label(sound) }}</span>
+                      </button>
+                    } @empty {
+                      <div class="empty">
+                        <p class="empty__title">Todavía no hay sonidos</p>
+                        <p>Con <b>Importar sonidos…</b> traes WAV, OGG o MP3 al proyecto, a assets/sounds/.</p>
+                      </div>
+                    }
+                  </div>
+                }
               }
             </div>
           </div>
@@ -2126,6 +2248,27 @@
                         }
                         <option [value]="newVariableOption">+ Nueva variable…</option>
                       </select>
+                    }
+                    <!-- Un sonido de assets/, de los de Recursos › Sonidos, con un
+                         boton para escucharlo sin salir del evento. -->
+                    @case ('sound_ref') {
+                      <select class="select-lone"
+                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                        <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— sonido —</option>
+                        @for (sound of snd.sounds(); track sound) {
+                          <option [value]="sound" [selected]="ev.paramValue(step, row.key) === sound">{{ sound }}</option>
+                        }
+                        @if (ev.paramValue(step, row.key) && !snd.sounds().includes(ev.paramValue(step, row.key))) {
+                          <option [value]="ev.paramValue(step, row.key)" selected>{{ ev.paramValue(step, row.key) }} (no está)</option>
+                        }
+                      </select>
+                      @if (ev.paramValue(step, row.key); as sound) {
+                        <button class="ibtn" type="button" (click)="$event.preventDefault(); snd.togglePreview(sound)"
+                                [title]="snd.playing() === sound ? 'Cortar' : 'Escuchar'"
+                                [attr.aria-label]="snd.playing() === sound ? 'Cortar' : 'Escuchar'">
+                          <svg [hcIcon]="snd.playing() === sound ? 'square' : 'play'"></svg>
+                        </button>
+                      }
                     }
                     <!-- Una de las opciones que declara el catalogo (la comparacion de una variable). -->
                     @case ('choice') {
@@ -2248,11 +2391,16 @@
                     <img [src]="file.data.dataUrl" [alt]="file.path" />
                   </div>
                 }
+                @case ('audio') {
+                  <div class="fileview fileview--image">
+                    <audio controls [src]="file.data.dataUrl" [attr.aria-label]="file.path"></audio>
+                  </div>
+                }
                 @default {
                   <p class="empty">
                     @if (explorer.isTooLargeToPreview(file)) {
-                      {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }}: es una imagen, pero demasiado
-                      pesada para previsualizarla aquí.
+                      {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }}: es una imagen o un sonido, pero
+                      demasiado pesado para previsualizarlo aquí.
                     } @else {
                       {{ file.path }} pesa {{ explorer.fileSize(file.data.size) }} y no es texto ni imagen:
                       el editor no puede mostrarlo.

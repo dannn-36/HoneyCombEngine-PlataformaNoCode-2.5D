@@ -39,6 +39,13 @@ set(HONEYCOMB_ENGINE_SOURCES core/GraphicsDevice.cpp core/ResourceManager.cpp
 
 add_executable(engine main.cpp ${HONEYCOMB_ENGINE_SOURCES})
 target_link_libraries(engine PRIVATE raylib SDL2::SDL2 nlohmann_json::nlohmann_json)
+
+# En Windows, el icono de HoneyComb dentro del .exe (ver resources/engine.rc).
+# Con MinGW lo compila windres; con MSVC, rc.exe.
+if(WIN32)
+    enable_language(RC)
+    target_sources(engine PRIVATE resources/engine.rc)
+endif()
 target_include_directories(engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Las dos compilaciones del motor, que el editor deja elegir (Ejecutar > Motor):

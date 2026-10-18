@@ -20,8 +20,12 @@ const { ipcMain, dialog } = require('electron');
 const { ensureProjectRoot, isInside } = require('./project-root');
 const { safeStem, freeName } = require('./names');
 
-/** Las claves del nivel que nombran un archivo de assets/ (ver schema/level.schema.json). */
-const ASSET_KEYS = new Set(['texture', 'soundPath', 'floorTexture']);
+/**
+ * Las claves del nivel que nombran un archivo de assets/ (ver
+ * schema/level.schema.json): las texturas, la musica del nivel, y los sonidos y
+ * musicas de los eventos (play_sound, play_music).
+ */
+const ASSET_KEYS = new Set(['texture', 'soundPath', 'floorTexture', 'music']);
 
 /** Rutas de assets/ que usa un nivel, buscadas en todo el JSON (entidades, visuales, eventos...). */
 function collectAssetRefs(value, refs = new Set()) {

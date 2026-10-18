@@ -34,6 +34,8 @@ const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
 const { app } = require('electron');
 
+const { writeFileAtomic, backupPathOf, removeStaleTempFiles } = require('./safe-write');
+
 // La carpeta del editor (editor/), que es donde vive main.js. Se calcula desde
 // __dirname de ESTE archivo, que esta un nivel mas adentro (editor/ipc/).
 const EDITOR_DIR = path.dirname(__dirname);
@@ -61,18 +63,31 @@ function defaultWorkspaceRoot() {
   return path.join(app.getPath('documents'), 'HoneyComb');
 }
 
-async function readSettings() {
+/** Un objeto JSON leido de "file", o null si no esta o no es un objeto JSON valido. */
+async function readJsonObject(file) {
   try {
-    return JSON.parse(await fs.readFile(settingsPath(), 'utf-8'));
+    const value = JSON.parse(await fs.readFile(file, 'utf-8'));
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
   } catch {
-    // Primera vez, o un archivo roto: se arranca con los valores por defecto.
-    return {};
+    return null;
   }
 }
 
+/**
+ * La configuracion del editor. Si el archivo se rompio (un guardado cortado
+ * por una version vieja, o editado a mano), se usa el respaldo .bak que deja
+ * writeFileAtomic: sin el, el editor "olvidaba" la carpeta elegida y volvia a
+ * Documentos/HoneyComb sin avisar. Sin ninguno de los dos, los valores por
+ * defecto (es la primera vez).
+ */
+async function readSettings() {
+  return (await readJsonObject(settingsPath())) ?? (await readJsonObject(backupPathOf(settingsPath()))) ?? {};
+}
+
 async function writeSettings(settings) {
-  await fs.mkdir(path.dirname(settingsPath()), { recursive: true });
-  await fs.writeFile(settingsPath(), JSON.stringify(settings, null, 2), 'utf-8');
+  // Atomica (ver ipc/safe-write.js): un corte a mitad de la escritura ya no
+  // puede dejar el archivo vacio, y el anterior queda en .bak.
+  await writeFileAtomic(settingsPath(), JSON.stringify(settings, null, 2));
 }
 
 /** true si la carpeta no existe o no tiene nada adentro. */
@@ -101,6 +116,35 @@ async function seedFromInstall(root) {
   return copied;
 }
 
+/**
+ * Lo que trae un proyecto nuevo (Archivo > Nuevo proyecto): las imagenes que
+ * usa un nivel recien creado (piso, pared y jugador, ver defaultVisuals en
+ * level.service.ts) y la hoja de figuras de Recursos > Figuras. Sin ellas el
+ * primer nivel se veria vacio en el motor, que dibuja en negro lo que no
+ * encuentra.
+ */
+const STARTER_TEXTURES = ['floor.png', 'wall.png', 'player.png', 'shapes.png'];
+
+/**
+ * Arma un proyecto nuevo en "root": la estructura de carpetas y las imagenes
+ * basicas. La carpeta tiene que estar vacia (o no existir): un proyecto nuevo
+ * no se mezcla con lo que ya habia. Devuelve las imagenes que copio.
+ */
+async function createProject(root) {
+  if (!(await isEmptyDir(root))) {
+    throw new Error('La carpeta elegida no está vacía. Elige una carpeta vacía, o crea una nueva desde el diálogo.');
+  }
+  await ensureStructure(root);
+  const copied = [];
+  for (const name of STARTER_TEXTURES) {
+    const source = path.join(INSTALL_ROOT, 'assets', 'textures', name);
+    if (!fsSync.existsSync(source)) continue;
+    await fs.copyFile(source, path.join(root, 'assets', 'textures', name), fsSync.constants.COPYFILE_EXCL);
+    copied.push(name);
+  }
+  return copied;
+}
+
 /** Crea las subcarpetas que falten. No borra ni pisa nada. */
 async function ensureStructure(root) {
   for (const dir of WORKSPACE_DIRS) {
@@ -121,6 +165,11 @@ async function initWorkspace() {
   const seeded = !settings.workspaceRoot && (await isEmptyDir(root)) ? await seedFromInstall(root) : [];
   await ensureStructure(root);
   workspaceRoot = root;
+  // La carpeta del editor y la de la configuracion (honeycomb-settings.json).
+  cleanTempFiles([
+    [root, 4],
+    [path.dirname(settingsPath()), 0],
+  ]);
   return { root, seeded };
 }
 
@@ -129,7 +178,33 @@ async function changeWorkspace(root) {
   await ensureStructure(root);
   workspaceRoot = root;
   await writeSettings({ ...(await readSettings()), workspaceRoot: root });
+  cleanTempFiles([[root, 4]]);
   return root;
+}
+
+/**
+ * Borra, sin esperar, los .tmp que dejo un guardado que se corto (ver
+ * removeStaleTempFiles) en cada [carpeta, profundidad]. En segundo plano: una
+ * carpeta grande no tiene por que demorar la ventana. La ultima limpieza queda
+ * en lastCleanup, para las pruebas.
+ */
+let lastCleanup = Promise.resolve(0);
+function cleanTempFiles(folders) {
+  lastCleanup = Promise.all(
+    folders.map(([folder, depth]) =>
+      removeStaleTempFiles(folder, { depth }).then((removed) => {
+        if (removed > 0) {
+          console.log(`[honeycomb] se borraron ${removed} temporales de guardados cortados en ${folder}`);
+        }
+        return removed;
+      }),
+    ),
+  ).then((counts) => counts.reduce((sum, count) => sum + count, 0));
+}
+
+/** La limpieza de temporales que se lanzo por ultima vez (cuantos borro). */
+function tempCleanup() {
+  return lastCleanup;
 }
 
 function getProjectRoot() {
@@ -173,8 +248,11 @@ module.exports = {
   INSTALL_ROOT,
   initWorkspace,
   changeWorkspace,
+  createProject,
   getProjectRoot,
   ensureProjectRoot,
   resolveInProject,
   isInside,
+  tempCleanup,
+  settingsPath,
 };

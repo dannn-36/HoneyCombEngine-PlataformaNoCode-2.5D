@@ -24,7 +24,7 @@ import {
 } from '../models/item.model';
 import { ItemLibraryService } from '../services/item-library.service';
 import { LevelService } from '../services/level.service';
-import { ProjectService } from '../services/project.service';
+import { ProjectService, writeOrConfirm } from '../services/project.service';
 import type { IconName } from '../ui/icons.generated';
 
 /** Con que abrir la ventana: un objeto guardado, o uno nuevo de ese tipo. */
@@ -337,12 +337,31 @@ export class ItemEditorController {
     const saved = normalizeItem({ ...state.draft, id, name });
     const list = state.savedId ? current.map((item) => (item.id === id ? saved : item)) : [...current, saved];
     try {
-      await this.library.save(list);
+      if (!(await this.saveList(list, 'la biblioteca del editor'))) {
+        return;
+      }
       this.state.set({ draft: structuredClone(saved), savedId: id });
-      this.note('Objeto "' + name + '" guardado en items.json.');
+      this.note(
+        'Objeto "' + name + '" guardado en items.json.' +
+          (state.savedId ? ' Los niveles que ya lo usaban conservan su copia: «Actualizar en todos los niveles» los pone al día.' : ''),
+      );
     } catch (error) {
       this.note('No se pudo guardar el objeto: ' + (error instanceof Error ? error.message : String(error)));
     }
+  }
+
+  /**
+   * Guarda la lista en items.json. Si el archivo cambio por fuera y la persona
+   * elige no pisarlo, se relee el del disco (el borrador de la ventana no se
+   * pierde) y devuelve false.
+   */
+  private async saveList(list: ItemDef[], what: string): Promise<boolean> {
+    if (await writeOrConfirm((options) => this.library.save(list, options), what)) {
+      return true;
+    }
+    await this.library.load();
+    this.note('No se guardó: items.json cambió en el disco. Se cargó la versión del disco; el objeto que editabas sigue en la ventana.');
+    return false;
   }
 
   async remove(): Promise<void> {
@@ -355,7 +374,9 @@ export class ItemEditorController {
     }
     const list = this.library.items().filter((item) => item.id !== state.savedId);
     try {
-      await this.library.save(list);
+      if (!(await this.saveList(list, 'la biblioteca sin este objeto'))) {
+        return;
+      }
     } catch (error) {
       this.note('No se pudo eliminar: ' + (error instanceof Error ? error.message : String(error)));
       return;
@@ -387,4 +408,95 @@ export class ItemEditorController {
     this.markDirty();
     this.note('"' + saved.name + '" actualizado en este nivel.');
   }
+
+  /** true mientras se recorren los niveles para actualizar un objeto. */
+  readonly updatingLevels = signal(false);
+
+  /**
+   * Pone al dia la copia de este objeto en TODOS los niveles del proyecto que la
+   * tienen, no solo en el abierto. Cada nivel guarda su propia copia (se juega
+   * sin items.json), asi que editar un arma en la biblioteca no cambiaba los
+   * niveles que ya la usaban.
+   *
+   * El nivel abierto se actualiza en memoria y queda "sin guardar", como con
+   * "Actualizar en este nivel": escribirlo en el disco pisaria lo que se esta
+   * editando. Los demas se reescriben en el disco con solo ese objeto cambiado.
+   * Un nivel que no tiene una copia del objeto no se toca: nunca lo uso.
+   */
+  async updateInAllLevels(): Promise<void> {
+    const savedId = this.state()?.savedId;
+    const saved = savedId ? this.library.find(savedId) : undefined;
+    if (!saved || this.updatingLevels()) {
+      return;
+    }
+    this.updatingLevels.set(true);
+    try {
+      const openFile = this.levels.fileName();
+      const openPath = openFile ? 'levels/' + openFile : null;
+      let inOpenLevel = false;
+      if (this.definedInLevel()) {
+        const current = (this.levels.level().items ?? []).find((item) => item.id === saved.id);
+        if (JSON.stringify(current) !== JSON.stringify(saved)) {
+          this.levels.upsertItems([saved]);
+          this.markDirty();
+          inOpenLevel = true;
+        }
+      }
+
+      const updated: string[] = [];
+      const failed: string[] = [];
+      for (const path of await this.project.listLevelPaths()) {
+        if (path.toLowerCase() === openPath?.toLowerCase()) {
+          continue;
+        }
+        try {
+          const changed = await this.project.rewriteLevelJson(path, (raw) => replaceItemCopy(raw, saved));
+          if (changed) {
+            updated.push(path.slice('levels/'.length));
+          }
+        } catch {
+          failed.push(path.slice('levels/'.length));
+        }
+      }
+
+      const parts: string[] = [];
+      if (updated.length > 0) {
+        const names = updated.slice(0, 4).join(', ') + (updated.length > 4 ? '…' : '');
+        parts.push(`en ${updated.length} ${updated.length === 1 ? 'nivel' : 'niveles'} (${names})`);
+      }
+      if (inOpenLevel) {
+        parts.push('en el nivel abierto (falta guardarlo)');
+      }
+      this.note(
+        parts.length > 0
+          ? '"' + saved.name + '" actualizado ' + parts.join(' y ') + '.'
+          : 'Ningún nivel tenía una copia distinta de "' + saved.name + '": no hubo nada que actualizar.',
+      );
+      if (failed.length > 0) {
+        this.note('No se pudieron actualizar: ' + failed.join(', ') + ' (cambiaron en el disco o no se pudieron escribir).');
+      }
+    } catch (error) {
+      this.note('No se pudieron recorrer los niveles: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      this.updatingLevels.set(false);
+    }
+  }
+}
+
+/**
+ * Reemplaza en el JSON crudo de un nivel la copia del objeto con el id de
+ * "def", en el mismo lugar de la lista. Devuelve si cambio algo: un nivel sin
+ * copia, o con una igual, queda como estaba.
+ */
+export function replaceItemCopy(raw: Record<string, unknown>, def: ItemDef): boolean {
+  const items = raw['items'];
+  if (!Array.isArray(items)) {
+    return false;
+  }
+  const index = items.findIndex((item) => (item as { id?: unknown } | null)?.id === def.id);
+  if (index < 0 || JSON.stringify(items[index]) === JSON.stringify(def)) {
+    return false;
+  }
+  items[index] = structuredClone(def);
+  return true;
 }

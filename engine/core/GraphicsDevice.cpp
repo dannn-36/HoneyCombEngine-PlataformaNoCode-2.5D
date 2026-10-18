@@ -8,10 +8,22 @@
 
 #include "GraphicsDevice.hpp"
 
+#include <cstdlib>
+
 GraphicsDevice::GraphicsDevice(int width, int height, const char* title) {
     // El orden importa: SetConfigFlags configura la ventana que se VA a crear,
     // asi que va siempre antes de InitWindow. Al reves no tiene efecto.
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+#ifdef _WIN32
+    // El icono de la ventana y de la barra de tareas: el del propio .exe (el
+    // recurso 1, ver resources/engine.rc), que en un juego exportado es el del
+    // juego. SDL lo lee de estas dos variables al registrar la ventana, asi
+    // que tambien van antes de InitWindow. Sin ellas, SDL deja el icono
+    // generico de Windows. Un icono de game.json se pone despues, encima
+    // (SetWindowIcon en GameSession).
+    _putenv_s("SDL_WINDOWS_INTRESOURCE_ICON", "1");
+    _putenv_s("SDL_WINDOWS_INTRESOURCE_ICON_SMALL", "1");
+#endif
     InitWindow(width, height, title);
 }
 

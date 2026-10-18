@@ -194,11 +194,28 @@ void GameSession::RegisterEvents()
     { BeginTransition(target, title, restart); };
     eventContext.showMessage = [this](const std::string &text, float seconds)
     { ShowMessage(text, seconds); };
+    // Los bloques de tiempo, teclas, dialogo, musica y camara.
+    eventContext.levelTime = &levelTime;
+    eventContext.frameTime = &lastFrameTime;
+    eventContext.interactPressed = &interactForEvents;
+    eventContext.playMusic = [this](const std::string &path)
+    { PlayTrack(path); };
+    eventContext.showDialog = [this](const std::string &speaker, const std::string &text)
+    { dialogs.push_back(DialogLine{speaker, text}); };
+    eventContext.shakeCamera = [this](float intensity, float seconds)
+    { camera.Shake(intensity, seconds); };
+    eventContext.spawnEntity = [this](const std::string &templateId, Vector2 cell)
+    { return SpawnEntity(templateId, cell); };
     EventBindings::RegisterAll(events, eventContext);
 }
 
 void GameSession::PrepareLevel(LevelStart start)
 {
+    // Lugar para las entidades que creen los eventos ("Crear entidad"), ANTES
+    // de tomar punteros: reservar despues mudaria el vector y los dejaria
+    // colgando (ver kSpawnReserve).
+    level.entities.reserve(level.entities.size() + kSpawnReserve);
+    spawnedCount = 0;
     entityById.clear();
     animInstances.clear();
     // Las marcas del nivel se borran; las de la partida (gameFlags) siguen.
@@ -208,6 +225,24 @@ void GameSession::PrepareLevel(LevelStart start)
     {
         entityById[entity.id] = &entity;
     }
+
+    // El reloj y los dialogos son del nivel: empiezan de cero.
+    levelTime = 0.0f;
+    lastFrameTime = 0.0f;
+    dialogs.clear();
+    // A quien se le puede hablar: las entidades de los eventos "Al hablar con".
+    talkableIds.clear();
+    for (const auto &event : events.Events())
+    {
+        if (event.trigger.type == "on_interact" && event.trigger.params.is_object() &&
+            event.trigger.params.contains("entity") && event.trigger.params.at("entity").is_string())
+        {
+            talkableIds.insert(event.trigger.params.at("entity").get<std::string>());
+        }
+    }
+    // La musica del nivel, o silencio si no tiene. Si es la que ya sonaba (dos
+    // niveles con la misma), sigue sin cortarse.
+    PlayTrack(level.music);
 
     // El piso, de atras hacia adelante y en coordenadas de mundo, de una vez.
     // En isometrico la Y de pantalla de una celda es (col + row) * alto / 2, asi
@@ -391,6 +426,173 @@ void GameSession::ShowMessage(const std::string &text, float seconds)
     messageRemaining = seconds;
 }
 
+void GameSession::PlayTrack(const std::string &relativePath)
+{
+    if (relativePath == currentTrack)
+    {
+        return;
+    }
+    currentTrack = relativePath;
+    if (relativePath.empty())
+    {
+        audio.StopMusic();
+        return;
+    }
+    // GetMusic devuelve la cache: la musica es un stream que se reproduce en
+    // su lugar, no una copia. Uno que no se pudo abrir (no esta, o el formato
+    // no es de los que lee raylib) llega vacio, y se queda en silencio.
+    Music &music = const_cast<Music &>(resources.GetMusic(assets.Resolve(relativePath)));
+    if (music.frameCount > 0)
+    {
+        audio.PlayMusic(music);
+    }
+    else
+    {
+        audio.StopMusic();
+        std::cerr << "No se pudo abrir la musica " << relativePath << std::endl;
+    }
+}
+
+bool GameSession::SpawnEntity(const std::string &templateId, Vector2 cell)
+{
+    const auto source = entityById.find(templateId);
+    if (source == entityById.end())
+    {
+        std::cerr << "spawn_entity: no hay ninguna entidad '" << templateId << "' para copiar." << std::endl;
+        return false;
+    }
+    if (spawnedCount >= kSpawnReserve || level.entities.size() >= level.entities.capacity())
+    {
+        std::cerr << "spawn_entity: ya se crearon " << spawnedCount << " entidades en este nivel; no se crean mas."
+                  << std::endl;
+        return false;
+    }
+    // La copia arranca como la plantilla recien cargada: visible, entera y en
+    // su casilla, aunque la plantilla este oculta o ya haya peleado.
+    LevelEntity copy = *source->second;
+    copy.hidden = false;
+    copy.destroyed = false;
+    copy.precisePosition = cell;
+    copy.position = GridCoord{static_cast<int>(cell.x), static_cast<int>(cell.y)};
+    copy.startPosition = cell;
+    copy.health = copy.maxHealth;
+    copy.attackTimer = 0.0f;
+    copy.hurtTimer = 0.0f;
+    copy.combo = ComboState{};
+    if (!Movement::CanOccupy(level, copy, cell))
+    {
+        std::cerr << "spawn_entity: la copia de '" << templateId << "' no puede estar en (" << cell.x << ", "
+                  << cell.y << ")." << std::endl;
+        return false;
+    }
+    // Un id que no use nadie: "<plantilla>_1", "<plantilla>_2"...
+    std::size_t serial = 1;
+    while (entityById.count(templateId + "_" + std::to_string(serial)) > 0)
+    {
+        ++serial;
+    }
+    copy.id = templateId + "_" + std::to_string(serial);
+
+    // Sin mudar el vector: hay lugar reservado (ver PrepareLevel).
+    level.entities.push_back(std::move(copy));
+    LevelEntity &spawned = level.entities.back();
+    entityById[spawned.id] = &spawned;
+    if (spawned.frames > 1 && animInstances.count(templateId) > 0)
+    {
+        animations.RegisterClip(spawned.id, animations.GetClip(templateId));
+        AnimationInstance instance;
+        instance.Play(animations.GetClip(spawned.id));
+        animInstances[spawned.id] = instance;
+    }
+    ++spawnedCount;
+    std::cout << "Entidad creada: '" << spawned.id << "' (copia de '" << templateId << "')" << std::endl;
+    return true;
+}
+
+namespace
+{
+// Parte "text" en renglones que entren en "maxWidth" pixeles, cortando entre
+// palabras. Respeta los saltos de linea que traiga el texto.
+std::vector<std::string> WrapText(const Font &font, const std::string &text, float size, float maxWidth)
+{
+    std::vector<std::string> lines;
+    const auto flushParagraph = [&](const std::string &source) {
+        std::string line;
+        std::size_t start = 0;
+        while (start <= source.size())
+        {
+            std::size_t end = source.find(' ', start);
+            if (end == std::string::npos)
+            {
+                end = source.size();
+            }
+            const std::string word = source.substr(start, end - start);
+            const std::string candidate = line.empty() ? word : line + " " + word;
+            if (!line.empty() && MeasureTextEx(font, candidate.c_str(), size, size / 10.0f).x > maxWidth)
+            {
+                lines.push_back(line);
+                line = word;
+            }
+            else
+            {
+                line = candidate;
+            }
+            start = end + 1;
+        }
+        lines.push_back(line);
+    };
+    std::size_t start = 0;
+    while (true)
+    {
+        const std::size_t end = text.find('\n', start);
+        flushParagraph(text.substr(start, end == std::string::npos ? std::string::npos : end - start));
+        if (end == std::string::npos)
+        {
+            break;
+        }
+        start = end + 1;
+    }
+    return lines;
+}
+} // namespace
+
+void GameSession::DrawDialog()
+{
+    if (dialogs.empty())
+    {
+        return;
+    }
+    const DialogLine &line = dialogs.front();
+    const float width = static_cast<float>(gfx.GetScreenWidth());
+    const float height = static_cast<float>(gfx.GetScreenHeight());
+    const float margin = 24.0f;
+    const float textSize = 20.0f;
+    const float boxWidth = std::min(width - 2.0f * margin, 900.0f);
+    const std::vector<std::string> lines = WrapText(defaultFont, line.text, textSize, boxWidth - 40.0f);
+    const float speakerHeight = line.speaker.empty() ? 0.0f : 28.0f;
+    const float boxHeight = 30.0f + speakerHeight + static_cast<float>(lines.size()) * (textSize + 6.0f) + 26.0f;
+    const Rectangle box{(width - boxWidth) / 2.0f, height - margin - boxHeight, boxWidth, boxHeight};
+
+    // Opaco: abajo estan el inventario y los avisos, y no tienen que traslucirse.
+    DrawRectangleRec(box, Color{16, 18, 24, 255});
+    DrawRectangleLinesEx(box, 2.0f, Color{245, 166, 35, 255});
+    float y = box.y + 16.0f;
+    if (!line.speaker.empty())
+    {
+        gfx.DrawText(defaultFont, line.speaker.c_str(), Vector2{box.x + 20.0f, y}, 22.0f, Color{245, 166, 35, 255});
+        y += speakerHeight;
+    }
+    for (const auto &text : lines)
+    {
+        gfx.DrawText(defaultFont, text.c_str(), Vector2{box.x + 20.0f, y}, textSize, RAYWHITE);
+        y += textSize + 6.0f;
+    }
+    const char *hint = dialogs.size() > 1 ? "E / Enter: seguir" : "E / Enter: cerrar";
+    const Vector2 hintSize = MeasureTextEx(defaultFont, hint, 14.0f, 1.4f);
+    gfx.DrawText(defaultFont, hint, Vector2{box.x + box.width - hintSize.x - 16.0f, box.y + box.height - 22.0f}, 14.0f,
+                 Color{170, 176, 190, 255});
+}
+
 void GameSession::FrameCamera()
 {
     const IsoGridSystem &grid = level.grid;
@@ -551,16 +753,9 @@ void GameSession::GoToTitle()
     }
     titleMenu.items.push_back(kQuit);
 
-    if (!config.titleScreen.music.empty())
-    {
-        // GetMusic devuelve la cache: la musica es un stream que se reproduce
-        // en su lugar, no una copia.
-        Music &music = const_cast<Music &>(resources.GetMusic(assets.Resolve(config.titleScreen.music)));
-        if (music.frameCount > 0)
-        {
-            audio.PlayMusic(music);
-        }
-    }
+    // La musica de la portada, o silencio: la del nivel que quedo atras no
+    // sigue sonando en el menu.
+    PlayTrack(config.titleScreen.music);
 }
 
 void GameSession::UpdateTitle()
@@ -648,7 +843,7 @@ void GameSession::NewGame()
     screen = Screen::Playing;
     paused = false;
     gameOver = false;
-    audio.StopMusic();
+    // La musica ya la puso PrepareLevel: la del nivel, o silencio.
 }
 
 bool GameSession::ContinueGame()
@@ -765,7 +960,6 @@ bool GameSession::ContinueGame()
     screen = Screen::Playing;
     paused = false;
     gameOver = false;
-    audio.StopMusic();
     if (status == Progress::LoadStatus::Recovered)
     {
         notice = "La partida guardada estaba dañada: se recuperó la anterior";
@@ -1055,9 +1249,22 @@ void GameSession::Update(float deltaTime)
         paused = !paused;
         pauseMenu = Screens::Menu{{kResume, kRestartLevel, kBackToTitle, kQuitGame}, 0};
     }
-    // Congelado: pasando de nivel, en pausa o derrotado. Nadie se mueve, nadie
-    // pega, los eventos no corren; la escena se sigue dibujando quieta.
-    const bool frozen = transition.active || paused || gameOver;
+    // Un dialogo de "Mostrar dialogo" se lee y se pasa con E, Enter, Espacio o
+    // clic. El cuadro en que se cierra tambien cuenta como congelado: la misma
+    // E no tiene que abrir una tienda, juntar un arma ni volver a hablarle al NPC.
+    bool dialogClosed = false;
+    if (!dialogs.empty() && !paused && !transition.active && !gameOver &&
+        (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || IsKeyPressed(KEY_SPACE) ||
+         IsMouseButtonPressed(MOUSE_BUTTON_LEFT)))
+    {
+        dialogs.pop_front();
+        dialogClosed = true;
+    }
+    // Congelado: pasando de nivel, en pausa, derrotado o leyendo un dialogo.
+    // Nadie se mueve, nadie pega, los eventos no corren; la escena se sigue
+    // dibujando quieta.
+    const bool frozen = transition.active || paused || gameOver || !dialogs.empty() || dialogClosed;
+    interactForEvents = false;
 
     // --- Camara: tamano de la ventana -------------------------------------
     // Antes de apuntar: el mouse tiene que leerse con el mismo encuadre que se
@@ -1184,6 +1391,20 @@ void GameSession::Update(float deltaTime)
             else if (nearShop && prompt.empty())
             {
                 prompt = "E: tienda de " + nearShop->id;
+            }
+            // E sin tienda cerca es para los eventos "Al hablar con".
+            interactForEvents = interactPressed && !nearShop;
+            if (prompt.empty() && !nearShop && !talkableIds.empty())
+            {
+                for (const auto &id : talkableIds)
+                {
+                    const auto it = entityById.find(id);
+                    if (it != entityById.end() && EventBindings::InInteractReach(*player, *it->second))
+                    {
+                        prompt = "E: hablar";
+                        break;
+                    }
+                }
             }
         }
 
@@ -1584,7 +1805,11 @@ void GameSession::Update(float deltaTime)
     currentCollisions = collision.Flush();
     if (!frozen)
     {
-        events.Update();
+        // El reloj del nivel ("Al pasar un tiempo") y el de las esperas solo
+        // corren mientras se juega.
+        lastFrameTime = deltaTime;
+        levelTime += deltaTime;
+        events.Update(deltaTime);
     }
     audio.Update();  // raylib necesita esto continuo para musica en streaming
 
@@ -1647,6 +1872,7 @@ void GameSession::Update(float deltaTime)
     {
         CombatView::DrawShop(gfx, defaultFont, level, *shopNpc, inventory, shopFeedback);
     }
+    DrawDialog();
 
     if (noticeRemaining > 0.0f)
     {

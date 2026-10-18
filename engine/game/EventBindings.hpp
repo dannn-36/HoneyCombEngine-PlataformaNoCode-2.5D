@@ -79,7 +79,34 @@ struct Context {
     std::function<void(const std::string& text, float seconds)> showMessage;
     // "Guardar partida": la escribe GameSession, que es quien sabe que guardar.
     std::function<void()> saveGame;
+
+    // --- Tiempo, teclas y escena (los bloques de "Al empezar el nivel" en adelante)
+    // Segundos que lleva el nivel en juego, sin contar pausas ni pantallas
+    // encima, y los del ultimo cuadro: el reloj de "Al pasar un tiempo".
+    const float* levelTime = nullptr;
+    const float* frameTime = nullptr;
+    // E se apreto en este cuadro y nadie la uso para otra cosa (una tienda):
+    // "Al hablar con una entidad".
+    const bool* interactPressed = nullptr;
+    // Lo que piden los eventos y resuelve GameSession: la musica (vacio =
+    // silencio), un dialogo en pantalla, sacudir la camara, y crear una copia
+    // de una entidad en una casilla (false si no se pudo).
+    std::function<void(const std::string& path)> playMusic;
+    std::function<void(const std::string& speaker, const std::string& text)> showDialog;
+    std::function<void(float intensity, float seconds)> shakeCamera;
+    std::function<bool(const std::string& templateId, Vector2 cell)> spawnEntity;
 };
+
+// A cuantas celdas del centro de una entidad tiene que estar el jugador para
+// "hablarle" con E (trigger "on_interact").
+constexpr float kInteractReach = 1.5f;
+
+// La tecla de un parametro "key" del catalogo ("E", "F", "ENTER"...), o
+// KEY_NULL si no es una de las que se ofrecen.
+int KeyFromName(const std::string& name);
+
+// true si el jugador esta lo bastante cerca de "entity" para hablarle con E.
+bool InInteractReach(const LevelEntity& player, const LevelEntity& entity);
 
 // Registra los triggers, condiciones y acciones del catalogo en "events".
 // Se llama UNA vez, antes del bucle principal: los registros no dependen del

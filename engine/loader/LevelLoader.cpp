@@ -73,6 +73,13 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
                                                 : BackgroundFit::Cover;
     }
 
+    // --- Musica -------------------------------------------------------------
+    // Opcional: la ruta, sin cargarla (es un stream; la pone GameSession al
+    // empezar el nivel). Algo que no es texto se ignora, como un nivel sin musica.
+    if (levelJson.contains("music") && levelJson.at("music").is_string()) {
+        level.music = levelJson.at("music").get<std::string>();
+    }
+
     // --- Camara -------------------------------------------------------------
     // Bloque opcional. Sin el quedan los valores por defecto de CameraSettings,
     // que son la camara de siempre: fija, con el nivel centrado y zoom 1.

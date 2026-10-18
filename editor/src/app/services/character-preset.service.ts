@@ -20,8 +20,9 @@ export class CharacterPresetService {
     this.presets.set(await this.project.readCharacterPresets());
   }
 
-  async save(presets: CharacterPreset[]): Promise<void> {
-    await this.project.writeCharacterPresets(presets);
+  /** Falla con FileChangedOnDiskError si characters.json cambio por fuera, salvo con overwrite. */
+  async save(presets: CharacterPreset[], options: { overwrite?: boolean } = {}): Promise<void> {
+    await this.project.writeCharacterPresets(presets, options);
     this.presets.set(presets);
   }
 }

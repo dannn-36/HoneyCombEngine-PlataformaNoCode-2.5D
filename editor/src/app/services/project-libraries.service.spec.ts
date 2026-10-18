@@ -57,7 +57,7 @@ describe('GameConfigService', () => {
     const service = TestBed.inject(GameConfigService);
     const config = { ...defaultGameConfig(), name: 'Nuevo' };
     await service.save(config);
-    expect(project.writeGameConfig).toHaveBeenCalledWith(config);
+    expect(project.writeGameConfig).toHaveBeenCalledWith(config, {});
     expect(service.config()).toBe(config);
     expect(service.exists()).toBe(true);
   });
@@ -150,7 +150,7 @@ describe('ItemLibraryService', () => {
   it('guardar escribe el archivo y despues la memoria', async () => {
     const service = TestBed.inject(ItemLibraryService);
     await service.save([coin]);
-    expect(project.writeItemLibrary).toHaveBeenCalledWith([coin]);
+    expect(project.writeItemLibrary).toHaveBeenCalledWith([coin], {});
     expect(service.items()).toEqual([coin]);
   });
 
@@ -178,7 +178,7 @@ describe('CharacterPresetService', () => {
   it('guardar escribe el archivo y despues la memoria', async () => {
     const service = TestBed.inject(CharacterPresetService);
     await service.save([hero]);
-    expect(project.writeCharacterPresets).toHaveBeenCalledWith([hero]);
+    expect(project.writeCharacterPresets).toHaveBeenCalledWith([hero], {});
     expect(service.presets()).toEqual([hero]);
   });
 

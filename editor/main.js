@@ -32,10 +32,17 @@ const ipcTextures = require('./ipc/textures');
 const ipcRun = require('./ipc/run');
 const ipcEngineBuild = require('./ipc/engine-build');
 const ipcExport = require('./ipc/export');
+const ipcRecovery = require('./ipc/recovery');
+const ipcSounds = require('./ipc/sounds');
+const ipcLevelCheck = require('./ipc/level-check');
 const { initWorkspace } = require('./ipc/project-root');
 
 const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
 const ANGULAR_BUILD_INDEX = path.join(__dirname, 'dist/editor/browser/index.html');
+
+// El icono de HoneyComb (lo dibuja tools/gen-icon.mjs). Sin el, la ventana y la
+// barra de tareas mostraban el de Electron. Windows lo quiere en .ico; Linux, en PNG.
+const WINDOW_ICON = path.join(__dirname, 'public', process.platform === 'win32' ? 'favicon.ico' : 'icon.png');
 
 // Pantalla de diagnostico: sin esto, un dev server caido deja la ventana en
 // blanco sin ninguna pista de que fue lo que fallo.
@@ -66,6 +73,8 @@ function createWindow() {
     width: 1280,
     height: 800,
     backgroundColor: '#14171d',
+    title: 'HoneyComb Engine',
+    icon: WINDOW_ICON,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       // Las dos banderas de seguridad estandar de Electron. Con esto, el codigo
@@ -104,6 +113,13 @@ function createWindow() {
       noLink: true,
     });
     if (choice === 0) {
+      // Se eligio perder los cambios: la copia del guardado automatico ya no
+      // tiene que ofrecerse al volver a abrir (ver ipc/recovery.js).
+      try {
+        ipcRecovery.clearRecoverySync();
+      } catch (err) {
+        console.warn('[honeycomb] no se pudo borrar la copia de recuperacion:', err.message);
+      }
       event.preventDefault();
     }
   });
@@ -150,6 +166,12 @@ app.whenReady().then(async () => {
   // el menu Ver del editor.
   Menu.setApplicationMenu(null);
 
+  // Un id propio para la barra de tareas de Windows: sin el, el editor se
+  // agrupa con cualquier otra app de Electron y toma el icono de electron.exe.
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('HoneyComb.Engine.Editor');
+  }
+
   // La carpeta del editor, lista antes que la ventana: es la raiz de todo lo
   // que la UI lee y escribe (ver ipc/project-root.js). Si falla (Documentos sin
   // permiso de escritura, por ejemplo) se reintenta con el primer pedido de la
@@ -170,6 +192,9 @@ app.whenReady().then(async () => {
   ipcRun.register();
   ipcEngineBuild.register();
   ipcExport.register();
+  ipcRecovery.register();
+  ipcSounds.register();
+  ipcLevelCheck.register();
 
   createWindow();
 

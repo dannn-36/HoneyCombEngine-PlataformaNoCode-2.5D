@@ -1,0 +1,13 @@
+// Recursos del ejecutable en Windows: el icono de HoneyComb.
+//
+// Es el que muestran el Explorador, el acceso directo y la barra de tareas, y
+// el de la ventana del juego (GraphicsDevice se lo pide a SDL con
+// SDL_WINDOWS_INTRESOURCE_ICON=1). Sin el, el .exe tenia el icono generico de
+// Windows. Lo dibuja tools/gen-icon.mjs.
+//
+// Va con id 1 y en idioma neutro (LANGUAGE 0, 0) a proposito: al exportar un
+// juego con su propio icono, editor/ipc/exe-icon.js reemplaza justo este
+// recurso (RT_GROUP_ICON 1 y sus RT_ICON) en la copia del .exe.
+
+LANGUAGE 0, 0
+1 ICON "honeycomb.ico"

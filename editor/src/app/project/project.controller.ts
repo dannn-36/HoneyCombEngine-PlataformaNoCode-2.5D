@@ -1,4 +1,4 @@
-import { WritableSignal, computed, inject, signal } from '@angular/core';
+import { WritableSignal, computed, effect, inject, signal, untracked } from '@angular/core';
 
 import { EventsController } from '../events/events.controller';
 import { ItemLibraryService } from '../services/item-library.service';
@@ -16,6 +16,7 @@ import { GridConfig } from '../models/level.model';
 import { levelFileName } from '../core/file-names';
 import type { EngineStart, LevelImport } from '../electron-api';
 import { NamePromptController } from '../ui/name-prompt.controller';
+import { SoundsController } from '../sounds/sounds.controller';
 
 /** Plantillas del dialogo "nivel nuevo": vacio, con jugador, o escena de prueba. */
 export type NewLevelTemplate = 'empty' | 'player' | 'test-scene';
@@ -36,6 +37,8 @@ export interface ProjectDeps {
   prompt: NamePromptController;
   /** Con que motor se ejecuta (Debug o Release), y compilarlo si falta. */
   engine: EngineController;
+  /** Los sonidos del proyecto (Recursos › Sonidos). */
+  sounds: SoundsController;
 }
 
 /**
@@ -66,6 +69,7 @@ export class ProjectController {
   private readonly ev: EventsController;
   private readonly prompt: NamePromptController;
   private readonly engine: EngineController;
+  private readonly sounds: SoundsController;
 
   private readonly entities = computed(() => this.levels.level().entities);
 
@@ -80,6 +84,135 @@ export class ProjectController {
     this.ev = deps.ev;
     this.prompt = deps.prompt;
     this.engine = deps.engine;
+    this.sounds = deps.sounds;
+
+    // Guardado automatico: con cambios sin guardar, una copia del nivel cada
+    // pocos segundos (ver scheduleRecovery). Mira el nivel y la marca de
+    // cambios; recien despues de ofrecer la copia que hubiera al arrancar, para
+    // no borrarla antes de preguntar (al arrancar no hay cambios).
+    effect(() => {
+      const dirty = this.dirty();
+      this.levels.level();
+      if (this.hasFileSystem && this.recoveryArmed()) {
+        untracked(() => this.scheduleRecovery(dirty));
+      }
+    });
+  }
+
+  // --- Guardado automatico y recuperacion -------------------------------------
+  //
+  // Si el editor se cierra de golpe con cambios sin guardar, al volver a
+  // abrirlo se ofrece recuperarlos. La copia vive fuera de la carpeta del
+  // editor (ver ipc/recovery.js) y nunca pisa el nivel: recuperarla deja el
+  // nivel abierto y "sin guardar", y lo que se haga con el es decision de quien
+  // edita.
+
+  /** Cuanto se espera despues del ultimo cambio para escribir la copia. */
+  static readonly RECOVERY_DELAY_MS = 4000;
+
+  /** false hasta haber ofrecido la copia del arranque. */
+  private readonly recoveryArmed = signal(false);
+
+  private recoveryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Hay una copia escrita en esta sesion que todavia no se borro. */
+  private recoveryWritten = false;
+
+  /**
+   * Con cambios, escribe la copia al rato del ultimo (escribir en cada tecla
+   * seria escribir el nivel entero decenas de veces por segundo). Sin cambios
+   * (se guardo, se abrio otro nivel, se deshizo hasta lo guardado), la borra.
+   */
+  private scheduleRecovery(dirty: boolean): void {
+    if (this.recoveryTimer !== null) {
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = null;
+    }
+    if (!dirty) {
+      if (this.recoveryWritten) {
+        this.recoveryWritten = false;
+        void this.project.clearRecovery().catch(() => {});
+      }
+      return;
+    }
+    this.recoveryTimer = setTimeout(() => {
+      this.recoveryTimer = null;
+      void this.writeRecoveryNow();
+    }, ProjectController.RECOVERY_DELAY_MS);
+  }
+
+  private async writeRecoveryNow(): Promise<void> {
+    if (!this.dirty()) {
+      return;
+    }
+    try {
+      await this.project.writeRecovery({
+        level: this.levels.level(),
+        fileName: this.levels.fileName(),
+        openedPath: this.lastSavedPath(),
+      });
+      this.recoveryWritten = true;
+    } catch (error) {
+      // La copia es una red de seguridad: si falla, se avisa una vez y se sigue editando.
+      if (!this.recoveryFailedNoted) {
+        this.recoveryFailedNoted = true;
+        this.note('No se pudo hacer la copia de seguridad automática del nivel: ' + this.describe(error));
+      }
+    }
+  }
+
+  private recoveryFailedNoted = false;
+
+  /**
+   * Al arrancar: si quedo una copia de una sesion que se corto, pregunta si se
+   * quiere recuperar. Si si, el nivel se abre como estaba y queda sin guardar;
+   * si no, la copia se borra.
+   */
+  private async offerRecovery(): Promise<void> {
+    let recovered;
+    try {
+      recovered = await this.project.readRecovery();
+    } catch {
+      recovered = null;
+    }
+    if (!recovered) {
+      return;
+    }
+    const name = recovered.fileName ?? recovered.level.name;
+    const when = new Date(recovered.savedAt);
+    const time = Number.isNaN(when.getTime())
+      ? ''
+      : ' (' + when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ')';
+    const accept = window.confirm(
+      `El editor se cerró sin guardar los cambios del nivel «${name}»${time}. ¿Recuperarlos?\n\n` +
+        'Se abren como estaban, sin guardar: para conservarlos usa Archivo › Guardar. Si eliges Cancelar, se descartan.',
+    );
+    if (!accept) {
+      await this.project.clearRecovery().catch(() => {});
+      this.note('Se descartaron los cambios sin guardar de la sesión anterior.');
+      return;
+    }
+    this.levels.adopt(recovered.level, recovered.fileName);
+    this.lastSavedPath.set(recovered.openedPath);
+    this.dirty.set(true);
+    this.recoveryWritten = true;
+    this.view.frameAll();
+    this.note('Recuperados los cambios sin guardar de «' + name + '». Guarda para conservarlos.');
+  }
+
+  /**
+   * Borra la copia del guardado automatico ya mismo: se eligio perder los
+   * cambios y lo que sigue cambia de carpeta o recarga la ventana.
+   */
+  async discardRecovery(): Promise<void> {
+    if (this.recoveryTimer !== null) {
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = null;
+    }
+    this.recoveryWritten = false;
+    if (this.hasFileSystem) {
+      await this.project.clearRecovery().catch(() => {});
+    }
   }
 
   readonly levelFiles = signal<string[]>([]);
@@ -122,8 +255,48 @@ export class ProjectController {
             info.seeded.join(', ') + '.',
         );
       }
+      await this.offerRecovery();
     } catch (error) {
       this.note('No se pudo preparar la carpeta del editor: ' + this.describe(error));
+    } finally {
+      this.recoveryArmed.set(true);
+    }
+  }
+
+  /**
+   * Archivo › Nuevo proyecto…: elige una carpeta vacia, le arma la estructura
+   * de un proyecto con las imagenes basicas (piso, pared, jugador y figuras) y
+   * pasa a trabajar ahi. Despues abre el dialogo de nivel nuevo con el jugador
+   * ya puesto: con esas imagenes, el primer nivel se ve apenas se crea.
+   */
+  async newProject(): Promise<void> {
+    if (!this.hasFileSystem) {
+      this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
+      return;
+    }
+    if (!this.confirmDiscard('Crear un proyecto nuevo')) {
+      return;
+    }
+    try {
+      await this.discardRecovery();
+      const created = await this.project.createProject();
+      if (!created) {
+        return;
+      }
+      this.levels.createNew('nuevo_nivel');
+      this.lastSavedPath.set(null);
+      this.dirty.set(false);
+      await this.refreshProject();
+      this.view.frameAll();
+      this.note(
+        'Proyecto nuevo en ' + created.root +
+          (created.copied.length > 0 ? ', con las imágenes básicas (' + created.copied.join(', ') + ').' : '.'),
+      );
+      this.newLevel();
+      this.newLevelName.set('nivel_1');
+      this.newLevelTemplate.set('player');
+    } catch (error) {
+      this.note('No se pudo crear el proyecto: ' + this.describe(error));
     }
   }
 
@@ -151,6 +324,9 @@ export class ProjectController {
       return;
     }
     try {
+      // La copia es de ESTA carpeta: despues del cambio ya no se la encuentra
+      // para borrarla, y se ofreceria al volver a ella.
+      await this.discardRecovery();
       const root = await this.project.changeWorkspace();
       if (!root) {
         return;
@@ -187,6 +363,7 @@ export class ProjectController {
     try {
       this.levelFiles.set(await this.project.listLevels());
       this.tex.textures.set(await this.project.listTextures());
+      await this.sounds.reload();
       // Las miniaturas no se cargan aca: cada una se pide cuando aparece en
       // pantalla (ver TextureThumbDirective). Solo se descarta lo que hubiera
       // de antes, que puede ser de otra carpeta.
@@ -494,6 +671,7 @@ export class ProjectController {
       this.levelFiles.set(await this.project.listLevels());
       await this.explorer.reloadDir('levels');
       this.note('Guardado en levels/' + this.levels.fileName());
+      void this.reportSchemaProblems('levels/' + this.levels.fileName());
       return true;
     } catch (error) {
       if (error instanceof LevelChangedOnDiskError && !overwrite) {
@@ -513,6 +691,30 @@ export class ProjectController {
       }
       this.note('Error al guardar: ' + this.describe(error));
       return false;
+    }
+  }
+
+  /**
+   * Revisa contra schema/level.schema.json lo que se acaba de guardar y avisa
+   * en la Consola lo que el motor rechazaria al cargarlo. Solo avisa: el nivel
+   * ya esta guardado. Asi se ve al guardar, y no recien al Ejecutar.
+   */
+  private async reportSchemaProblems(relativePath: string): Promise<void> {
+    let problems: string[];
+    try {
+      problems = await this.project.checkSavedLevel(relativePath);
+    } catch {
+      return; // Revisar es una ayuda: si no se puede, el guardado sigue valiendo.
+    }
+    if (problems.length === 0) {
+      return;
+    }
+    this.note(
+      `Aviso: ${relativePath} se guardó, pero el motor puede rechazarlo al ejecutarlo ` +
+        `(${problems.length === 1 ? 'un problema' : problems.length + ' problemas'} con el formato del nivel):`,
+    );
+    for (const problem of problems) {
+      this.note('  · ' + problem);
     }
   }
 
