@@ -1,0 +1,80 @@
+INFO: Initializing raylib 6.0
+INFO: Platform backend: DESKTOP (SDL)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully 
+INFO:     > Display size: 1920 x 1080
+INFO:     > Screen size:  800 x 450
+INFO:     > Render size:  800 x 450
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 404
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   NVIDIA Corporation
+INFO:     > Renderer: NVIDIA GeForce RTX 4060 Ti/PCIe/SSE2
+INFO:     > Version:  3.3.0 NVIDIA 610.88
+INFO:     > GLSL:     3.30 NVIDIA via Cg compiler
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (SDL2): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: <repo>\engine\build-perf
+INFO: AUDIO: Device initialized successfully
+INFO:     > Backend:       miniaudio | WASAPI
+INFO:     > Format:        32-bit IEEE Floating Point -> 32-bit IEEE Floating Point
+INFO:     > Channels:      2 -> 2
+INFO:     > Sample rate:   48000 -> 48000
+INFO:     > Periods size:  1440
+Nivel cargado: _arranque (0 entidades)
+INFO: TIMER: Target time per frame: 16.667 milliseconds
+INFO: FILEIO: [<temporal>/escenas\assets/textures/floor.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (64x64 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (64x64 | R8G8B8A8 | 1 mipmaps)
+INFO: FILEIO: [<temporal>/escenas\assets/textures/wall.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 4] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+INFO: FILEIO: [<temporal>/escenas\assets/textures/player.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (31x14 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 5] Texture loaded successfully (31x14 | R8G8B8A8 | 1 mipmaps)
+INFO: FILEIO: [<temporal>/escenas\assets/textures/player2.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (32x16 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 6] Texture loaded successfully (32x16 | R8G8B8A8 | 1 mipmaps)
+INFO: FILEIO: [<temporal>/escenas\assets/textures/shapes.png] File loaded successfully
+INFO: IMAGE: Data loaded successfully (262x782 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 7] Texture loaded successfully (262x782 | R8G8B8A8 | 1 mipmaps)
+Nivel cargado: rend_e0500 (501 entidades)
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+PRESUPUESTO M-01 FPS promedio: 1187.65 (objetivo >= 60.000000) CUMPLE
+PRESUPUESTO M-01 FPS del 1% mas lento: 272.103 (objetivo >= 45.000000) CUMPLE
+PRESUPUESTO M-02 carga (ms): 23.6357 (objetivo <= 2000.000000) CUMPLE
+PRESUPUESTO M-03 pico de memoria (MB): 84.1914 (objetivo <= 256.000000) CUMPLE
+PERF {"archivo":"rend_e0500.json","arranque_ms":313.6142,"atacar":false,"carga_ms":23.4247,"carga_total_ms":23.6357,"celdas_pared":252,"celdas_piso":4096,"colisiones_prom":6.914816581997811,"compilacion":"Release","con_collider":501,"cuadros":71258,"enemigos":200,"entidades":501,"entidades_activas":501,"entidades_activas_final":501,"etiqueta":"rend_e0500","eventos":0,"fps_1pct_bajo":272.10257288651474,"fps_p99":579.9404401168011,"fps_promedio":1187.6526742571334,"grilla":"64x64","json_mb_archivo":0.11609745025634766,"json_ms":1.6,"jugador_mueve":true,"limite_aplicado":true,"limite_mb":4096.0,"modo_carga":"arranque+carga","ms_desde_main_primer_cuadro":338.5427,"ms_max":60.494,"ms_p50":0.7437,"ms_p90":1.1372,"ms_p99":1.7243149999999965,"ms_proceso_al_iniciar":17.2547,"ms_proceso_primer_cuadro":356.4798,"ms_promedio":0.8419970094585849,"nivel":"rend_e0500","pico_privada_mb":79.640625,"pico_residente_mb":84.19140625,"preparar_ms":0.211,"presupuesto_cumple":true,"privada_final_mb":77.66015625,"proyectiles_max":5,"recargas":[],"recorrido_celdas":179.99534606933594,"recorte":true,"residente_final_mb":82.64453125,"segundos_medidos":59.99902290000001,"sprites_dibujados":932.1149625305229,"sprites_recortados":3916.885037469477,"texturas_nivel":3,"zonas":0}
+RESUMEN Release | rend_e0500 | 501 entidades | carga 23.6357 ms | 1187.65 FPS | 1% bajo 272.103 FPS | p99 1.72431 ms | pico 84.1914 MB
+INFO: TEXTURE: [ID 6] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 7] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 5] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 4] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: AUDIO: Device closed successfully
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully

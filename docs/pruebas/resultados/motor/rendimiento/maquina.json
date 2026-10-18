@@ -1,0 +1,36 @@
+{
+  "cpu": {
+    "Name": "AMD Ryzen 5 7600 6-Core Processor              ",
+    "NumberOfCores": 6,
+    "NumberOfLogicalProcessors": 12,
+    "MaxClockSpeed": 3801
+  },
+  "ram_gb": 31.1,
+  "ram_modulos": [
+    {
+      "Capacity": 17179869184,
+      "Speed": 4800
+    },
+    {
+      "Capacity": 17179869184,
+      "Speed": 4800
+    }
+  ],
+  "gpus": [
+    {
+      "Name": "AMD Radeon(TM) Graphics",
+      "DriverVersion": "32.0.21030.2001"
+    },
+    {
+      "Name": "NVIDIA GeForce RTX 4060 Ti",
+      "DriverVersion": "32.0.16.1088"
+    }
+  ],
+  "os": {
+    "Caption": "Microsoft Windows 11 Home",
+    "Version": "10.0.26200"
+  },
+  "compilador": "g++ (MSYS2 UCRT64) -O3 Release, raylib 6.0 backend SDL2",
+  "ventana": "800x450 (sin game.json)",
+  "notas": "Controlled Folder Access activo; ULTRAKILL abierto durante las mediciones; otros procesos de compilacion/tests concurrentes durante el estres"
+}

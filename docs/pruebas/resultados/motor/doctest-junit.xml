@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="<repo>\engine\build-tests\engine_tests" errors="0" failures="42" tests="2525" time="40.2549" timestamp="2026-10-18T06:40:32Z" doctest_version="2.4.12">
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="un clip registrado se recupera por nombre" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="pedir un clip que no existe falla con una excepcion" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="sin clip el cuadro actual es vacio" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="el cuadro avanza cuando pasa su duracion" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="un frame largo avanza varios cuadros de una vez" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="un clip en loop vuelve al primer cuadro" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="un clip sin loop se queda en el ultimo cuadro y termina" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="pedir el mismo clip no lo reinicia salvo que se pida" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="cambiar de clip arranca el nuevo desde el principio" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_animation.cpp" name="un clip sin cuadros no avanza ni se rompe" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_asset_resolver.cpp" name="por defecto las rutas se resuelven dentro de assets" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_asset_resolver.cpp" name="la raiz configurada se antepone con barra normal" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_asset_resolver.cpp" name="un archivo que existe se informa como presente" time="0.001287" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_asset_resolver.cpp" name="un archivo que no existe se informa como ausente" time="0.000378" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_asset_resolver.cpp" name="los assets del repositorio se encuentran con la raiz real" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="la configuracion fuera de rango se lleva al rango" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="la camara fija pone el centro del encuadre en el medio de la pantalla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="la camara fija ignora al jugador al actualizar" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="con zoom el centro sigue en el medio de la pantalla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="pantalla a mundo es la inversa de mundo a pantalla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="siguiendo sin suavizado la camara queda pegada al foco" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="siguiendo el desplazamiento se lleva a pixeles enteros" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="dentro de la zona muerta la camara no se mueve" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="el suavizado recorre la parte exponencial de la distancia" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="con limites la camara no muestra el vacio fuera del nivel" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="un nivel mas chico que la vista queda centrado" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_camera.cpp" name="sin limites validos la camara sigue al foco" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="sin colliders no hay pares" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="un collider solo no choca consigo mismo" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="dos cajas que se solapan dan un par con sus duenos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="dos cajas separadas no chocan" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="dos cajas que solo se tocan en el borde no chocan" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="solaparse en un solo eje no es chocar" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="una caja dentro de otra choca" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="cada par aparece una sola vez" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="flush vacia la cola para el frame siguiente" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_collision.cpp" name="las coordenadas negativas chocan igual" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="solo el type enemy es enemigo y lo oculto no pelea" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el golpe sin arma es un area con el dano propio" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="un golpe sin arma dana a los enemigos cercanos y no a los lejanos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="despues de pegar hay que esperar la pausa del ataque" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="un enemigo sin vida queda destruido y se informa" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="un enemigo oculto no recibe golpes" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="defendiendo no se ataca" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="un enemigo sin arma pega por contacto con pausa entre golpes" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="defender reduce el dano y el esquive lo anula" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el jugador sin vida pierde el nivel" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="un enemigo persigue al jugador solo si lo tiene a la vista" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="sin jugador el combate avanza sin romperse" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el golpe en linea alcanza hacia donde se apunta" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el sector golpea solo dentro de su angulo" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el proyectil viaja y golpea solo al primero" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el proyectil que atraviesa golpea una vez a cada uno" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el proyectil se frena contra una pared" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el explosivo dana a todos los de su radio" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="el area remota cae tras su demora y no mas lejos que su alcance" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="la habilidad se carga acertando y sale sola en el ataque siguiente" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="una habilidad manual espera su tecla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="un ataque de curacion cura a quien lo lanza" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="un enemigo armado dispara al jugador cuando esta a su alcance" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="los efectos de un golpe se vencen solos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_combat.cpp" name="limpiar el estado vacia proyectiles areas y efectos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="todos los niveles de referencia cargan sin errores" time="0.136291" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="los casos validos del contrato cargan igual que el archivo" time="0.039692" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="los casos que el indice manda rechazar se rechazan con un mensaje" time="0.040154" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="los casos que el indice manda tolerar cargan sin errores" time="0.050055" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="ningun caso del contrato tira el motor" time="0.060442" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="el indice del contrato y las carpetas coinciden" time="0.003678" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="los casos tolerados quedan como dice su nota" time="0.035725" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_contract.cpp" name="un parametro de evento con el tipo equivocado no cierra el juego" time="0.030056" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_contract.cpp:494:
+CHECK( frame.empty() ) is NOT correct!
+  values: CHECK( false )
+  logged: al evaluar: [json.exception.type_error.302] type must be string, but is number
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="al chocar dispara con el par en cualquier orden" time="0.029792" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="al chocar con un id que no existe no dispara" time="0.030153" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="al eliminar una entidad dispara cuando queda destruida" time="0.030168" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="vencer a todos no dispara en un nivel sin enemigos" time="0.029703" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="vencer a todos dispara cuando cae el ultimo enemigo" time="0.029934" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="vencer al jefe dispara cuando caen todos los jefes" time="0.030181" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="limpiar una zona dispara cuando caen sus enemigos" time="0.029944" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="juntar objetos sin cantidad pide todos los colocados" time="0.030309" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="juntar objetos con cantidad cuenta lo juntado de cualquier origen" time="0.029687" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="entrar a una zona dispara con el jugador adentro y activo" time="0.02993" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="usar una habilidad dispara con el arma que la lanzo" time="0.030202" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="una marca del nivel y una de la partida se guardan en lugares distintos" time="0.030006" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="las condiciones de marca miran el nivel y la partida" time="0.029778" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="fijar y sumar variables aceptan numeros escritos como texto" time="0.03004" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="comparar una variable usa el operador del catalogo" time="0.029866" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="guardar partida llama a quien sabe guardar" time="0.030056" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="destruir una entidad la marca sin sacarla del nivel" time="0.030029" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="ocultar y mostrar una entidad no la destruye" time="0.029981" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="pasar de nivel agenda el destino en la misma carpeta" time="0.03" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="pasar de nivel sin destino se ignora" time="0.02996" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="mostrar mensaje pide el texto por tres segundos" time="0.029896" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="dar un objeto lo entrega y avisa" time="0.030212" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="dar un objeto sin jugador no hace nada" time="0.029967" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="las monedas suman y nunca quedan negativas" time="0.029783" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="curar al jugador no pasa de su vida maxima" time="0.030009" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="tener un objeto mira el inventario" time="0.029998" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="achicar el inventario deja en el piso lo que no entra" time="0.030149" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="reproducir un sonido no rompe aunque el archivo falte" time="0.030113" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="un parametro de texto escrito como numero no rompe los bloques que usan string param" time="0.029799" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_bindings.cpp" name="un parametro de texto escrito como numero no rompe ningun bloque" time="0.030007" status="run">
+      <failure type="CHECK_NOTHROW">
+<repo>/engine/tests/test_event_bindings.cpp:472:
+CHECK_NOTHROW( fx.Fires(Step("on_collision", {{"entityA", 5}, {"entityB", "5"}})) ) THREW exception: "[json.exception.type_error.302] type must be string, but is number"
+
+      </failure>
+      <failure type="CHECK_NOTHROW">
+<repo>/engine/tests/test_event_bindings.cpp:473:
+CHECK_NOTHROW( fx.Fires(Step("on_entity_destroyed", {{"entity", 5}})) ) THREW exception: "[json.exception.type_error.302] type must be string, but is number"
+
+      </failure>
+      <failure type="CHECK_NOTHROW">
+<repo>/engine/tests/test_event_bindings.cpp:474:
+CHECK_NOTHROW( fx.Run(Step("set_flag", {{"flag", 5}})) ) THREW exception: "[json.exception.type_error.302] type must be string, but is number"
+
+      </failure>
+      <failure type="CHECK_NOTHROW">
+<repo>/engine/tests/test_event_bindings.cpp:475:
+CHECK_NOTHROW( fx.Run(Step("destroy_entity", {{"entity", 5}})) ) THREW exception: "[json.exception.type_error.302] type must be string, but is number"
+
+      </failure>
+      <failure type="CHECK_NOTHROW">
+<repo>/engine/tests/test_event_bindings.cpp:476:
+CHECK_NOTHROW( fx.Run(Step("play_sound", {{"soundPath", 5}})) ) THREW exception: "[json.exception.type_error.302] type must be string, but is number"
+
+      </failure>
+      <failure type="CHECK_NOTHROW">
+<repo>/engine/tests/test_event_bindings.cpp:477:
+CHECK_NOTHROW( fx.Run(Step("load_level", {{"level", 5}})) ) THREW exception: "[json.exception.type_error.302] type must be string, but is number"
+
+      </failure>
+      <failure type="CHECK_NOTHROW">
+<repo>/engine/tests/test_event_bindings.cpp:478:
+CHECK_NOTHROW( fx.Run(Step("load_level", {{"level", "otro"}, {"message", 5}})) ) THREW exception: "[json.exception.type_error.302] type must be string, but is number"
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="un array vacio no da eventos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="un evento completo conserva trigger condiciones y acciones" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="los eventos se devuelven en el orden del archivo" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="condiciones y acciones son opcionales" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="un paso sin params queda con un objeto vacio" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="un evento sin trigger se rechaza con un mensaje" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="un paso sin type se rechaza con un mensaje" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_loader.cpp" name="un type que no es texto se rechaza con un mensaje" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="sin eventos cargados actualizar no hace nada" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="un evento ejecuta sus acciones solo en el frame en que empieza a cumplirse" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="un evento vuelve a dispararse despues de dejar de cumplirse" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="todas las condiciones tienen que cumplirse" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="un evento cuyo trigger no dispara no ejecuta nada" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="un trigger sin registrar se ignora sin romper" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="una condicion sin registrar cuenta como no cumplida" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="una accion sin registrar se saltea y las siguientes se ejecutan" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="las acciones se ejecutan en el orden del editor" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="cada funcion recibe los params de su paso" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="cargar eventos reemplaza los anteriores y reinicia su memoria" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="registrar un type de nuevo reemplaza la funcion anterior" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_event_system.cpp" name="cada evento recuerda por separado si ya se cumplia" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="sin game json quedan los valores de siempre" time="0.00057" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="un game json completo se lee entero" time="0.007505" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="los valores fuera de rango se llevan al rango" time="0.001639" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="los nombres desconocidos toman la opcion por defecto" time="0.00569" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="el borde de la vida solo existe si el json lo trae" time="0.002254" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="un game json roto vuelve a los valores de siempre" time="0.001377" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="un game json con un tipo equivocado vuelve a los valores de siempre" time="0.001333" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_game_config.cpp" name="el titulo de la ventana usa el nombre del juego" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="un inventario nuevo esta vacio y pega con las manos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="configurar toma limite reglas monedas y armas iniciales" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="el limite de casilleros va de uno a nueve" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="la primera arma juntada pasa a ser la activa" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="un arma repetida no se agrega" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="con todo lleno solo se cambia la activa si se pide" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="elegir un casillero vacio no cambia la activa" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="la rueda da la vuelta en los dos sentidos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="el contador de habilidad es de cada arma" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="achicar el limite devuelve las armas que ya no entran" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="con el limite bloqueado no se puede cambiar" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="pasar a un nivel sin inventario conserva todo" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="pasar a un nivel con inventario aplica su limite y suma sus armas" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_inventory.cpp" name="restaurar una partida respeta el orden y descarta lo desconocido" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="la grilla guarda las medidas que recibe" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="la celda de origen cae en el origen de la pantalla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="una columna mueve media celda a la derecha y una fila media a la izquierda" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="una posicion fraccionaria se proyecta en continuo" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="el centro de cada celda vuelve a su celda" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="la conversion continua es la inversa exacta de la proyeccion" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="un punto fuera de la grilla redondea hacia abajo y no hacia cero" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="solo las celdas dentro de la grilla son validas" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="una grilla de tamano cero no tiene celdas validas" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_iso_grid.cpp" name="cualquier proporcion de tile sirve y no solo dos a uno" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="un ataque que no es un objeto queda con los valores por defecto" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="cada nombre de forma de ataque se traduce a su patron" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="un ataque lee todos sus campos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="los valores imposibles de un ataque se corrigen" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="unos objetos que no son una lista dan un catalogo vacio" time="0.028693" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="un objeto sin id se descarta" time="0.029945" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="un objeto minimo es una moneda que vale uno" time="0.030858" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="un arma lee su categoria su ataque y su habilidad" time="0.029258" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="una curacion y una moneda leen su efecto" time="0.029887" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="la textura y el recorte de un objeto se cargan" time="0.030786" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="una zona lee su rectangulo y nunca mide menos de una celda" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="una entidad sin bloques de combate queda como siempre" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="los objetos que suelta una entidad llevan su probabilidad al rango" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="el inventario de una entidad se lee y se lleva al rango" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="el esquive y la defensa se activan con su bloque" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_item_loader.cpp" name="la tienda descarta entradas sin objeto y precios negativos" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un archivo que no existe se rechaza con un mensaje" time="0.030579" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un json mal formado se rechaza con un mensaje" time="0.039476" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un archivo vacio se rechaza con un mensaje" time="0.030024" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un nivel sin grilla se rechaza con un mensaje" time="0.029772" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una grilla sin alto se rechaza con un mensaje" time="0.030028" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una grilla con medidas de texto se rechaza con un mensaje" time="0.030156" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un tile fuera de la grilla se rechaza con un mensaje" time="0.029825" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una entidad sin posicion se rechaza con un mensaje" time="0.030063" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una entidad sin textura se rechaza con un mensaje" time="0.029848" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una entidad sin recorte se rechaza con un mensaje" time="0.030477" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un piso sin recorte se rechaza con un mensaje" time="0.03994" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un evento sin trigger se rechaza con un mensaje" time="0.040445" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un nivel minimo carga con los valores por defecto" time="0.029184" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="las medidas del tile se leen del json" time="0.040257" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="sin tiles el nivel es un rectangulo con paredes en el borde" time="0.029929" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="los tiles respetan piso pared y variante de piso" time="0.029754" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="el piso y la pared cargan su textura y su recorte" time="0.040456" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="el color de fondo se lleva al rango de 0 a 255" time="0.029628" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="la imagen de fondo lee su modo y uno desconocido es cover" time="0.049919" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="la camara fuera de rango se lleva al rango" time="0.030359" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una entidad completa se lee con todos sus campos" time="0.039716" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una entidad minima toma los valores de siempre" time="0.030129" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="los valores invalidos de una entidad se corrigen" time="0.029767" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="la animacion vieja player_idle conserva sus dos cuadros" time="0.040583" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una entidad pared deja su collider como sensor" time="0.039571" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="dos entidades con la misma textura comparten la carga" time="0.029871" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="una textura que no existe no impide cargar el nivel" time="0.039983" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="los bloques de combate de una entidad pasan por el cargador de objetos" time="0.029946" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="las salas y las zonas se cargan como zonas" time="0.030094" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="unas salas que no son una lista se ignoran" time="0.039871" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="los eventos del nivel quedan cargados en el sistema de eventos" time="0.0299" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="cargar un nivel nuevo reemplaza los eventos del anterior" time="0.030091" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_level_loader.cpp" name="un nivel sin la clave events no hereda los eventos del anterior" time="0.030657" status="run">
+      <failure message="1 == 0" type="CHECK">
+<repo>/engine/tests/test_level_loader.cpp:536:
+CHECK( runs == 0 ) is NOT correct!
+  values: CHECK( 1 == 0 )
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="un arma nueva entra al inventario" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="con el inventario lleno y cambio manual hay que confirmar" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="con cambio automatico no hace falta confirmar" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="con el inventario bloqueado no se cambia ni confirmando" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="una curacion no pasa de la vida maxima y con vida llena se rechaza" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="las monedas se suman con su valor" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="un objeto colocado se junta al tocarlo y queda destruido" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="un objeto oculto o sin definir no se junta" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="parado sobre un arma que no entra se avisa y con E se cambia" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="un objeto soltado a los pies espera a que el jugador se aleje" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="lo que suelta un enemigo depende de su probabilidad" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="limpiar el nivel vacia el piso y lo juntado" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="la tienda mas cercana al alcance es la que se abre" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_loot.cpp" name="comprar cobra el precio y entrega el objeto" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="arriba en pantalla es en diagonal dentro de la grilla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="derecha en pantalla suma columnas y resta filas" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="en diagonal no se va mas rapido" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="quieto no se mueve ni cambia hacia donde mira" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="el esquive recorre su distancia en su duracion y da invulnerabilidad" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="no se puede esquivar de nuevo durante la pausa" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="sin esquive configurado la tecla no hace nada" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="esquivar quieto y sin apuntar va hacia donde mira" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="defender frena al jugador y solo si tiene defensa" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_mobility.cpp" name="esquivar corta la defensa" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="el collider se pasa de pixeles a celdas" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="el centro de una entidad grande esta en el medio de su bloque" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="una posicion se lleva al interior de la grilla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="no se puede estar donde no hay piso" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="el borde entre dos casillas con piso tambien es piso" time="0" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_movement.cpp:71:
+CHECK( Movement::CanOccupy(level, mover, Vector2{6.5f, 5.0f}) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="las paredes por celda solo frenan si el nivel tiene textura de pared" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="el tamano de quien se mueve cuenta contra la pared" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="un collider solido bloquea y un sensor no" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="una entidad oculta o destruida no bloquea" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="una entidad pared bloquea su bloque entero sin importar el collider" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="un collider redondo deja pasar por la esquina de su caja" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="quien se mueve nunca choca consigo mismo" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="el bloqueador extra cuenta como solido aunque no lo sea" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="moverse sin obstaculos llega al destino y actualiza la celda" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="contra una pared en diagonal se desliza por el eje libre" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="encerrado no se mueve y lo informa" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="moverse nunca saca a la entidad de la grilla" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="un proyectil choca fuera del piso y contra las paredes" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_movement.cpp" name="un proyectil choca contra entidades solidas y pared pero no contra quien lo tiro" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="la partida vive en saves partida json" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="sin partida no hay nada para continuar" time="0.000505" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="una partida escrita se lee igual" time="0.002178" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="una partida sin posicion arranca donde dice el nivel" time="0.001996" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="guardar de nuevo reemplaza la partida anterior" time="0.002486" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="una partida rota se ignora sin romper" time="0.00628" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="una partida sin nivel no sirve para continuar" time="0.001984" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="una partida con un tipo equivocado se ignora sin romper" time="0.006642" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="las variables que no son numeros se descartan al leer" time="0.002068" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_progress.cpp" name="no poder escribir la partida se informa" time="0.000952" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="el cargador sobrevive a miles de niveles mutados" time="31.5607" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="un nivel que es solo cien mil listas anidadas se rechaza sin caerse" time="0.495328" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="un nombre de nivel con diez mil listas anidadas se rechaza sin caerse" time="0.406888" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="los parametros de un evento con diez mil listas anidadas no tiran el motor" time="0.334109" status="run">
+      <failure message="-1073741571 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:731:
+CHECK( code == 0 ) is NOT correct!
+  values: CHECK( -1073741571 == 0 )
+  logged: el proceso termino con 0xc00000fd
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="el ataque de un arma con diez mil listas anidadas no tira el motor" time="0.330906" status="run">
+      <failure message="-1073741571 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:742:
+CHECK( code == 0 ) is NOT correct!
+  values: CHECK( -1073741571 == 0 )
+  logged: el proceso termino con 0xc00000fd
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="la tienda de una entidad con diez mil listas anidadas no tira el motor" time="0.337425" status="run">
+      <failure message="-1073741571 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:755:
+CHECK( code == 0 ) is NOT correct!
+  values: CHECK( -1073741571 == 0 )
+  logged: el proceso termino con 0xc00000fd
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="assetresolver no lee archivos fuera de assets con rutas que suben" time="0.004499" status="run">
+      <failure message="true" type="CHECK_FALSE">
+<repo>/engine/tests/test_security.cpp:771:
+CHECK_FALSE( assets.Exists("../../secreto/afuera.txt") ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+      </failure>
+      <failure message="true" type="CHECK_FALSE">
+<repo>/engine/tests/test_security.cpp:772:
+CHECK_FALSE( assets.Exists("textures/../../../secreto/afuera.txt") ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:774:
+CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: ../../secreto/afuera.png
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:774:
+CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: textures/../../../secreto/afuera.png
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="assetresolver no lee fuera de assets con barras invertidas" time="0.004159" status="run">
+      <failure message="true" type="CHECK_FALSE">
+<repo>/engine/tests/test_security.cpp:783:
+CHECK_FALSE( assets.Exists("..\\..\\secreto\\afuera.txt") ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:785:
+CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: ..\..\secreto\afuera.png
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:785:
+CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: textures\..\..\..\secreto\afuera.png
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="assetresolver no convierte una ruta absoluta en una lectura fuera de assets" time="0.003743" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="assetresolver no convierte una ruta unc en una lectura de red" time="0.003793" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="una textura de entidad con ruta que sube no se carga desde fuera de assets" time="0.074112" status="run">
+      <failure message="7 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:828:
+CHECK( loaded.entities[0].texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+  logged: ../../secreto/afuera.png
+
+      </failure>
+      <failure message="7 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:828:
+CHECK( loaded.entities[0].texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+  logged: ..\..\secreto\afuera.png
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="el fondo y el piso con ruta que sube no se cargan desde fuera de assets" time="0.039882" status="run">
+      <failure message="7 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:842:
+CHECK( loaded.backgroundTexture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+      </failure>
+      <failure message="7 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:844:
+CHECK( loaded.floorTexture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+      </failure>
+      <failure message="7 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:846:
+CHECK( loaded.floorVariants[0].texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="la textura de un objeto con ruta que sube no se carga desde fuera de assets" time="0.029743" status="run">
+      <failure message="7 == 0" type="CHECK">
+<repo>/engine/tests/test_security.cpp:858:
+CHECK( loaded.items.at("moneda").texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="una ruta de textura de doscientos mil caracteres no rompe el cargador" time="0.050132" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="pasar de nivel con un nombre comun queda en levels" time="0.028195" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="pasar de nivel con una ruta que sube no sale de levels" time="0.029834" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:885:
+CHECK( InsideDir(fx.levelsDir, fx.LoadLevelTarget("../../fuera/nivel")) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:886:
+CHECK( InsideDir(fx.levelsDir, fx.LoadLevelTarget("..\\..\\fuera\\nivel.json")) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="pasar de nivel con una ruta absoluta no sale de levels" time="0.02985" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:893:
+CHECK( InsideDir(fx.levelsDir, target) ) is NOT correct!
+  values: CHECK( false )
+  logged: C:/Windows/win.ini
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="pasar de nivel con una ruta unc no sale de levels" time="0.030145" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:901:
+CHECK( InsideDir(fx.levelsDir, target) ) is NOT correct!
+  values: CHECK( false )
+  logged: //servidor/recurso/nivel.json
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="la partida guardada no entrega un nivel fuera de levels" time="0.008373" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:919:
+CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: ../../fuera.json
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:919:
+CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: ..\..\fuera.json
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:919:
+CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: C:/Windows/win.ini
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:919:
+CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: //servidor/recurso/nivel.json
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="game json no entrega rutas de assets que salen del proyecto" time="0.001734" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:933:
+CHECK( StaysInside(config.icon) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:934:
+CHECK( StaysInside(config.titleScreen.backgroundImage) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:935:
+CHECK( StaysInside(config.titleScreen.music) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:936:
+CHECK( StaysInside(config.hud.heartFull) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:937:
+CHECK( StaysInside(config.hud.barFrame) ) is NOT correct!
+  values: CHECK( false )
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="game json no entrega un nivel inicial fuera de levels" time="0.013564" status="run">
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:946:
+CHECK( StaysInside(config.startLevel) ) is NOT correct!
+  values: CHECK( false )
+  logged: ../../fuera.json
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:946:
+CHECK( StaysInside(config.startLevel) ) is NOT correct!
+  values: CHECK( false )
+  logged: C:/Windows/win.ini
+
+      </failure>
+      <failure message="false" type="CHECK">
+<repo>/engine/tests/test_security.cpp:946:
+CHECK( StaysInside(config.startLevel) ) is NOT correct!
+  values: CHECK( false )
+  logged: //servidor/recurso/nivel.json
+
+      </failure>
+    </testcase>
+    <testcase classname="<repo>/engine/tests/test_security.cpp" name="la partida guardada y game json mutados nunca dejan escapar una excepcion" time="3.79291" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zones.cpp" name="una zona se busca por su id" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zones.cpp" name="una zona cubre media celda antes de su primera celda y no incluye el borde final" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zones.cpp" name="una zona sin enemigos nunca queda limpia" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zones.cpp" name="una zona queda limpia cuando caen los enemigos que arrancaron en ella" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zones.cpp" name="un enemigo que salio persiguiendo sigue contando para su sala" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zones.cpp" name="un enemigo grande cuenta desde el centro de su bloque" time="0" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="lo que esta mas adelante se dibuja encima aunque se encole primero" time="0.002081" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="el orden depende de la profundidad y no del orden de encolado" time="0.001076" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="a igual profundidad la entidad se dibuja sobre la pared" time="0.000748" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="el piso queda siempre debajo aunque este mas adelante" time="0.000599" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="las estadisticas cuentan piso ordenados y recortados" time="0.001155" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="sin vista configurada no se recorta nada" time="0.001909" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="un sprite que asoma en el borde de la vista no se recorta" time="0.001138" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="un sprite rotado nunca se recorta" time="0.001051" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="un sprite espejado no se toma como vacio al recortar" time="0.001254" status="run"/>
+    <testcase classname="<repo>/engine/tests/test_zsort.cpp" name="el tamano de destino manda sobre el recorte al recortar" time="0.00132" status="run"/>
+  </testsuite>
+</testsuites>

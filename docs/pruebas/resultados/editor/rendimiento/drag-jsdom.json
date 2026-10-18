@@ -1,0 +1,341 @@
+{
+  "generatedAt": "2026-10-18T05:31:56.664Z",
+  "machine": {
+    "cpu": "AMD Ryzen 5 7600 6-Core Processor",
+    "threads": 12,
+    "mhz": 3793,
+    "totalMemGB": 31.1,
+    "platform": "win32 10.0.26200",
+    "node": "v24.20.0"
+  },
+  "data": [
+    {
+      "entities": 100,
+      "grid": "16x16",
+      "bootMs": 227.95979999999986,
+      "openMs": 32.55439999999976,
+      "drawCallsPerFrame": 959,
+      "drawImagesPerFrame": 356,
+      "fullStep": {
+        "n": 40,
+        "median": 1.85,
+        "p95": 2.966,
+        "mean": 1.949,
+        "min": 1.169,
+        "max": 3.168
+      },
+      "breakdown": {
+        "update": {
+          "n": 40,
+          "median": 0.322,
+          "p95": 0.598,
+          "mean": 0.382,
+          "min": 0.251,
+          "max": 1.479
+        },
+        "history": {
+          "n": 40,
+          "median": 0.054,
+          "p95": 0.083,
+          "mean": 0.06,
+          "min": 0.04,
+          "max": 0.099
+        },
+        "selection": {
+          "n": 40,
+          "median": 0.005,
+          "p95": 0.006,
+          "mean": 0.005,
+          "min": 0.003,
+          "max": 0.007
+        },
+        "render": {
+          "n": 40,
+          "median": 0.273,
+          "p95": 0.427,
+          "mean": 0.294,
+          "min": 0.193,
+          "max": 0.569
+        },
+        "restOfChangeDetection": {
+          "n": 40,
+          "median": 0.848,
+          "p95": 1.58,
+          "mean": 0.928,
+          "min": 0.537,
+          "max": 1.902
+        }
+      },
+      "hoverStep": {
+        "n": 40,
+        "median": 1.436,
+        "p95": 1.944,
+        "mean": 1.472,
+        "min": 1.013,
+        "max": 3.194
+      },
+      "pointerDown": {
+        "n": 10,
+        "median": 1.507,
+        "p95": 1.8,
+        "mean": 1.437,
+        "min": 0.988,
+        "max": 1.8
+      },
+      "pointerUp": {
+        "n": 10,
+        "median": 1.087,
+        "p95": 1.287,
+        "mean": 1.098,
+        "min": 0.885,
+        "max": 1.287
+      }
+    },
+    {
+      "entities": 250,
+      "grid": "23x23",
+      "bootMs": 46.27429999999913,
+      "openMs": 57.25619999999981,
+      "drawCallsPerFrame": 1652,
+      "drawImagesPerFrame": 779,
+      "fullStep": {
+        "n": 40,
+        "median": 2.364,
+        "p95": 3.268,
+        "mean": 2.522,
+        "min": 1.625,
+        "max": 5.88
+      },
+      "breakdown": {
+        "update": {
+          "n": 40,
+          "median": 0.319,
+          "p95": 0.621,
+          "mean": 0.362,
+          "min": 0.122,
+          "max": 0.776
+        },
+        "history": {
+          "n": 40,
+          "median": 0.085,
+          "p95": 0.196,
+          "mean": 0.099,
+          "min": 0.052,
+          "max": 0.204
+        },
+        "selection": {
+          "n": 40,
+          "median": 0.005,
+          "p95": 0.01,
+          "mean": 0.006,
+          "min": 0.002,
+          "max": 0.021
+        },
+        "render": {
+          "n": 40,
+          "median": 0.482,
+          "p95": 0.709,
+          "mean": 0.492,
+          "min": 0.305,
+          "max": 0.871
+        },
+        "restOfChangeDetection": {
+          "n": 40,
+          "median": 1.1,
+          "p95": 1.612,
+          "mean": 1.165,
+          "min": 0.587,
+          "max": 1.779
+        }
+      },
+      "hoverStep": {
+        "n": 40,
+        "median": 1.886,
+        "p95": 2.389,
+        "mean": 1.921,
+        "min": 1.241,
+        "max": 2.813
+      },
+      "pointerDown": {
+        "n": 10,
+        "median": 1.62,
+        "p95": 4.107,
+        "mean": 2.144,
+        "min": 1.405,
+        "max": 4.107
+      },
+      "pointerUp": {
+        "n": 10,
+        "median": 1.547,
+        "p95": 2.182,
+        "mean": 1.596,
+        "min": 1.295,
+        "max": 2.182
+      }
+    },
+    {
+      "entities": 500,
+      "grid": "32x32",
+      "bootMs": 37.038800000000265,
+      "openMs": 76.9952000000003,
+      "drawCallsPerFrame": 2736,
+      "drawImagesPerFrame": 1524,
+      "fullStep": {
+        "n": 40,
+        "median": 3.159,
+        "p95": 3.942,
+        "mean": 3.226,
+        "min": 2.462,
+        "max": 4.186
+      },
+      "breakdown": {
+        "update": {
+          "n": 40,
+          "median": 0.357,
+          "p95": 0.791,
+          "mean": 0.481,
+          "min": 0.257,
+          "max": 2.449
+        },
+        "history": {
+          "n": 40,
+          "median": 0.139,
+          "p95": 0.238,
+          "mean": 0.158,
+          "min": 0.102,
+          "max": 0.403
+        },
+        "selection": {
+          "n": 40,
+          "median": 0.01,
+          "p95": 0.047,
+          "mean": 0.014,
+          "min": 0.006,
+          "max": 0.059
+        },
+        "render": {
+          "n": 40,
+          "median": 0.917,
+          "p95": 1.397,
+          "mean": 0.997,
+          "min": 0.616,
+          "max": 2.3
+        },
+        "restOfChangeDetection": {
+          "n": 40,
+          "median": 1.994,
+          "p95": 5.081,
+          "mean": 2.225,
+          "min": 1.143,
+          "max": 5.816
+        }
+      },
+      "hoverStep": {
+        "n": 40,
+        "median": 3.55,
+        "p95": 6.993,
+        "mean": 4.065,
+        "min": 2.042,
+        "max": 13.616
+      },
+      "pointerDown": {
+        "n": 10,
+        "median": 2.793,
+        "p95": 3.386,
+        "mean": 2.788,
+        "min": 2.036,
+        "max": 3.386
+      },
+      "pointerUp": {
+        "n": 10,
+        "median": 2.897,
+        "p95": 6.835,
+        "mean": 3.368,
+        "min": 2.235,
+        "max": 6.835
+      }
+    },
+    {
+      "entities": 1000,
+      "grid": "45x45",
+      "bootMs": 38.54160000000047,
+      "openMs": 159.85930000000008,
+      "drawCallsPerFrame": 4705,
+      "drawImagesPerFrame": 3025,
+      "fullStep": {
+        "n": 40,
+        "median": 4.776,
+        "p95": 6.605,
+        "mean": 5.031,
+        "min": 3.681,
+        "max": 7.729
+      },
+      "breakdown": {
+        "update": {
+          "n": 40,
+          "median": 0.329,
+          "p95": 0.554,
+          "mean": 0.36,
+          "min": 0.229,
+          "max": 0.574
+        },
+        "history": {
+          "n": 40,
+          "median": 0.274,
+          "p95": 0.361,
+          "mean": 0.28,
+          "min": 0.197,
+          "max": 0.599
+        },
+        "selection": {
+          "n": 40,
+          "median": 0.013,
+          "p95": 0.02,
+          "mean": 0.013,
+          "min": 0.008,
+          "max": 0.023
+        },
+        "render": {
+          "n": 40,
+          "median": 1.579,
+          "p95": 2.076,
+          "mean": 1.657,
+          "min": 1.218,
+          "max": 3.424
+        },
+        "restOfChangeDetection": {
+          "n": 40,
+          "median": 2.451,
+          "p95": 3.652,
+          "mean": 2.569,
+          "min": 1.547,
+          "max": 6.098
+        }
+      },
+      "hoverStep": {
+        "n": 40,
+        "median": 5.291,
+        "p95": 20.891,
+        "mean": 8.723,
+        "min": 3.766,
+        "max": 70.021
+      },
+      "pointerDown": {
+        "n": 10,
+        "median": 4.332,
+        "p95": 17.525,
+        "mean": 5.97,
+        "min": 3.444,
+        "max": 17.525
+      },
+      "pointerUp": {
+        "n": 10,
+        "median": 3.484,
+        "p95": 24.57,
+        "mean": 6.351,
+        "min": 2.438,
+        "max": 24.57
+      }
+    }
+  ]
+}

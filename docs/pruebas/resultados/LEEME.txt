@@ -1,0 +1,28 @@
+RESULTADOS DE LAS PRUEBAS AUTOMATICAS - HoneyComb Engine
+Ejecucion del 17 y 18/10/2026 sobre el commit 33c2c25 con las pruebas de la rama "pruebas".
+Es la evidencia del Reporte de Pruebas Automaticas (DOC13, version 3).
+Las rutas del equipo se reemplazaron por <repo>, <temp> y <usuario>.
+
+editor/
+  vitest-resultados.json     Corrida general del editor (Vitest, reporte JSON): 887 pruebas.
+  vitest-estres.json         Pruebas de estres del editor, corridas aparte con HC_STRESS=1.
+  cobertura.txt              Cobertura por archivo (@vitest/coverage-v8).
+  rendimiento/               Mediciones del arrastre (M-05) en jsdom y en Electron real, y estres.
+
+motor/
+  doctest-junit.xml          Corrida completa de engine_tests (doctest, JUnit). El JUnit de doctest
+                             marca como "failure" las pruebas de fallo esperado (should_fail);
+                             la corrida termino con exito (codigo 0).
+  cobertura-gcov.json        Cobertura de lineas por archivo (gcov).
+  rendimiento/               Protocolo 6.5 (protocolo_*), estres por dimension (estres_*),
+                             tiempo de arranque M-04 (m04_*), puntos de ruptura (resumen_rotura.csv),
+                             datos del equipo (maquina.json) y la corrida del presupuesto de 500 entidades.
+
+seguridad/
+  electron-junit.xml         Pruebas de la capa Electron (node --test, JUnit); "todo" = fallo esperado.
+  electron-consola.txt       Salida de las mismas pruebas.
+  motor-seguridad-consola.txt  Suite "seguridad" del motor (fuzzing y rutas).
+  npm-audit-produccion.json  npm audit --omit=dev (dependencias de produccion).
+  npm-audit-completo.json    npm audit del arbol completo.
+
+Como repetir las pruebas: ver la seccion 4 del reporte.

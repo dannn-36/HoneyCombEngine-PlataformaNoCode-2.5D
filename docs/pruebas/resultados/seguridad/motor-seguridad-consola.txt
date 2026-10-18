@@ -1,0 +1,232 @@
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+<repo>/engine/tests/test_security.cpp:599:
+TEST SUITE: seguridad
+TEST CASE:  el cargador sobrevive a miles de niveles mutados
+
+<repo>/engine/tests/test_security.cpp:694: MESSAGE: fuzzing: 26 semillas, 2368 cargas en 41.6031 s; cargaron 439; descartadas por grilla enorme sin tiles (EN-07) 224, por medida fuera de int 8; excepciones sin mensaje 0
+  rechazo json::out_of_range: 246
+  rechazo json::parse_error: 1222
+  rechazo json::type_error: 361
+  rechazo std::runtime_error: 100
+  mutacion anidar: 175
+  mutacion borrar clave: 182
+  mutacion cambiar bytes: 493
+  mutacion cambiar tipo: 196
+  mutacion duplicar clave: 160
+  mutacion grilla enorme: 211
+  mutacion insertar bytes: 367
+  mutacion numero enorme: 212
+  mutacion texto largo: 177
+  mutacion truncar: 427
+
+===============================================================================
+<repo>/engine/tests/test_security.cpp:724:
+TEST SUITE: seguridad
+TEST CASE:  los parametros de un evento con diez mil listas anidadas no tiran el motor
+
+<repo>/engine/tests/test_security.cpp:731: ERROR: CHECK( code == 0 ) is NOT correct!
+  values: CHECK( -1073741571 == 0 )
+  logged: el proceso termino con 0xc00000fd
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:736:
+TEST SUITE: seguridad
+TEST CASE:  el ataque de un arma con diez mil listas anidadas no tira el motor
+
+<repo>/engine/tests/test_security.cpp:742: ERROR: CHECK( code == 0 ) is NOT correct!
+  values: CHECK( -1073741571 == 0 )
+  logged: el proceso termino con 0xc00000fd
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:747:
+TEST SUITE: seguridad
+TEST CASE:  la tienda de una entidad con diez mil listas anidadas no tira el motor
+
+<repo>/engine/tests/test_security.cpp:755: ERROR: CHECK( code == 0 ) is NOT correct!
+  values: CHECK( -1073741571 == 0 )
+  logged: el proceso termino con 0xc00000fd
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:767:
+TEST SUITE: seguridad
+TEST CASE:  assetresolver no lee archivos fuera de assets con rutas que suben
+
+<repo>/engine/tests/test_security.cpp:771: ERROR: CHECK_FALSE( assets.Exists("../../secreto/afuera.txt") ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+<repo>/engine/tests/test_security.cpp:772: ERROR: CHECK_FALSE( assets.Exists("textures/../../../secreto/afuera.txt") ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+<repo>/engine/tests/test_security.cpp:774: ERROR: CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: ../../secreto/afuera.png
+
+<repo>/engine/tests/test_security.cpp:774: ERROR: CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: textures/../../../secreto/afuera.png
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:780:
+TEST SUITE: seguridad
+TEST CASE:  assetresolver no lee fuera de assets con barras invertidas
+
+<repo>/engine/tests/test_security.cpp:783: ERROR: CHECK_FALSE( assets.Exists("..\\..\\secreto\\afuera.txt") ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+<repo>/engine/tests/test_security.cpp:785: ERROR: CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: ..\..\secreto\afuera.png
+
+<repo>/engine/tests/test_security.cpp:785: ERROR: CHECK( InsideDir(fx.assetsDir, fs::u8path(assets.Resolve(reference))) ) is NOT correct!
+  values: CHECK( false )
+  logged: textures\..\..\..\secreto\afuera.png
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:820:
+TEST SUITE: seguridad
+TEST CASE:  una textura de entidad con ruta que sube no se carga desde fuera de assets
+
+<repo>/engine/tests/test_security.cpp:828: ERROR: CHECK( loaded.entities[0].texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+  logged: ../../secreto/afuera.png
+
+<repo>/engine/tests/test_security.cpp:828: ERROR: CHECK( loaded.entities[0].texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+  logged: ..\..\secreto\afuera.png
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:833:
+TEST SUITE: seguridad
+TEST CASE:  el fondo y el piso con ruta que sube no se cargan desde fuera de assets
+
+<repo>/engine/tests/test_security.cpp:842: ERROR: CHECK( loaded.backgroundTexture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+<repo>/engine/tests/test_security.cpp:844: ERROR: CHECK( loaded.floorTexture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+<repo>/engine/tests/test_security.cpp:846: ERROR: CHECK( loaded.floorVariants[0].texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:850:
+TEST SUITE: seguridad
+TEST CASE:  la textura de un objeto con ruta que sube no se carga desde fuera de assets
+
+<repo>/engine/tests/test_security.cpp:858: ERROR: CHECK( loaded.items.at("moneda").texture->width == 0 ) is NOT correct!
+  values: CHECK( 7 == 0 )
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:883:
+TEST SUITE: seguridad
+TEST CASE:  pasar de nivel con una ruta que sube no sale de levels
+
+<repo>/engine/tests/test_security.cpp:885: ERROR: CHECK( InsideDir(fx.levelsDir, fx.LoadLevelTarget("../../fuera/nivel")) ) is NOT correct!
+  values: CHECK( false )
+
+<repo>/engine/tests/test_security.cpp:886: ERROR: CHECK( InsideDir(fx.levelsDir, fx.LoadLevelTarget("..\\..\\fuera\\nivel.json")) ) is NOT correct!
+  values: CHECK( false )
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:890:
+TEST SUITE: seguridad
+TEST CASE:  pasar de nivel con una ruta absoluta no sale de levels
+
+<repo>/engine/tests/test_security.cpp:893: ERROR: CHECK( InsideDir(fx.levelsDir, target) ) is NOT correct!
+  values: CHECK( false )
+  logged: C:/Windows/win.ini
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:898:
+TEST SUITE: seguridad
+TEST CASE:  pasar de nivel con una ruta unc no sale de levels
+
+<repo>/engine/tests/test_security.cpp:901: ERROR: CHECK( InsideDir(fx.levelsDir, target) ) is NOT correct!
+  values: CHECK( false )
+  logged: //servidor/recurso/nivel.json
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:912:
+TEST SUITE: seguridad
+TEST CASE:  la partida guardada no entrega un nivel fuera de levels
+
+<repo>/engine/tests/test_security.cpp:919: ERROR: CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: ../../fuera.json
+
+<repo>/engine/tests/test_security.cpp:919: ERROR: CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: ..\..\fuera.json
+
+<repo>/engine/tests/test_security.cpp:919: ERROR: CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: C:/Windows/win.ini
+
+<repo>/engine/tests/test_security.cpp:919: ERROR: CHECK( (!loaded || StaysInside(save.level)) ) is NOT correct!
+  values: CHECK( false )
+  logged: //servidor/recurso/nivel.json
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:924:
+TEST SUITE: seguridad
+TEST CASE:  game json no entrega rutas de assets que salen del proyecto
+
+<repo>/engine/tests/test_security.cpp:933: ERROR: CHECK( StaysInside(config.icon) ) is NOT correct!
+  values: CHECK( false )
+
+<repo>/engine/tests/test_security.cpp:934: ERROR: CHECK( StaysInside(config.titleScreen.backgroundImage) ) is NOT correct!
+  values: CHECK( false )
+
+<repo>/engine/tests/test_security.cpp:935: ERROR: CHECK( StaysInside(config.titleScreen.music) ) is NOT correct!
+  values: CHECK( false )
+
+<repo>/engine/tests/test_security.cpp:936: ERROR: CHECK( StaysInside(config.hud.heartFull) ) is NOT correct!
+  values: CHECK( false )
+
+<repo>/engine/tests/test_security.cpp:937: ERROR: CHECK( StaysInside(config.hud.barFrame) ) is NOT correct!
+  values: CHECK( false )
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:941:
+TEST SUITE: seguridad
+TEST CASE:  game json no entrega un nivel inicial fuera de levels
+
+<repo>/engine/tests/test_security.cpp:946: ERROR: CHECK( StaysInside(config.startLevel) ) is NOT correct!
+  values: CHECK( false )
+  logged: ../../fuera.json
+
+<repo>/engine/tests/test_security.cpp:946: ERROR: CHECK( StaysInside(config.startLevel) ) is NOT correct!
+  values: CHECK( false )
+  logged: C:/Windows/win.ini
+
+<repo>/engine/tests/test_security.cpp:946: ERROR: CHECK( StaysInside(config.startLevel) ) is NOT correct!
+  values: CHECK( false )
+  logged: //servidor/recurso/nivel.json
+
+Failed as expected so marking it as not failed
+===============================================================================
+<repo>/engine/tests/test_security.cpp:950:
+TEST SUITE: seguridad
+TEST CASE:  la partida guardada y game json mutados nunca dejan escapar una excepcion
+
+<repo>/engine/tests/test_security.cpp:995: MESSAGE: partida y game.json: 400 mutaciones de cada uno
+
+===============================================================================
+[doctest] test cases:  22 |  22 passed |  0 failed | 272 skipped
+[doctest] assertions: 867 | 835 passed | 32 failed |
+[doctest] Status: SUCCESS!

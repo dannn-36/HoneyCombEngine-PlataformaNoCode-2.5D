@@ -1,0 +1,1292 @@
+▶ project:run solo ejecuta el motor de la instalacion (SE-01)
+  ⚠ un nivel de una carpeta ajena no hace ejecutar el engine.exe que trae al lado (244.6743ms) # Defecto conocido: SE-01 - run.js busca el motor junto al nivel recibido
+  ⚠ con el motor debug instalado, pedir release no ejecuta el release de una carpeta ajena (232.5413ms) # Defecto conocido: SE-01 - el modo sin compilar cae en el motor de la carpeta del nivel
+  ⚠ un nivel fuera de la carpeta del editor se rechaza sin lanzar nada (170.7063ms) # Defecto conocido: SE-01 - levelPath no se valida contra la carpeta del editor
+  ⚠ un archivo que no es un nivel json no se le pasa al motor (154.3334ms) # Defecto conocido: SE-01 - project:run no mira la extension ni la carpeta del nivel
+  ⚠ una ruta relativa con subidas no se resuelve contra la carpeta de trabajo del editor (154.5724ms) # Defecto conocido: SE-01 - las rutas relativas no pasan por resolveInProject
+  ✔ con un nivel del proyecto ejecuta el motor de la instalacion (158.6642ms)
+  ✔ sin motor en la instalacion ni en el proyecto contesta que falta, sin lanzar nada (28.9279ms)
+(node:38604) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ✔ sin nivel o con un valor que no es una ruta no lanza nada (28.757ms)
+✔ project:run solo ejecuta el motor de la instalacion (SE-01) (1175.4025ms)
+▶ project:run arma el comando sin shell ni opciones de la UI
+  ✔ lanza sin shell: los metacaracteres del nombre del nivel no se interpretan (162.6111ms)
+  ✔ un modo desconocido no elige carpetas de la UI: cae en debug (657.5157ms)
+  ✔ "start" solo agrega --portada; cualquier otro valor no agrega opciones (408.0918ms)
+  ✔ el motor arranca en su propia carpeta, no en una que mande la UI (192.3497ms)
+✔ project:run arma el comando sin shell ni opciones de la UI (1421.2241ms)
+▶ engine:build solo corre la compilacion de la instalacion
+  ✔ un modo desconocido se rechaza sin lanzar nada (67.7976ms)
+  ✔ compila con el cmake de la instalacion, sin shell y en engine/ (54.4242ms)
+  ✔ no le pasa al compilador ELECTRON_RUN_AS_NODE (29.3333ms)
+  ✔ sin una instalacion compilada antes no inventa un cmake: contesta el error (25.4675ms)
+  ✔ engine:status mira solo la instalacion (24.9637ms)
+✔ engine:build solo corre la compilacion de la instalacion (202.5762ms)
+▶ webPreferences de la ventana
+  ✔ contextIsolation esta activado (62.4827ms)
+  ✔ nodeIntegration esta desactivado (29.6435ms)
+  ✔ no activa node en workers ni en subframes (15.4918ms)
+  ✔ no usa el modulo remote (35.3768ms)
+  ✔ no habilita webview, contenido inseguro ni funciones experimentales (32.2873ms)
+  ✔ no desactiva webSecurity ni el sandbox (28.0052ms)
+  ⚠ declara sandbox: true de forma explicita (16.1424ms) # Defecto conocido: SE-08 - sandbox no se declara explicitamente
+  ⚠ declara webSecurity: true de forma explicita (15.0697ms) # Defecto conocido: SE-08 - webSecurity no se declara explicitamente
+  ✔ el preload es el preload.js del editor (49.0144ms)
+✔ webPreferences de la ventana (302.2351ms)
+▶ navegacion y ventanas nuevas (SE-03)
+  ⚠ la ventana no navega a un sitio externo (26.4945ms) # Defecto conocido: SE-03 - no hay handler de will-navigate
+  ⚠ la ventana no abre ventanas nuevas (16.0122ms) # Defecto conocido: SE-03 - no hay setWindowOpenHandler
+  ⚠ las redirecciones a un sitio externo tambien se frenan (14.9807ms) # Defecto conocido: SE-03 - no hay handler de will-redirect
+✔ navegacion y ventanas nuevas (SE-03) (58.2218ms)
+▶ de donde sale la interfaz (SE-09)
+  ⚠ la instalacion sin empaquetar no carga la interfaz desde un servidor local (31.0817ms) # Defecto conocido: SE-09 - sin ELECTRON_START_URL se carga http://localhost:4200 antes que dist/
+  ✔ empaquetada carga dist/ e ignora ELECTRON_START_URL (31.1318ms)
+[honeycomb] http://localhost:4200/ no respondio; usando dist/.
+  ✔ si el servidor no responde cae en dist/ y no en otra url (15.4541ms)
+✔ de donde sale la interfaz (SE-09) (78.1028ms)
+▶ herramientas de desarrollo (SE-06)
+  ⚠ empaquetada, HONEYCOMB_DEVTOOLS no abre las herramientas (32.997ms) # Defecto conocido: SE-06 - HONEYCOMB_DEVTOOLS abre devtools en produccion
+  ⚠ empaquetada, el canal window:toggleDevTools no las abre (30.4134ms) # Defecto conocido: SE-06 - window:toggleDevTools funciona en produccion
+  ✔ sin HONEYCOMB_DEVTOOLS no se abren solas (15.4009ms)
+✔ herramientas de desarrollo (SE-06) (79.293ms)
+[honeycomb] http://localhost:4200/ no respondio y no hay build en dist/.
+▶ pagina de diagnostico (SE-07)
+  ✔ muestra el motivo y la url que fallaron (16.1255ms)
+[honeycomb] http://localhost:4200/ no respondio y no hay build en dist/.
+  ⚠ escapa un <script> que venga en la descripcion o la url (45.5984ms) # Defecto conocido: SE-07 - diagnosticPage interpola sin escapar
+[honeycomb] http://localhost:4200/<img src=x onerror=alert(1)> no respondio y no hay build en dist/.
+  ⚠ escapa un <img onerror> que venga en la url (16.1332ms) # Defecto conocido: SE-07 - diagnosticPage interpola sin escapar
+  ✔ no reacciona a fallos de subframes ni de file:// o data: (16.2168ms)
+✔ pagina de diagnostico (SE-07) (94.6955ms)
+▶ content security policy (SE-02)
+  ⚠ src/index.html declara una CSP estricta para scripts (0.8948ms) # Defecto conocido: SE-02 - no hay Content Security Policy
+  ⚠ el build de dist/ conserva la CSP (4.8508ms) # Defecto conocido: SE-02 - no hay Content Security Policy
+✔ content security policy (SE-02) (5.9384ms)
+▶ quien le habla al proceso principal (SE-10)
+  ⚠ los handlers rechazan pedidos de un origen que no es la interfaz (32.0388ms) # Defecto conocido: SE-10 - los handlers IPC no validan el remitente
+  ⚠ se niegan los permisos del navegador que el editor no usa (23.115ms) # Defecto conocido: SE-10 - no hay setPermissionRequestHandler
+✔ quien le habla al proceso principal (SE-10) (55.498ms)
+▶ una union dentro del proyecto no deja salir de el
+  ⚠ project:readFile no lee a traves de una union (48.4622ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ project:readFileData no muestra un archivo a traves de una union (18.02ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ project:listEntries no lista una carpeta de afuera a traves de una union (14.0006ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ project:listDir no lista una carpeta de afuera a traves de una union (13.5096ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ project:writeFile no escribe a traves de una union (51.7397ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ project:writeFile no pisa un archivo de afuera a traves de una union (20.2934ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ project:createDir no crea carpetas a traves de una union (14.6067ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ textures:write no escribe afuera si assets/textures es una union (13.7025ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ game:clearSave no borra afuera si saves es una union (23.8722ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ⚠ convert:begin desde el proyecto no toma imagenes de afuera a traves de una union (19.6476ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  ✔ una carpeta comun del proyecto sigue funcionando (11.5092ms)
+✔ una union dentro del proyecto no deja salir de el (252.4438ms)
+▶ otros enlaces dentro del proyecto
+  ﹣ project:readFile no lee a traves de un enlace simbolico a archivo (9.8162ms) # crear enlaces simbolicos pide administrador o el modo desarrollador
+  ⚠ project:writeFile no modifica un archivo de afuera enlazado con un enlace duro (23.3507ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+✔ otros enlaces dentro del proyecto (33.6856ms)
+▶ project:writeFile solo escribe archivos de datos (SE-05)
+  ✔ acepta levels/ok.json (6.4697ms)
+  ✔ acepta characters.json (1.9641ms)
+  ✔ acepta items.json (1.849ms)
+  ✔ acepta game.json (1.9037ms)
+  ⚠ rechaza un archivo .exe (2.855ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .dll (2.052ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .bat (1.8379ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .cmd (3.943ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .ps1 (7.1624ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .vbs (3.0252ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .js (1.6668ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .hta (2.4368ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .lnk (2.9474ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un archivo .scr (3.6157ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza desktop.ini, que cambia como el explorador muestra la carpeta (3.4851ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  ⚠ rechaza un contenido exageradamente grande (131.7354ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+✔ project:writeFile solo escribe archivos de datos (SE-05) (217.6337ms)
+▶ nombres que windows trata distinto (SE-12)
+  ⚠ project:writeFile rechaza el nombre reservado CON.json (1.9951ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ project:writeFile rechaza el nombre reservado NUL (1.2317ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ project:writeFile rechaza el nombre reservado aux.json (3.0796ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ project:writeFile rechaza el nombre reservado COM1.json (2.7311ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ project:writeFile rechaza el nombre reservado LPT1.json (1.5132ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ project:writeFile rechaza un flujo alternativo de ntfs (2.1886ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ project:writeFile rechaza un nombre con punto o espacio al final (12.3425ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ project:createDir rechaza un nombre reservado (3.1816ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ✔ project:createDir rechaza los caracteres que windows no admite (0.774ms)
+✔ nombres que windows trata distinto (SE-12) (29.965ms)
+▶ textures:write solo deja PNG con nombre limpio en assets/textures
+  ✔ el nombre "../../fuera/sprite" termina como un png dentro de assets/textures (21.1436ms)
+  ✔ el nombre "..\\..\\fuera\\sprite" termina como un png dentro de assets/textures (3.8259ms)
+  ✔ el nombre "C:\\Windows\\Temp\\sprite" termina como un png dentro de assets/textures (5.0129ms)
+  ✔ el nombre "\\\\127.0.0.1\\c$\\sprite" termina como un png dentro de assets/textures (2.7348ms)
+  ✔ el nombre "sprite.exe" termina como un png dentro de assets/textures (3.6941ms)
+  ✔ el nombre "sprite.png.exe" termina como un png dentro de assets/textures (2.8338ms)
+  ✔ el nombre "sprite\u0000.exe" termina como un png dentro de assets/textures (3.2272ms)
+  ✔ el nombre "a/b/c/sprite" termina como un png dentro de assets/textures (3.8671ms)
+  ✔ el nombre "%2e%2e%2fsprite" termina como un png dentro de assets/textures (2.5465ms)
+  ✔ el nombre "" termina como un png dentro de assets/textures (3.1091ms)
+  ✔ el nombre "   " termina como un png dentro de assets/textures (2.3831ms)
+  ✔ el nombre "♡" termina como un png dentro de assets/textures (2.6419ms)
+  ⚠ el nombre reservado CON no se usa tal cual (3.2854ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ el nombre reservado nul no se usa tal cual (1.3991ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ el nombre reservado AUX no se usa tal cual (1.2868ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ⚠ el nombre reservado COM1 no se usa tal cual (1.1876ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  ✔ un nombre larguisimo no escribe nada fuera de la carpeta (falla o se recorta) (3.5786ms)
+  ✔ rechaza lo que no es un png (0.5064ms)
+  ✔ rechaza un png mas grande que el tope de importacion (36.6907ms)
+  ✔ sin overwrite no pisa una textura que ya existe (6.0666ms)
+  ✔ falla si faltan el nombre o la imagen, o no son texto (0.4586ms)
+✔ textures:write solo deja PNG con nombre limpio en assets/textures (112.7828ms)
+▶ el convertidor solo trabaja con su plan (convert:*)
+  ✔ convert:begin siempre pide los archivos con el dialogo, aunque la UI mande una ruta (1.9656ms)
+  ✔ convert:readImage y convert:writeImage rechazan indices que no son del plan (4.4832ms)
+  ✔ convert:writeImage escribe siempre en assets/textures con el nombre del plan (1.6833ms)
+  ⚠ convert:writeImage rechaza lo que no es un png (1.5191ms) # Defecto conocido: SE-11 - convert:writeImage no valida el PNG ni su tamano
+  ⚠ convert:writeImage rechaza una imagen mas grande que el tope de importacion (78.0294ms) # Defecto conocido: SE-11 - convert:writeImage no valida el PNG ni su tamano
+  ✔ convert:begin ignora archivos que no son imagenes aunque el dialogo los devuelva (9.683ms)
+✔ el convertidor solo trabaja con su plan (convert:*) (97.8451ms)
+▶ importar un nivel no copia archivos de fuera de sus assets
+  ✔ las referencias tramposas quedan como faltantes y no se copian (56.721ms)
+  ✔ una referencia que sale de assets no escribe en otra carpeta del proyecto (27.6275ms)
+  ✔ el nombre del nivel importado se limpia y no pisa otro (23.564ms)
+  ✔ un nivel que no es json valido se rechaza sin copiar nada (29.4115ms)
+  ✔ project:open no usa una ruta mandada por la UI: siempre pasa por el dialogo (30.784ms)
+✔ importar un nivel no copia archivos de fuera de sus assets (170.0195ms)
+▶ la superficie expuesta es minima
+  ✔ expone solo honeycombProject y honeycombWindow (1.173ms)
+  ✔ honeycombProject tiene exactamente la lista de funciones esperada (0.1579ms)
+  ✔ coincide con el contrato tipado de src/app/electron-api.d.ts (3.1674ms)
+  ✔ todo lo expuesto es una funcion: ni objetos, ni modulos, ni valores (1.137ms)
+  ✔ no expone nada de node ni un invoke generico (3.8834ms)
+  ✔ preload.js no carga otros modulos que electron (funciona con sandbox) (0.5621ms)
+✔ la superficie expuesta es minima (11.1779ms)
+▶ cada funcion invoca un canal fijo
+  ✔ beginConvert invoca siempre el mismo canal, sin importar los argumentos (11.1981ms)
+  ✔ buildEngine invoca siempre el mismo canal, sin importar los argumentos (0.4658ms)
+  ✔ changeWorkspace invoca siempre el mismo canal, sin importar los argumentos (0.142ms)
+  ✔ clearSave invoca siempre el mismo canal, sin importar los argumentos (0.1375ms)
+  ✔ createDir invoca siempre el mismo canal, sin importar los argumentos (0.0806ms)
+  ✔ engineStatus invoca siempre el mismo canal, sin importar los argumentos (0.1691ms)
+  ✔ ensureRoot invoca siempre el mismo canal, sin importar los argumentos (0.1784ms)
+  ✔ listDir invoca siempre el mismo canal, sin importar los argumentos (0.1171ms)
+  ✔ listEntries invoca siempre el mismo canal, sin importar los argumentos (0.0787ms)
+  ✔ open invoca siempre el mismo canal, sin importar los argumentos (0.1234ms)
+  ✔ readConvertImage invoca siempre el mismo canal, sin importar los argumentos (0.0868ms)
+  ✔ readEventCatalog invoca siempre el mismo canal, sin importar los argumentos (0.1918ms)
+  ✔ readFile invoca siempre el mismo canal, sin importar los argumentos (0.1074ms)
+  ✔ readFileData invoca siempre el mismo canal, sin importar los argumentos (0.0885ms)
+  ✔ resetConvert invoca siempre el mismo canal, sin importar los argumentos (0.0818ms)
+  ✔ revealWorkspace invoca siempre el mismo canal, sin importar los argumentos (0.1193ms)
+  ✔ run invoca siempre el mismo canal, sin importar los argumentos (0.1247ms)
+  ✔ workspaceInfo invoca siempre el mismo canal, sin importar los argumentos (0.0775ms)
+  ✔ writeConvertedImage invoca siempre el mismo canal, sin importar los argumentos (0.0914ms)
+  ✔ writeFile invoca siempre el mismo canal, sin importar los argumentos (0.0917ms)
+  ✔ writeTexture invoca siempre el mismo canal, sin importar los argumentos (0.097ms)
+  ✔ toggleDevTools invoca solo window:toggleDevTools (0.1408ms)
+  ✔ onEngineBuildLog entrega solo la linea, nunca el evento de ipc (0.2133ms)
+✔ cada funcion invoca un canal fijo (15.1065ms)
+▶ cada canal expuesto tiene su handler
+  ✔ todo canal que invoca el preload esta registrado en el proceso principal (0.8264ms)
+  ✔ no hay handlers registrados que el preload no use (0.1951ms)
+✔ cada canal expuesto tiene su handler (62.3699ms)
+▶ los handlers aguantan datos basura sin salir del proyecto
+  ✔ ningun canal se cuelga, escribe afuera o lee el secreto con datos basura (108.1092ms)
+✔ los handlers aguantan datos basura sin salir del proyecto (123.3795ms)
+▶ project:readFile no lee fuera de la carpeta del editor
+  ✔ rechaza: subir con barras normales (3.2617ms)
+  ✔ rechaza: subir con barras invertidas (1.7914ms)
+  ✔ rechaza: subir desde una subcarpeta (1.4259ms)
+  ✔ rechaza: separadores mezclados (1.9428ms)
+  ✔ rechaza: subir de mas (1.751ms)
+  ✔ rechaza: ruta absoluta (1.0923ms)
+  ✔ rechaza: ruta absoluta con barras normales (4.585ms)
+  ✔ rechaza: ruta absoluta con la unidad en minuscula (2.3358ms)
+  ✔ rechaza: ruta desde la raiz del disco sin unidad (1.1283ms)
+  ✔ rechaza: ruta relativa a la unidad (29.2498ms)
+  ✔ rechaza: prefijo de ruta larga de windows (4.8271ms)
+  ✔ rechaza: espacio de nombres de dispositivos (9.7139ms)
+  ✔ rechaza: ruta unc a un recurso compartido (30.1372ms)
+  ✔ rechaza: ruta unc con barras normales (11.2007ms)
+  ✔ rechaza: url file (7.6247ms)
+  ✔ rechaza: codificada como url (5.2286ms)
+  ✔ rechaza: codificada como url con barras reales (5.0083ms)
+  ✔ rechaza: byte nulo al final (4.463ms)
+  ✔ rechaza: byte nulo en el medio (9.4208ms)
+  ✔ rechaza: puntos y espacios que windows recorta (6.614ms)
+  ✔ rechaza: tres puntos (4.7585ms)
+  ✔ rechaza: nombre muy largo (7.6853ms)
+  ✔ una ruta valida dentro del proyecto se sigue leyendo (2.4901ms)
+✔ project:readFile no lee fuera de la carpeta del editor (173.7755ms)
+▶ project:readFileData no muestra archivos de afuera
+  ✔ rechaza: subir con barras normales (0.5317ms)
+  ✔ rechaza: subir con barras invertidas (0.1204ms)
+  ✔ rechaza: subir desde una subcarpeta (0.1145ms)
+  ✔ rechaza: separadores mezclados (0.1355ms)
+  ✔ rechaza: subir de mas (0.1172ms)
+  ✔ rechaza: ruta absoluta (0.1103ms)
+  ✔ rechaza: ruta absoluta con barras normales (0.0948ms)
+  ✔ rechaza: ruta absoluta con la unidad en minuscula (0.0911ms)
+  ✔ rechaza: ruta desde la raiz del disco sin unidad (0.1185ms)
+  ✔ rechaza: ruta relativa a la unidad (3.169ms)
+  ✔ rechaza: prefijo de ruta larga de windows (0.2168ms)
+  ✔ rechaza: espacio de nombres de dispositivos (0.2498ms)
+  ✔ rechaza: ruta unc a un recurso compartido (0.1253ms)
+  ✔ rechaza: ruta unc con barras normales (0.1353ms)
+  ✔ rechaza: url file (0.6285ms)
+  ✔ rechaza: codificada como url (0.8559ms)
+  ✔ rechaza: codificada como url con barras reales (0.4732ms)
+  ✔ rechaza: byte nulo al final (0.1775ms)
+  ✔ rechaza: byte nulo en el medio (0.1372ms)
+  ✔ rechaza: puntos y espacios que windows recorta (0.1047ms)
+  ✔ rechaza: tres puntos (0.0953ms)
+  ✔ rechaza: nombre muy largo (0.182ms)
+✔ project:readFileData no muestra archivos de afuera (8.6106ms)
+▶ project:writeFile no escribe fuera de la carpeta del editor
+  ✔ rechaza: subir con barras normales (1.5538ms)
+  ✔ rechaza: subir con barras invertidas (0.856ms)
+  ✔ rechaza: subir desde una subcarpeta (0.8241ms)
+  ✔ rechaza: separadores mezclados (1.0834ms)
+  ✔ rechaza: subir de mas (1.0875ms)
+  ✔ rechaza: ruta absoluta (1.1538ms)
+  ✔ rechaza: ruta absoluta con barras normales (1.2015ms)
+  ✔ rechaza: ruta absoluta con la unidad en minuscula (1.1442ms)
+  ✔ rechaza: ruta desde la raiz del disco sin unidad (0.8883ms)
+  ✔ rechaza: ruta relativa a la unidad (5.7572ms)
+  ✔ rechaza: prefijo de ruta larga de windows (1.8819ms)
+  ✔ rechaza: espacio de nombres de dispositivos (1.0118ms)
+  ✔ rechaza: ruta unc a un recurso compartido (0.8027ms)
+  ✔ rechaza: ruta unc con barras normales (0.7331ms)
+  ✔ rechaza: url file (1.7509ms)
+  ✔ rechaza: codificada como url (2.1095ms)
+  ✔ rechaza: codificada como url con barras reales (3.3685ms)
+  ✔ rechaza: byte nulo al final (3.0638ms)
+  ✔ rechaza: byte nulo en el medio (1.6594ms)
+  ✔ rechaza: puntos y espacios que windows recorta (1.5019ms)
+  ✔ rechaza: tres puntos (1.6506ms)
+  ✔ rechaza: nombre muy largo (0.8715ms)
+  ✔ tampoco pisa un archivo que ya existe afuera (0.9295ms)
+  ✔ una ruta valida dentro del proyecto se sigue escribiendo (3.3164ms)
+✔ project:writeFile no escribe fuera de la carpeta del editor (41.3001ms)
+▶ project:createDir no crea carpetas afuera
+  ✔ rechaza: subir con barras normales (1.6586ms)
+  ✔ rechaza: subir con barras invertidas (0.9184ms)
+  ✔ rechaza: subir desde una subcarpeta (0.8226ms)
+  ✔ rechaza: separadores mezclados (0.9093ms)
+  ✔ rechaza: subir de mas (1.2164ms)
+  ✔ rechaza: ruta absoluta (0.967ms)
+  ✔ rechaza: ruta absoluta con barras normales (0.9067ms)
+  ✔ rechaza: ruta absoluta con la unidad en minuscula (0.8284ms)
+  ✔ rechaza: ruta desde la raiz del disco sin unidad (0.735ms)
+  ✔ rechaza: ruta relativa a la unidad (3.5368ms)
+  ✔ rechaza: prefijo de ruta larga de windows (1.0656ms)
+  ✔ rechaza: espacio de nombres de dispositivos (0.8686ms)
+  ✔ rechaza: ruta unc a un recurso compartido (0.8926ms)
+  ✔ rechaza: ruta unc con barras normales (0.8264ms)
+  ✔ rechaza: url file (3.0622ms)
+  ✔ rechaza: codificada como url (3.6733ms)
+  ✔ rechaza: codificada como url con barras reales (5.7584ms)
+  ✔ rechaza: byte nulo al final (4.0276ms)
+  ✔ rechaza: byte nulo en el medio (1.8137ms)
+  ✔ rechaza: puntos y espacios que windows recorta (1.7648ms)
+  ✔ rechaza: tres puntos (1.6992ms)
+  ✔ rechaza: nombre muy largo (2.2251ms)
+✔ project:createDir no crea carpetas afuera (42.3386ms)
+▶ project:listDir y project:listEntries no listan carpetas de afuera
+  ✔ project:listDir rechaza: subir con barras normales (1.4984ms)
+  ✔ project:listDir rechaza: subir con barras invertidas (0.1524ms)
+  ✔ project:listDir rechaza: separadores mezclados (0.1169ms)
+  ✔ project:listDir rechaza: ruta absoluta (0.1882ms)
+  ✔ project:listDir rechaza: ruta absoluta con barras normales (0.1083ms)
+  ✔ project:listDir rechaza: prefijo de ruta larga de windows (0.0916ms)
+  ✔ project:listDir rechaza: espacio de nombres de dispositivos (0.0967ms)
+  ✔ project:listDir rechaza: ruta desde la raiz del disco sin unidad (0.2783ms)
+  ✔ project:listDir rechaza: la raiz del disco (0.161ms)
+  ✔ project:listDir rechaza: la carpeta padre (0.1193ms)
+  ✔ project:listEntries rechaza: subir con barras normales (0.5028ms)
+  ✔ project:listEntries rechaza: subir con barras invertidas (0.2747ms)
+  ✔ project:listEntries rechaza: separadores mezclados (0.1358ms)
+  ✔ project:listEntries rechaza: ruta absoluta (0.1817ms)
+  ✔ project:listEntries rechaza: ruta absoluta con barras normales (0.2554ms)
+  ✔ project:listEntries rechaza: prefijo de ruta larga de windows (0.1761ms)
+  ✔ project:listEntries rechaza: espacio de nombres de dispositivos (0.1349ms)
+  ✔ project:listEntries rechaza: ruta desde la raiz del disco sin unidad (0.1334ms)
+  ✔ project:listEntries rechaza: la raiz del disco (0.2168ms)
+  ✔ project:listEntries rechaza: la carpeta padre (0.1132ms)
+✔ project:listDir y project:listEntries no listan carpetas de afuera (5.7565ms)
+▶ los handlers de rutas no aceptan tipos inesperados
+  ✔ project:readFile falla con valores que no son texto (1.797ms)
+  ✔ project:readFileData falla con valores que no son texto (1.2771ms)
+  ✔ project:createDir falla con valores que no son texto (1.9156ms)
+  ✔ project:listDir falla con valores que no son texto (1.2406ms)
+  ✔ project:writeFile falla si la ruta o el contenido no son lo esperado (7.3483ms)
+✔ los handlers de rutas no aceptan tipos inesperados (13.9468ms)
+▶ los canales sin rutas no usan lo que mande la UI
+  ✔ workspace:change no cambia la carpeta a una ruta mandada por la UI (0.2942ms)
+  ✔ workspace:reveal abre solo la carpeta del editor (0.1339ms)
+  ✔ workspace:readEventCatalog lee el catalogo de la instalacion y nada mas (1.1804ms)
+  ✔ game:clearSave borra solo saves/partida.json aunque reciba otra ruta (2.9872ms)
+✔ los canales sin rutas no usan lo que mande la UI (4.8707ms)
+ℹ tests 265
+ℹ suites 28
+ℹ pass 208
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 56
+ℹ duration_ms 2904.5723
+
+✖ failing tests:
+
+test at ipc\tests\ejecucion.test.js:61:3
+⚠ un nivel de una carpeta ajena no hace ejecutar el engine.exe que trae al lado (244.6743ms) # Defecto conocido: SE-01 - run.js busca el motor junto al nivel recibido
+  AssertionError [ERR_ASSERTION]: ejecuto el binario de la carpeta ajena
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:79:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '<temp>\\hc-seguridad-zfPZiu\\compartida\\engine\\build\\engine.exe',
+    expected: '<temp>\\hc-seguridad-zfPZiu\\compartida\\engine\\build\\engine.exe',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\ejecucion.test.js:88:3
+⚠ con el motor debug instalado, pedir release no ejecuta el release de una carpeta ajena (232.5413ms) # Defecto conocido: SE-01 - el modo sin compilar cae en el motor de la carpeta del nivel
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+  
+  '<temp>\\hc-seguridad-bdH0KE\\compartida\\engine\\build-release\\engine.exe'
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:106:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<temp>\\hc-seguridad-bdH0KE\\compartida\\engine\\build-release\\engine.exe',
+    expected: '<temp>\\hc-seguridad-bdH0KE\\compartida\\engine\\build-release\\engine.exe',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\ejecucion.test.js:111:3
+⚠ un nivel fuera de la carpeta del editor se rechaza sin lanzar nada (170.7063ms) # Defecto conocido: SE-01 - levelPath no se valida contra la carpeta del editor
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:126:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\ejecucion.test.js:131:3
+⚠ un archivo que no es un nivel json no se le pasa al motor (154.3334ms) # Defecto conocido: SE-01 - project:run no mira la extension ni la carpeta del nivel
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:145:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\ejecucion.test.js:150:3
+⚠ una ruta relativa con subidas no se resuelve contra la carpeta de trabajo del editor (154.5724ms) # Defecto conocido: SE-01 - las rutas relativas no pasan por resolveInProject
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:166:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:93:3
+⚠ declara sandbox: true de forma explicita (16.1424ms) # Defecto conocido: SE-08 - sandbox no se declara explicitamente
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - true
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:100:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:104:3
+⚠ declara webSecurity: true de forma explicita (15.0697ms) # Defecto conocido: SE-08 - webSecurity no se declara explicitamente
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - true
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:108:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:120:3
+⚠ la ventana no navega a un sitio externo (26.4945ms) # Defecto conocido: SE-03 - no hay handler de will-navigate
+  AssertionError [ERR_ASSERTION]: nadie freno la navegacion
+  
+  false !== true
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:130:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:134:3
+⚠ la ventana no abre ventanas nuevas (16.0122ms) # Defecto conocido: SE-03 - no hay setWindowOpenHandler
+  AssertionError [ERR_ASSERTION]: no hay setWindowOpenHandler
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:141:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:146:3
+⚠ las redirecciones a un sitio externo tambien se frenan (14.9807ms) # Defecto conocido: SE-03 - no hay handler de will-redirect
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:153:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:159:3
+⚠ la instalacion sin empaquetar no carga la interfaz desde un servidor local (31.0817ms) # Defecto conocido: SE-09 - sin ELECTRON_START_URL se carga http://localhost:4200 antes que dist/
+  AssertionError [ERR_ASSERTION]: cargo http://localhost:4200
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:177:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:201:3
+⚠ empaquetada, HONEYCOMB_DEVTOOLS no abre las herramientas (32.997ms) # Defecto conocido: SE-06 - HONEYCOMB_DEVTOOLS abre devtools en produccion
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:208:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:212:3
+⚠ empaquetada, el canal window:toggleDevTools no las abre (30.4134ms) # Defecto conocido: SE-06 - window:toggleDevTools funciona en produccion
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:222:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:253:3
+⚠ escapa un <script> que venga en la descripcion o la url (45.5984ms) # Defecto conocido: SE-07 - diagnosticPage interpola sin escapar
+  AssertionError [ERR_ASSERTION]: el <script> quedo como etiqueta
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:260:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:265:3
+⚠ escapa un <img onerror> que venga en la url (16.1332ms) # Defecto conocido: SE-07 - diagnosticPage interpola sin escapar
+  AssertionError [ERR_ASSERTION]: el <img onerror> quedo como etiqueta
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:273:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:312:3
+⚠ src/index.html declara una CSP estricta para scripts (0.8948ms) # Defecto conocido: SE-02 - no hay Content Security Policy
+  AssertionError [ERR_ASSERTION]: no hay <meta http-equiv="Content-Security-Policy">
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:320:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.start (node:internal/test_runner/test:1257:17)
+      at node:internal/test_runner/test:1887:71
+      at node:internal/per_context/primordials:504:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:478:3)
+      at node:internal/per_context/primordials:504:9
+      at Array.map (<anonymous>) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:338:3
+⚠ el build de dist/ conserva la CSP (4.8508ms) # Defecto conocido: SE-02 - no hay Content Security Policy
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(cspDe(fs.readFileSync(build, 'utf-8')) !== null)
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:347:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:969:18)
+      at Test.postRun (node:internal/test_runner/test:1537:19)
+      at Test.run (node:internal/test_runner/test:1462:12)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:353:3
+⚠ los handlers rechazan pedidos de un origen que no es la interfaz (32.0388ms) # Defecto conocido: SE-10 - los handlers IPC no validan el remitente
+  AssertionError [ERR_ASSERTION]: contesto a un origen externo
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:371:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\electron.test.js:375:3
+⚠ se niegan los permisos del navegador que el editor no usa (23.115ms) # Defecto conocido: SE-10 - no hay setPermissionRequestHandler
+  AssertionError [ERR_ASSERTION]: no hay manejador de permisos
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\electron.test.js:384:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:59:3
+⚠ project:readFile no lee a traves de una union (48.4622ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: leyo el secreto a traves de la union
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:62:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:65:3
+⚠ project:readFileData no muestra un archivo a traves de una union (18.02ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(err)
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:73:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:77:3
+⚠ project:listEntries no lista una carpeta de afuera a traves de una union (14.0006ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: listo el contenido de afuera
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:88:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:92:3
+⚠ project:listDir no lista una carpeta de afuera a traves de una union (13.5096ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(!lista.includes('secreto.txt'))
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:103:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:107:3
+⚠ project:writeFile no escribe a traves de una union (51.7397ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'nuevo.json',
+      'secreto.txt'
+    ]
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:115:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'nuevo.json', 'secreto.txt' ],
+    expected: [ 'secreto.txt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:118:3
+⚠ project:writeFile no pisa un archivo de afuera a traves de una union (20.2934ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'PISADO'
+  - 'SECRETO'
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:129:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'PISADO',
+    expected: 'SECRETO',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:133:3
+⚠ project:createDir no crea carpetas a traves de una union (14.6067ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'nueva',
+      'secreto.txt'
+    ]
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:136:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'nueva', 'secreto.txt' ],
+    expected: [ 'secreto.txt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:139:3
+⚠ textures:write no escribe afuera si assets/textures es una union (13.7025ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'secreto.txt',
+  +   'sprite.png'
+    ]
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:155:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'secreto.txt', 'sprite.png' ],
+    expected: [ 'secreto.txt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:159:3
+⚠ game:clearSave no borra afuera si saves es una union (23.8722ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: borro un archivo de afuera
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:163:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:169:3
+⚠ convert:begin desde el proyecto no toma imagenes de afuera a traves de una union (19.6476ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: agrego al plan una imagen de afuera
+  + actual - expected
+  
+  + [
+  +   {
+  +     index: 0,
+  +     size: 13,
+  +     source: 'foto.jpg',
+  +     target: 'foto.png'
+  +   }
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:176:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { index: 0, source: 'foto.jpg', target: 'foto.png', size: 13 } ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\enlaces.test.js:206:3
+⚠ project:writeFile no modifica un archivo de afuera enlazado con un enlace duro (23.3507ms) # Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'PISADO'
+  - 'SECRETO'
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:221:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'PISADO',
+    expected: 'SECRETO',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .exe (2.855ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.exe
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .dll (2.052ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.dll
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .bat (1.8379ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.bat
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .cmd (3.943ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.cmd
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .ps1 (7.1624ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.ps1
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .vbs (3.0252ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.vbs
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .js (1.6668ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.js
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .hta (2.4368ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.hta
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .lnk (2.9474ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.lnk
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:74:5
+⚠ rechaza un archivo .scr (3.6157ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio levels/programa.scr
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:83:3
+⚠ rechaza desktop.ini, que cambia como el explorador muestra la carpeta (3.4851ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:93:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:97:3
+⚠ rechaza un contenido exageradamente grande (131.7354ms) # Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano
+  AssertionError [ERR_ASSERTION]: escribio 64 MB sin quejarse
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:102:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:117:5
+⚠ project:writeFile rechaza el nombre reservado CON.json (1.9951ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:117:5
+⚠ project:writeFile rechaza el nombre reservado NUL (1.2317ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:117:5
+⚠ project:writeFile rechaza el nombre reservado aux.json (3.0796ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:117:5
+⚠ project:writeFile rechaza el nombre reservado COM1.json (2.7311ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:117:5
+⚠ project:writeFile rechaza el nombre reservado LPT1.json (1.5132ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:127:3
+⚠ project:writeFile rechaza un flujo alternativo de ntfs (2.1886ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: escribio un flujo alternativo
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:137:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:140:3
+⚠ project:writeFile rechaza un nombre con punto o espacio al final (12.3425ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(err)
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:147:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:151:3
+⚠ project:createDir rechaza un nombre reservado (3.1816ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(err)
+  
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:153:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:203:5
+⚠ el nombre reservado CON no se usa tal cual (3.2854ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 'CON'
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'CON',
+    expected: 'CON',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:203:5
+⚠ el nombre reservado nul no se usa tal cual (1.3991ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 'NUL'
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'NUL',
+    expected: 'NUL',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:203:5
+⚠ el nombre reservado AUX no se usa tal cual (1.2868ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 'AUX'
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'AUX',
+    expected: 'AUX',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:203:5
+⚠ el nombre reservado COM1 no se usa tal cual (1.1876ms) # Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+  
+  'COM1'
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'COM1',
+    expected: 'COM1',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:335:3
+⚠ convert:writeImage rechaza lo que no es un png (1.5191ms) # Defecto conocido: SE-11 - convert:writeImage no valida el PNG ni su tamano
+  AssertionError [ERR_ASSERTION]: guardo como .png algo que no es un PNG
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:344:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ipc\tests\escritura.test.js:347:3
+⚠ convert:writeImage rechaza una imagen mas grande que el tope de importacion (78.0294ms) # Defecto conocido: SE-11 - convert:writeImage no valida el PNG ni su tamano
+  AssertionError [ERR_ASSERTION]: guardo 41 MB sin tope
+      at TestContext.<anonymous> (<repo>\editor\ipc\tests\escritura.test.js:357:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,9 @@
+dimension,ultimo_valor_ok,valor_que_rompe,que_rompe,causa_raiz
+entidades (grilla 128x128; todas con collider),2500 (75 FPS; 1% 38),5000 (16 FPS),FPS < 30 (crece ~n^2),CollisionSystem::Flush O(n^2) (CollisionSystem.cpp:21-26) - EN-03; sin collider 10000 dan 416 FPS
+eventos (500 entidades),10000 (47 FPS; 1% 18),20000 (12.6 FPS),FPS < 30 (crece ~E^2),EventSystem::Update evalua todos cada cuadro (EventSystem.cpp:62) + Zones::Find lineal (Zones.cpp:9) + IsCleared recorre todas las entidades (Zones.cpp:23)
+combate (enemigos armados apilados),2000 (122 FPS; 1% 45),4000 (33.5 FPS; 1% 8.9),1% bajo inutilizable; 288k pares de colision por cuadro,CollisionSystem O(n^2) + BlocksProjectile por paso (Movement.cpp:133) + erase en medio (Combat.cpp:343)
+texturas de piso distintas (256x128),4000 (720 FPS; 594 MB; carga 0.56 s / 2.3 s en frio),no se rompio,memoria lineal ~128 KB por textura (extrapolado: 2 GB hacia ~15000),-
+cache de texturas al pasar de nivel (EN-11),10 niveles x 300 texturas,no se rompio en 10,memoria privada +39 MB por nivel y no baja (145 -> 499 MB),ResourceManager no descarga (ResourceManager.cpp:77 solo desde el destructor :24)
+grilla con tiles (como guarda el editor),2048x2048 (34 FPS; carga 3.0 s; 1284 MB),3072x3072 (15.6 FPS; carga 6.8 s; 2925 MB) / 4096x4096 terminate por bad_alloc (tope 4 GB),FPS < 30 y memoria > 2 GB,DOM de nlohmann (~225 B por casilla) + recorrer todo el piso cada cuadro (GameSession.cpp:1126) + CanOccupy lineal (Movement.cpp:46)
+grilla sin tiles (rectangulo del motor),2048x2048 (36 FPS; carga 0.22 s; 341 MB),4096x4096 (9 FPS; 1.16 GB) / 8192x8192 bad_alloc (tope 4 GB),FPS < 30; despues sin memoria,sin tope de tamano (LevelLoader.cpp:35-36; 174-180) ~64 B por casilla - EN-07
+grilla 50000x50000 (no ejecutada),-,extrapolado,~160 GB solo en vectores; la carga fallaria con bad_alloc o agotaria la memoria virtual; ~16 s por cuadro si cupiera,EN-07

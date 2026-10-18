@@ -1,0 +1,1723 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+	<testsuite name="project:run solo ejecuta el motor de la instalacion (SE-01)" time="1.114134" disabled="0" errors="0" tests="8" failures="5" skipped="5" timestamp="2026-10-18T06:39:04.203Z" hostname="Gianfry">
+		<testcase name="un nivel de una carpeta ajena no hace ejecutar el engine.exe que trae al lado" time="0.289549" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js" failure="ejecuto el binario de la carpeta ajena">
+			<skipped type="todo" message="Defecto conocido: SE-01 - run.js busca el motor junto al nivel recibido"/>
+			<failure type="testCodeFailure" message="ejecuto el binario de la carpeta ajena">
+Error [ERR_TEST_FAILURE]: ejecuto el binario de la carpeta ajena
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: ejecuto el binario de la carpeta ajena
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:79:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '<temp>\\hc-seguridad-g5zjYh\\compartida\\engine\\build\\engine.exe',
+    expected: '<temp>\\hc-seguridad-g5zjYh\\compartida\\engine\\build\\engine.exe',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="con el motor debug instalado, pedir release no ejecuta el release de una carpeta ajena" time="0.154950" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js" failure="Expected &amp;quot;actual&amp;quot; to be strictly unequal to:&#10;&#10;'<temp>\\hc-seguridad-F25eRD\\compartida\\engine\\build-release\\engine.exe'">
+			<skipped type="todo" message="Defecto conocido: SE-01 - el modo sin compilar cae en el motor de la carpeta del nivel"/>
+			<failure type="testCodeFailure" message="Expected &amp;quot;actual&amp;quot; to be strictly unequal to:&#10;&#10;'<temp>\\hc-seguridad-F25eRD\\compartida\\engine\\build-release\\engine.exe'">
+[Error [ERR_TEST_FAILURE]: Expected "actual" to be strictly unequal to:
+
+'<temp>\\hc-seguridad-F25eRD\\compartida\\engine\\build-release\\engine.exe'] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+  
+  '<temp>\\hc-seguridad-F25eRD\\compartida\\engine\\build-release\\engine.exe'
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:106:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<temp>\\hc-seguridad-F25eRD\\compartida\\engine\\build-release\\engine.exe',
+    expected: '<temp>\\hc-seguridad-F25eRD\\compartida\\engine\\build-release\\engine.exe',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="un nivel fuera de la carpeta del editor se rechaza sin lanzar nada" time="0.156368" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-01 - levelPath no se valida contra la carpeta del editor"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:126:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="un archivo que no es un nivel json no se le pasa al motor" time="0.154461" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-01 - project:run no mira la extension ni la carpeta del nivel"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:145:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="una ruta relativa con subidas no se resuelve contra la carpeta de trabajo del editor" time="0.156805" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-01 - las rutas relativas no pasan por resolveInProject"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\ejecucion.test.js:166:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="con un nivel del proyecto ejecuta el motor de la instalacion" time="0.159027" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="sin motor en la instalacion ni en el proyecto contesta que falta, sin lanzar nada" time="0.020133" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="sin nivel o con un valor que no es una ruta no lanza nada" time="0.021287" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+	</testsuite>
+	<testsuite name="project:run arma el comando sin shell ni opciones de la UI" time="1.364040" disabled="0" errors="0" tests="4" failures="0" skipped="0" timestamp="2026-10-18T06:39:05.319Z" hostname="Gianfry">
+		<testcase name="lanza sin shell: los metacaracteres del nombre del nivel no se interpretan" time="0.146977" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="un modo desconocido no elige carpetas de la UI: cae en debug" time="0.653631" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="&amp;quot;start&amp;quot; solo agrega --portada; cualquier otro valor no agrega opciones" time="0.407661" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="el motor arranca en su propia carpeta, no en una que mande la UI" time="0.155304" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+	</testsuite>
+	<testsuite name="engine:build solo corre la compilacion de la instalacion" time="0.126429" disabled="0" errors="0" tests="5" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.674Z" hostname="Gianfry">
+		<testcase name="un modo desconocido se rechaza sin lanzar nada" time="0.024026" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="compila con el cmake de la instalacion, sin shell y en engine/" time="0.029378" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="no le pasa al compilador ELECTRON_RUN_AS_NODE" time="0.028905" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="sin una instalacion compilada antes no inventa un cmake: contesta el error" time="0.020977" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+		<testcase name="engine:status mira solo la instalacion" time="0.022669" classname="test" file="<repo>\editor\ipc\tests\ejecucion.test.js"/>
+	</testsuite>
+	<testsuite name="webPreferences de la ventana" time="0.199003" disabled="0" errors="0" tests="9" failures="2" skipped="2" timestamp="2026-10-18T06:39:06.613Z" hostname="Gianfry">
+		<testcase name="contextIsolation esta activado" time="0.025771" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="nodeIntegration esta desactivado" time="0.029163" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="no activa node en workers ni en subframes" time="0.031143" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="no usa el modulo remote" time="0.015681" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="no habilita webview, contenido inseguro ni funciones experimentales" time="0.016487" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="no desactiva webSecurity ni el sandbox" time="0.016292" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="declara sandbox: true de forma explicita" time="0.016335" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ undefined&#10;- true&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-08 - sandbox no se declara explicitamente"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ undefined&#10;- true">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - true
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:100:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="declara webSecurity: true de forma explicita" time="0.029902" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ undefined&#10;- true&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-08 - webSecurity no se declara explicitamente"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ undefined&#10;- true">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - true
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:108:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="el preload es el preload.js del editor" time="0.016150" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+	</testsuite>
+	<testsuite name="navegacion y ventanas nuevas (SE-03)" time="0.062024" disabled="0" errors="0" tests="3" failures="3" skipped="3" timestamp="2026-10-18T06:39:06.750Z" hostname="Gianfry">
+		<testcase name="la ventana no navega a un sitio externo" time="0.016133" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="nadie freno la navegacion&#10;&#10;false !== true&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-03 - no hay handler de will-navigate"/>
+			<failure type="testCodeFailure" message="nadie freno la navegacion&#10;&#10;false !== true">
+Error [ERR_TEST_FAILURE]: nadie freno la navegacion
+
+false !== true
+
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: nadie freno la navegacion
+  
+  false !== true
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:130:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="la ventana no abre ventanas nuevas" time="0.030303" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="no hay setWindowOpenHandler">
+			<skipped type="todo" message="Defecto conocido: SE-03 - no hay setWindowOpenHandler"/>
+			<failure type="testCodeFailure" message="no hay setWindowOpenHandler">
+[Error [ERR_TEST_FAILURE]: no hay setWindowOpenHandler] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: no hay setWindowOpenHandler
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:141:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="las redirecciones a un sitio externo tambien se frenan" time="0.014931" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="Expected values to be strictly equal:&#10;&#10;false !== true&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-03 - no hay handler de will-redirect"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;false !== true">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+false !== true
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:153:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+	</testsuite>
+	<testsuite name="de donde sale la interfaz (SE-09)" time="0.047303" disabled="0" errors="0" tests="3" failures="1" skipped="1" timestamp="2026-10-18T06:39:06.765Z" hostname="Gianfry">
+		<testcase name="la instalacion sin empaquetar no carga la interfaz desde un servidor local" time="0.015057" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="cargo http://localhost:4200">
+			<skipped type="todo" message="Defecto conocido: SE-09 - sin ELECTRON_START_URL se carga http://localhost:4200 antes que dist/"/>
+			<failure type="testCodeFailure" message="cargo http://localhost:4200">
+Error [ERR_TEST_FAILURE]: cargo http://localhost:4200
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: cargo http://localhost:4200
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:177:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="empaquetada carga dist/ e ignora ELECTRON_START_URL" time="0.016724" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="si el servidor no responde cae en dist/ y no en otra url" time="0.015128" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+	</testsuite>
+	<testsuite name="herramientas de desarrollo (SE-06)" time="0.045415" disabled="0" errors="0" tests="3" failures="2" skipped="2" timestamp="2026-10-18T06:39:06.767Z" hostname="Gianfry">
+		<testcase name="empaquetada, HONEYCOMB_DEVTOOLS no abre las herramientas" time="0.014244" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="Expected values to be strictly equal:&#10;&#10;1 !== 0&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-06 - HONEYCOMB_DEVTOOLS abre devtools en produccion"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;1 !== 0">
+Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+1 !== 0
+
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:208:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="empaquetada, el canal window:toggleDevTools no las abre" time="0.015653" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="Expected values to be strictly equal:&#10;&#10;1 !== 0&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-06 - window:toggleDevTools funciona en produccion"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;1 !== 0">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+1 !== 0
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:222:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="sin HONEYCOMB_DEVTOOLS no se abren solas" time="0.015218" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+	</testsuite>
+	<testsuite name="pagina de diagnostico (SE-07)" time="0.063170" disabled="0" errors="0" tests="4" failures="2" skipped="2" timestamp="2026-10-18T06:39:06.750Z" hostname="Gianfry">
+		<testcase name="muestra el motivo y la url que fallaron" time="0.015903" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+		<testcase name="escapa un &lt;script> que venga en la descripcion o la url" time="0.015228" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="el &lt;script> quedo como etiqueta">
+			<skipped type="todo" message="Defecto conocido: SE-07 - diagnosticPage interpola sin escapar"/>
+			<failure type="testCodeFailure" message="el &lt;script> quedo como etiqueta">
+[Error [ERR_TEST_FAILURE]: el &lt;script> quedo como etiqueta] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: el &lt;script> quedo como etiqueta
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:260:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="escapa un &lt;img onerror> que venga en la url" time="0.015966" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="el &lt;img onerror> quedo como etiqueta">
+			<skipped type="todo" message="Defecto conocido: SE-07 - diagnosticPage interpola sin escapar"/>
+			<failure type="testCodeFailure" message="el &lt;img onerror> quedo como etiqueta">
+[Error [ERR_TEST_FAILURE]: el &lt;img onerror> quedo como etiqueta] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: el &lt;img onerror> quedo como etiqueta
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:273:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="no reacciona a fallos de subframes ni de file:// o data:" time="0.015751" classname="test" file="<repo>\editor\ipc\tests\electron.test.js"/>
+	</testsuite>
+	<testsuite name="content security policy (SE-02)" time="0.003646" disabled="0" errors="0" tests="2" failures="2" skipped="2" timestamp="2026-10-18T06:39:06.810Z" hostname="Gianfry">
+		<testcase name="src/index.html declara una CSP estricta para scripts" time="0.000510" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="no hay &lt;meta http-equiv=&amp;quot;Content-Security-Policy&amp;quot;>">
+			<skipped type="todo" message="Defecto conocido: SE-02 - no hay Content Security Policy"/>
+			<failure type="testCodeFailure" message="no hay &lt;meta http-equiv=&amp;quot;Content-Security-Policy&amp;quot;>">
+Error [ERR_TEST_FAILURE]: no hay &lt;meta http-equiv="Content-Security-Policy">
+    at new Promise (&lt;anonymous>)
+    at Array.map (&lt;anonymous>) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: no hay &lt;meta http-equiv="Content-Security-Policy">
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:320:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.start (node:internal/test_runner/test:1257:17)
+      at node:internal/test_runner/test:1887:71
+      at node:internal/per_context/primordials:504:82
+      at new Promise (&lt;anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:478:3)
+      at node:internal/per_context/primordials:504:9
+      at Array.map (&lt;anonymous>) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="el build de dist/ conserva la CSP" time="0.003062" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(cspDe(fs.readFileSync(build, 'utf-8')) !== null)&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-02 - no hay Content Security Policy"/>
+			<failure type="testCodeFailure" message="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(cspDe(fs.readFileSync(build, 'utf-8')) !== null)">
+Error [ERR_TEST_FAILURE]: The expression evaluated to a falsy value:
+
+  assert.ok(cspDe(fs.readFileSync(build, 'utf-8')) !== null)
+
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(cspDe(fs.readFileSync(build, 'utf-8')) !== null)
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:347:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:969:18)
+      at Test.postRun (node:internal/test_runner/test:1537:19)
+      at Test.run (node:internal/test_runner/test:1462:12)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+	</testsuite>
+	<testsuite name="quien le habla al proceso principal (SE-10)" time="0.059626" disabled="0" errors="0" tests="2" failures="2" skipped="2" timestamp="2026-10-18T06:39:06.754Z" hostname="Gianfry">
+		<testcase name="los handlers rechazan pedidos de un origen que no es la interfaz" time="0.034637" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="contesto a un origen externo">
+			<skipped type="todo" message="Defecto conocido: SE-10 - los handlers IPC no validan el remitente"/>
+			<failure type="testCodeFailure" message="contesto a un origen externo">
+Error [ERR_TEST_FAILURE]: contesto a un origen externo
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: contesto a un origen externo
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:371:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="se niegan los permisos del navegador que el editor no usa" time="0.024714" classname="test" file="<repo>\editor\ipc\tests\electron.test.js" failure="no hay manejador de permisos">
+			<skipped type="todo" message="Defecto conocido: SE-10 - no hay setPermissionRequestHandler"/>
+			<failure type="testCodeFailure" message="no hay manejador de permisos">
+[Error [ERR_TEST_FAILURE]: no hay manejador de permisos] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: no hay manejador de permisos
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\electron.test.js:384:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+	</testsuite>
+	<testsuite name="una union dentro del proyecto no deja salir de el" time="0.128379" disabled="0" errors="0" tests="11" failures="10" skipped="10" timestamp="2026-10-18T06:39:06.686Z" hostname="Gianfry">
+		<testcase name="project:readFile no lee a traves de una union" time="0.021724" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="leyo el secreto a traves de la union">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="leyo el secreto a traves de la union">
+Error [ERR_TEST_FAILURE]: leyo el secreto a traves de la union
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: leyo el secreto a traves de la union
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:62:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:readFileData no muestra un archivo a traves de una union" time="0.014312" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(err)&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(err)">
+[Error [ERR_TEST_FAILURE]: The expression evaluated to a falsy value:
+
+  assert.ok(err)
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(err)
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:73:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:listEntries no lista una carpeta de afuera a traves de una union" time="0.011050" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="listo el contenido de afuera">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="listo el contenido de afuera">
+[Error [ERR_TEST_FAILURE]: listo el contenido de afuera] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: listo el contenido de afuera
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:88:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:listDir no lista una carpeta de afuera a traves de una union" time="0.011765" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(!lista.includes('secreto.txt'))&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(!lista.includes('secreto.txt'))">
+[Error [ERR_TEST_FAILURE]: The expression evaluated to a falsy value:
+
+  assert.ok(!lista.includes('secreto.txt'))
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(!lista.includes('secreto.txt'))
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:103:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile no escribe a traves de una union" time="0.009848" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="Expected values to be strictly deep-equal:&#10;+ actual - expected&#10;&#10;  [&#10;+   'nuevo.json',&#10;    'secreto.txt'&#10;  ]&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly deep-equal:&#10;+ actual - expected&#10;&#10;  [&#10;+   'nuevo.json',&#10;    'secreto.txt'&#10;  ]">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
++   'nuevo.json',
+    'secreto.txt'
+  ]
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'nuevo.json',
+      'secreto.txt'
+    ]
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:115:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'nuevo.json', 'secreto.txt' ],
+    expected: [ 'secreto.txt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile no pisa un archivo de afuera a traves de una union" time="0.009299" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ 'PISADO'&#10;- 'SECRETO'&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ 'PISADO'&#10;- 'SECRETO'">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
++ actual - expected
+
++ 'PISADO'
+- 'SECRETO'
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'PISADO'
+  - 'SECRETO'
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:129:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'PISADO',
+    expected: 'SECRETO',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:createDir no crea carpetas a traves de una union" time="0.009604" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="Expected values to be strictly deep-equal:&#10;+ actual - expected&#10;&#10;  [&#10;+   'nueva',&#10;    'secreto.txt'&#10;  ]&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly deep-equal:&#10;+ actual - expected&#10;&#10;  [&#10;+   'nueva',&#10;    'secreto.txt'&#10;  ]">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
++   'nueva',
+    'secreto.txt'
+  ]
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'nueva',
+      'secreto.txt'
+    ]
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:136:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'nueva', 'secreto.txt' ],
+    expected: [ 'secreto.txt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="textures:write no escribe afuera si assets/textures es una union" time="0.009863" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="Expected values to be strictly deep-equal:&#10;+ actual - expected&#10;&#10;  [&#10;    'secreto.txt',&#10;+   'sprite.png'&#10;  ]&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly deep-equal:&#10;+ actual - expected&#10;&#10;  [&#10;    'secreto.txt',&#10;+   'sprite.png'&#10;  ]">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'secreto.txt',
++   'sprite.png'
+  ]
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'secreto.txt',
+  +   'sprite.png'
+    ]
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:155:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'secreto.txt', 'sprite.png' ],
+    expected: [ 'secreto.txt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="game:clearSave no borra afuera si saves es una union" time="0.009124" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="borro un archivo de afuera">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="borro un archivo de afuera">
+[Error [ERR_TEST_FAILURE]: borro un archivo de afuera] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: borro un archivo de afuera
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:163:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="convert:begin desde el proyecto no toma imagenes de afuera a traves de una union" time="0.011886" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="agrego al plan una imagen de afuera&#10;+ actual - expected&#10;&#10;+ [&#10;+   {&#10;+     index: 0,&#10;+     size: 13,&#10;+     source: 'foto.jpg',&#10;+     target: 'foto.png'&#10;+   }&#10;+ ]&#10;- []&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="agrego al plan una imagen de afuera&#10;+ actual - expected&#10;&#10;+ [&#10;+   {&#10;+     index: 0,&#10;+     size: 13,&#10;+     source: 'foto.jpg',&#10;+     target: 'foto.png'&#10;+   }&#10;+ ]&#10;- []">
+[Error [ERR_TEST_FAILURE]: agrego al plan una imagen de afuera
++ actual - expected
+
++ [
++   {
++     index: 0,
++     size: 13,
++     source: 'foto.jpg',
++     target: 'foto.png'
++   }
++ ]
+- []
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: agrego al plan una imagen de afuera
+  + actual - expected
+  
+  + [
+  +   {
+  +     index: 0,
+  +     size: 13,
+  +     source: 'foto.jpg',
+  +     target: 'foto.png'
+  +   }
+  + ]
+  - []
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:176:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ [Object] ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="una carpeta comun del proyecto sigue funcionando" time="0.007464" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js"/>
+	</testsuite>
+	<testsuite name="otros enlaces dentro del proyecto" time="0.017088" disabled="0" errors="0" tests="2" failures="1" skipped="2" timestamp="2026-10-18T06:39:06.797Z" hostname="Gianfry">
+		<testcase name="project:readFile no lee a traves de un enlace simbolico a archivo" time="0.007428" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js">
+			<skipped type="skipped" message="crear enlaces simbolicos pide administrador o el modo desarrollador"/>
+		</testcase>
+		<testcase name="project:writeFile no modifica un archivo de afuera enlazado con un enlace duro" time="0.009193" classname="test" file="<repo>\editor\ipc\tests\enlaces.test.js" failure="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ 'PISADO'&#10;- 'SECRETO'&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-04 - la validacion de rutas es lexica y sigue enlaces"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;+ actual - expected&#10;&#10;+ 'PISADO'&#10;- 'SECRETO'">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
++ actual - expected
+
++ 'PISADO'
+- 'SECRETO'
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'PISADO'
+  - 'SECRETO'
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\enlaces.test.js:221:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'PISADO',
+    expected: 'SECRETO',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+	</testsuite>
+	<testsuite name="project:writeFile solo escribe archivos de datos (SE-05)" time="0.114874" disabled="0" errors="0" tests="16" failures="12" skipped="12" timestamp="2026-10-18T06:39:06.701Z" hostname="Gianfry">
+		<testcase name="acepta levels/ok.json" time="0.003023" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="acepta characters.json" time="0.001132" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="acepta items.json" time="0.001170" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="acepta game.json" time="0.001254" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="rechaza un archivo .exe" time="0.002099" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.exe&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.exe&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.exe
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.exe
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .dll" time="0.002226" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.dll&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.dll&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.dll
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.dll
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .bat" time="0.001763" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.bat&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.bat&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.bat
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.bat
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .cmd" time="0.002339" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.cmd&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.cmd&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.cmd
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.cmd
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .ps1" time="0.002513" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.ps1&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.ps1&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.ps1
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.ps1
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .vbs" time="0.001803" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.vbs&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.vbs&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.vbs
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.vbs
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .js" time="0.001170" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.js&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.js&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.js
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.js
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .hta" time="0.002049" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.hta&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.hta&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.hta
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.hta
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .lnk" time="0.002525" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.lnk&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.lnk&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.lnk
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.lnk
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un archivo .scr" time="0.001812" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio levels/programa.scr&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio levels/programa.scr&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio levels/programa.scr
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio levels/programa.scr
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:79:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza desktop.ini, que cambia como el explorador muestra la carpeta" time="0.002013" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:93:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="rechaza un contenido exageradamente grande" time="0.072928" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio 64 MB sin quejarse&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-05 - project:writeFile no limita extension ni tamano"/>
+			<failure type="testCodeFailure" message="escribio 64 MB sin quejarse&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: escribio 64 MB sin quejarse
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio 64 MB sin quejarse
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:102:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+	</testsuite>
+	<testsuite name="nombres que windows trata distinto (SE-12)" time="0.014478" disabled="0" errors="0" tests="9" failures="8" skipped="8" timestamp="2026-10-18T06:39:06.802Z" hostname="Gianfry">
+		<testcase name="project:writeFile rechaza el nombre reservado CON.json" time="0.002213" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+
+    at async Promise.all (index 0) {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1889:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile rechaza el nombre reservado NUL" time="0.001290" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile rechaza el nombre reservado aux.json" time="0.001139" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile rechaza el nombre reservado COM1.json" time="0.001240" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile rechaza el nombre reservado LPT1.json" time="0.001125" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected values to be strictly equal:&#10;&#10;true !== false&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected values to be strictly equal:&#10;&#10;true !== false">
+[Error [ERR_TEST_FAILURE]: Expected values to be strictly equal:
+
+true !== false
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:122:16)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile rechaza un flujo alternativo de ntfs" time="0.001726" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="escribio un flujo alternativo">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="escribio un flujo alternativo">
+[Error [ERR_TEST_FAILURE]: escribio un flujo alternativo] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: escribio un flujo alternativo
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:137:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:writeFile rechaza un nombre con punto o espacio al final" time="0.003794" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(err)&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(err)">
+[Error [ERR_TEST_FAILURE]: The expression evaluated to a falsy value:
+
+  assert.ok(err)
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(err)
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:147:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:createDir rechaza un nombre reservado" time="0.000912" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(err)&#10;">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="The expression evaluated to a falsy value:&#10;&#10;  assert.ok(err)">
+[Error [ERR_TEST_FAILURE]: The expression evaluated to a falsy value:
+
+  assert.ok(err)
+] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(err)
+  
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:153:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="project:createDir rechaza los caracteres que windows no admite" time="0.000500" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+	</testsuite>
+	<testsuite name="textures:write solo deja PNG con nombre limpio en assets/textures" time="0.068181" disabled="0" errors="0" tests="21" failures="4" skipped="4" timestamp="2026-10-18T06:39:06.748Z" hostname="Gianfry">
+		<testcase name="el nombre &amp;quot;../../fuera/sprite&amp;quot; termina como un png dentro de assets/textures" time="0.005710" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;..\\..\\fuera\\sprite&amp;quot; termina como un png dentro de assets/textures" time="0.002704" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;C:\\Windows\\Temp\\sprite&amp;quot; termina como un png dentro de assets/textures" time="0.002897" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;\\\\127.0.0.1\\c$\\sprite&amp;quot; termina como un png dentro de assets/textures" time="0.001853" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;sprite.exe&amp;quot; termina como un png dentro de assets/textures" time="0.001491" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;sprite.png.exe&amp;quot; termina como un png dentro de assets/textures" time="0.002355" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;sprite\u0000.exe&amp;quot; termina como un png dentro de assets/textures" time="0.002071" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;a/b/c/sprite&amp;quot; termina como un png dentro de assets/textures" time="0.001926" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;%2e%2e%2fsprite&amp;quot; termina como un png dentro de assets/textures" time="0.001712" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;&amp;quot; termina como un png dentro de assets/textures" time="0.002477" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;   &amp;quot; termina como un png dentro de assets/textures" time="0.001858" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre &amp;quot;♡&amp;quot; termina como un png dentro de assets/textures" time="0.002357" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="el nombre reservado CON no se usa tal cual" time="0.004636" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected &amp;quot;actual&amp;quot; to be strictly unequal to: 'CON'">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected &amp;quot;actual&amp;quot; to be strictly unequal to: 'CON'">
+[Error [ERR_TEST_FAILURE]: Expected "actual" to be strictly unequal to: 'CON'] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 'CON'
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'CON',
+    expected: 'CON',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="el nombre reservado nul no se usa tal cual" time="0.000921" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected &amp;quot;actual&amp;quot; to be strictly unequal to: 'NUL'">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected &amp;quot;actual&amp;quot; to be strictly unequal to: 'NUL'">
+[Error [ERR_TEST_FAILURE]: Expected "actual" to be strictly unequal to: 'NUL'] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 'NUL'
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'NUL',
+    expected: 'NUL',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="el nombre reservado AUX no se usa tal cual" time="0.000767" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected &amp;quot;actual&amp;quot; to be strictly unequal to: 'AUX'">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected &amp;quot;actual&amp;quot; to be strictly unequal to: 'AUX'">
+[Error [ERR_TEST_FAILURE]: Expected "actual" to be strictly unequal to: 'AUX'] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to: 'AUX'
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'AUX',
+    expected: 'AUX',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="el nombre reservado COM1 no se usa tal cual" time="0.000840" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="Expected &amp;quot;actual&amp;quot; to be strictly unequal to:&#10;&#10;'COM1'">
+			<skipped type="todo" message="Defecto conocido: SE-12 - no se rechazan nombres reservados ni flujos alternativos de Windows"/>
+			<failure type="testCodeFailure" message="Expected &amp;quot;actual&amp;quot; to be strictly unequal to:&#10;&#10;'COM1'">
+[Error [ERR_TEST_FAILURE]: Expected "actual" to be strictly unequal to:
+
+'COM1'] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+  
+  'COM1'
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:209:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'COM1',
+    expected: 'COM1',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="un nombre larguisimo no escribe nada fuera de la carpeta (falla o se recorta)" time="0.001669" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="rechaza lo que no es un png" time="0.000243" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="rechaza un png mas grande que el tope de importacion" time="0.021427" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="sin overwrite no pisa una textura que ya existe" time="0.006674" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="falla si faltan el nombre o la imagen, o no son texto" time="0.000515" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+	</testsuite>
+	<testsuite name="el convertidor solo trabaja con su plan (convert:*)" time="0.052877" disabled="0" errors="0" tests="6" failures="2" skipped="2" timestamp="2026-10-18T06:39:06.764Z" hostname="Gianfry">
+		<testcase name="convert:begin siempre pide los archivos con el dialogo, aunque la UI mande una ruta" time="0.001556" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="convert:readImage y convert:writeImage rechazan indices que no son del plan" time="0.002509" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="convert:writeImage escribe siempre en assets/textures con el nombre del plan" time="0.001092" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+		<testcase name="convert:writeImage rechaza lo que no es un png" time="0.001231" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="guardo como .png algo que no es un PNG">
+			<skipped type="todo" message="Defecto conocido: SE-11 - convert:writeImage no valida el PNG ni su tamano"/>
+			<failure type="testCodeFailure" message="guardo como .png algo que no es un PNG">
+[Error [ERR_TEST_FAILURE]: guardo como .png algo que no es un PNG] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: guardo como .png algo que no es un PNG
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:344:12)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="convert:writeImage rechaza una imagen mas grande que el tope de importacion" time="0.040590" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js" failure="guardo 41 MB sin tope">
+			<skipped type="todo" message="Defecto conocido: SE-11 - convert:writeImage no valida el PNG ni su tamano"/>
+			<failure type="testCodeFailure" message="guardo 41 MB sin tope">
+[Error [ERR_TEST_FAILURE]: guardo 41 MB sin tope] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: AssertionError [ERR_ASSERTION]: guardo 41 MB sin tope
+      at TestContext.&lt;anonymous> (<repo>\editor\ipc\tests\escritura.test.js:357:14)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+}
+			</failure>
+		</testcase>
+		<testcase name="convert:begin ignora archivos que no son imagenes aunque el dialogo los devuelva" time="0.005593" classname="test" file="<repo>\editor\ipc\tests\escritura.test.js"/>
+	</testsuite>
+	<testsuite name="importar un nivel no copia archivos de fuera de sus assets" time="0.086542" disabled="0" errors="0" tests="5" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.730Z" hostname="Gianfry">
+		<testcase name="las referencias tramposas quedan como faltantes y no se copian" time="0.031728" classname="test" file="<repo>\editor\ipc\tests\importacion.test.js"/>
+		<testcase name="una referencia que sale de assets no escribe en otra carpeta del proyecto" time="0.015950" classname="test" file="<repo>\editor\ipc\tests\importacion.test.js"/>
+		<testcase name="el nombre del nivel importado se limpia y no pisa otro" time="0.010815" classname="test" file="<repo>\editor\ipc\tests\importacion.test.js"/>
+		<testcase name="un nivel que no es json valido se rechaza sin copiar nada" time="0.010966" classname="test" file="<repo>\editor\ipc\tests\importacion.test.js"/>
+		<testcase name="project:open no usa una ruta mandada por la UI: siempre pasa por el dialogo" time="0.015698" classname="test" file="<repo>\editor\ipc\tests\importacion.test.js"/>
+	</testsuite>
+	<testsuite name="la superficie expuesta es minima" time="0.003750" disabled="0" errors="0" tests="6" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.813Z" hostname="Gianfry">
+		<testcase name="expone solo honeycombProject y honeycombWindow" time="0.001163" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="honeycombProject tiene exactamente la lista de funciones esperada" time="0.000145" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="coincide con el contrato tipado de src/app/electron-api.d.ts" time="0.000872" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="todo lo expuesto es una funcion: ni objetos, ni modulos, ni valores" time="0.000562" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="no expone nada de node ni un invoke generico" time="0.000149" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="preload.js no carga otros modulos que electron (funciona con sandbox)" time="0.000164" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+	</testsuite>
+	<testsuite name="cada funcion invoca un canal fijo" time="0.004988" disabled="0" errors="0" tests="23" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.813Z" hostname="Gianfry">
+		<testcase name="beginConvert invoca siempre el mismo canal, sin importar los argumentos" time="0.002385" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="buildEngine invoca siempre el mismo canal, sin importar los argumentos" time="0.000212" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="changeWorkspace invoca siempre el mismo canal, sin importar los argumentos" time="0.000144" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="clearSave invoca siempre el mismo canal, sin importar los argumentos" time="0.000168" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="createDir invoca siempre el mismo canal, sin importar los argumentos" time="0.000091" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="engineStatus invoca siempre el mismo canal, sin importar los argumentos" time="0.000063" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="ensureRoot invoca siempre el mismo canal, sin importar los argumentos" time="0.000061" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="listDir invoca siempre el mismo canal, sin importar los argumentos" time="0.000067" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="listEntries invoca siempre el mismo canal, sin importar los argumentos" time="0.000070" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="open invoca siempre el mismo canal, sin importar los argumentos" time="0.000072" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="readConvertImage invoca siempre el mismo canal, sin importar los argumentos" time="0.000078" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="readEventCatalog invoca siempre el mismo canal, sin importar los argumentos" time="0.000068" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="readFile invoca siempre el mismo canal, sin importar los argumentos" time="0.000053" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="readFileData invoca siempre el mismo canal, sin importar los argumentos" time="0.000067" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="resetConvert invoca siempre el mismo canal, sin importar los argumentos" time="0.000060" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="revealWorkspace invoca siempre el mismo canal, sin importar los argumentos" time="0.000078" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="run invoca siempre el mismo canal, sin importar los argumentos" time="0.000071" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="workspaceInfo invoca siempre el mismo canal, sin importar los argumentos" time="0.000053" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="writeConvertedImage invoca siempre el mismo canal, sin importar los argumentos" time="0.000067" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="writeFile invoca siempre el mismo canal, sin importar los argumentos" time="0.000061" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="writeTexture invoca siempre el mismo canal, sin importar los argumentos" time="0.000062" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="toggleDevTools invoca solo window:toggleDevTools" time="0.000105" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="onEngineBuildLog entrega solo la linea, nunca el evento de ipc" time="0.000167" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+	</testsuite>
+	<testsuite name="cada canal expuesto tiene su handler" time="0.042080" disabled="0" errors="0" tests="2" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.775Z" hostname="Gianfry">
+		<testcase name="todo canal que invoca el preload esta registrado en el proceso principal" time="0.000308" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+		<testcase name="no hay handlers registrados que el preload no use" time="0.000127" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+	</testsuite>
+	<testsuite name="los handlers aguantan datos basura sin salir del proyecto" time="0.074571" disabled="0" errors="0" tests="1" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.743Z" hostname="Gianfry">
+		<testcase name="ningun canal se cuelga, escribe afuera o lee el secreto con datos basura" time="0.065837" classname="test" file="<repo>\editor\ipc\tests\preload.test.js"/>
+	</testsuite>
+	<testsuite name="project:readFile no lee fuera de la carpeta del editor" time="0.038719" disabled="0" errors="0" tests="23" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.781Z" hostname="Gianfry">
+		<testcase name="rechaza: subir con barras normales" time="0.001914" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir con barras invertidas" time="0.000881" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir desde una subcarpeta" time="0.000800" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: separadores mezclados" time="0.000907" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir de mas" time="0.001005" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta" time="0.000705" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con barras normales" time="0.000667" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con la unidad en minuscula" time="0.000737" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta desde la raiz del disco sin unidad" time="0.000770" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta relativa a la unidad" time="0.004429" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: prefijo de ruta larga de windows" time="0.000990" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: espacio de nombres de dispositivos" time="0.001167" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc a un recurso compartido" time="0.000785" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc con barras normales" time="0.000750" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: url file" time="0.001544" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url" time="0.000962" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url con barras reales" time="0.001079" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo al final" time="0.001100" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo en el medio" time="0.000913" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: puntos y espacios que windows recorta" time="0.000877" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: tres puntos" time="0.000766" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: nombre muy largo" time="0.001070" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="una ruta valida dentro del proyecto se sigue leyendo" time="0.002709" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+	</testsuite>
+	<testsuite name="project:readFileData no muestra archivos de afuera" time="0.008915" disabled="0" errors="0" tests="22" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.811Z" hostname="Gianfry">
+		<testcase name="rechaza: subir con barras normales" time="0.000608" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir con barras invertidas" time="0.000121" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir desde una subcarpeta" time="0.000117" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: separadores mezclados" time="0.000131" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir de mas" time="0.000139" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta" time="0.000089" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con barras normales" time="0.000097" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con la unidad en minuscula" time="0.000086" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta desde la raiz del disco sin unidad" time="0.000136" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta relativa a la unidad" time="0.003437" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: prefijo de ruta larga de windows" time="0.000347" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: espacio de nombres de dispositivos" time="0.000194" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc a un recurso compartido" time="0.000121" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc con barras normales" time="0.000097" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: url file" time="0.000865" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url" time="0.000798" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url con barras reales" time="0.000438" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo al final" time="0.000112" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo en el medio" time="0.000131" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: puntos y espacios que windows recorta" time="0.000068" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: tres puntos" time="0.000059" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: nombre muy largo" time="0.000106" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+	</testsuite>
+	<testsuite name="project:writeFile no escribe fuera de la carpeta del editor" time="0.027810" disabled="0" errors="0" tests="24" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.792Z" hostname="Gianfry">
+		<testcase name="rechaza: subir con barras normales" time="0.000902" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir con barras invertidas" time="0.000683" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir desde una subcarpeta" time="0.000720" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: separadores mezclados" time="0.000643" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir de mas" time="0.000743" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta" time="0.000807" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con barras normales" time="0.000815" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con la unidad en minuscula" time="0.001092" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta desde la raiz del disco sin unidad" time="0.001040" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta relativa a la unidad" time="0.004912" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: prefijo de ruta larga de windows" time="0.000955" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: espacio de nombres de dispositivos" time="0.000638" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc a un recurso compartido" time="0.000668" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc con barras normales" time="0.000636" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: url file" time="0.001589" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url" time="0.001828" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url con barras reales" time="0.001609" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo al final" time="0.000667" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo en el medio" time="0.000611" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: puntos y espacios que windows recorta" time="0.000618" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: tres puntos" time="0.000799" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: nombre muy largo" time="0.000776" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="tampoco pisa un archivo que ya existe afuera" time="0.001003" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="una ruta valida dentro del proyecto se sigue escribiendo" time="0.002304" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+	</testsuite>
+	<testsuite name="project:createDir no crea carpetas afuera" time="0.021978" disabled="0" errors="0" tests="22" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.799Z" hostname="Gianfry">
+		<testcase name="rechaza: subir con barras normales" time="0.001396" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir con barras invertidas" time="0.000819" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir desde una subcarpeta" time="0.000784" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: separadores mezclados" time="0.000715" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: subir de mas" time="0.000753" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta" time="0.000621" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con barras normales" time="0.000730" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta absoluta con la unidad en minuscula" time="0.000989" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta desde la raiz del disco sin unidad" time="0.000754" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta relativa a la unidad" time="0.002161" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: prefijo de ruta larga de windows" time="0.001101" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: espacio de nombres de dispositivos" time="0.000812" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc a un recurso compartido" time="0.000687" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: ruta unc con barras normales" time="0.000727" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: url file" time="0.001801" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url" time="0.001829" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: codificada como url con barras reales" time="0.001103" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo al final" time="0.000770" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: byte nulo en el medio" time="0.000704" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: puntos y espacios que windows recorta" time="0.000702" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: tres puntos" time="0.000599" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="rechaza: nombre muy largo" time="0.000618" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+	</testsuite>
+	<testsuite name="project:listDir y project:listEntries no listan carpetas de afuera" time="0.001869" disabled="0" errors="0" tests="20" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.819Z" hostname="Gianfry">
+		<testcase name="project:listDir rechaza: subir con barras normales" time="0.000273" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: subir con barras invertidas" time="0.000087" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: separadores mezclados" time="0.000097" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: ruta absoluta" time="0.000122" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: ruta absoluta con barras normales" time="0.000067" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: prefijo de ruta larga de windows" time="0.000054" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: espacio de nombres de dispositivos" time="0.000055" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: ruta desde la raiz del disco sin unidad" time="0.000059" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: la raiz del disco" time="0.000086" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir rechaza: la carpeta padre" time="0.000069" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: subir con barras normales" time="0.000143" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: subir con barras invertidas" time="0.000067" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: separadores mezclados" time="0.000053" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: ruta absoluta" time="0.000048" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: ruta absoluta con barras normales" time="0.000058" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: prefijo de ruta larga de windows" time="0.000047" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: espacio de nombres de dispositivos" time="0.000043" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: ruta desde la raiz del disco sin unidad" time="0.000055" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: la raiz del disco" time="0.000048" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listEntries rechaza: la carpeta padre" time="0.000048" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+	</testsuite>
+	<testsuite name="los handlers de rutas no aceptan tipos inesperados" time="0.008959" disabled="0" errors="0" tests="5" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.812Z" hostname="Gianfry">
+		<testcase name="project:readFile falla con valores que no son texto" time="0.000942" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:readFileData falla con valores que no son texto" time="0.000799" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:createDir falla con valores que no son texto" time="0.001588" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:listDir falla con valores que no son texto" time="0.000866" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="project:writeFile falla si la ruta o el contenido no son lo esperado" time="0.004572" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+	</testsuite>
+	<testsuite name="los canales sin rutas no usan lo que mande la UI" time="0.003007" disabled="0" errors="0" tests="4" failures="0" skipped="0" timestamp="2026-10-18T06:39:06.817Z" hostname="Gianfry">
+		<testcase name="workspace:change no cambia la carpeta a una ruta mandada por la UI" time="0.000187" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="workspace:reveal abre solo la carpeta del editor" time="0.000082" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="workspace:readEventCatalog lee el catalogo de la instalacion y nada mas" time="0.000682" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+		<testcase name="game:clearSave borra solo saves/partida.json aunque reciba otra ruta" time="0.001902" classname="test" file="<repo>\editor\ipc\tests\rutas.test.js"/>
+	</testsuite>
+	<!-- tests 265 -->
+	<!-- suites 28 -->
+	<!-- pass 208 -->
+	<!-- fail 0 -->
+	<!-- cancelled 0 -->
+	<!-- skipped 1 -->
+	<!-- todo 56 -->
+	<!-- duration_ms 2674.8843 -->
+</testsuites>

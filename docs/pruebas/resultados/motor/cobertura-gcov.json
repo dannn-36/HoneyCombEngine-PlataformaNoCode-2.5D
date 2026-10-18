@@ -1,0 +1,259 @@
+{
+  "files": {
+    "core/graphicsdevice.cpp": {
+      "lines": 37,
+      "covered": 10,
+      "functions": 13,
+      "functions_covered": 3
+    },
+    "core/resourcemanager.cpp": {
+      "lines": 47,
+      "covered": 31,
+      "functions": 7,
+      "functions_covered": 5
+    },
+    "game/combat.cpp": {
+      "lines": 359,
+      "covered": 348,
+      "functions": 34,
+      "functions_covered": 34
+    },
+    "game/combatview.cpp": {
+      "lines": 247,
+      "covered": 0,
+      "functions": 14,
+      "functions_covered": 0
+    },
+    "game/devtools.cpp": {
+      "lines": 67,
+      "covered": 0,
+      "functions": 13,
+      "functions_covered": 0
+    },
+    "game/eventbindings.cpp": {
+      "lines": 193,
+      "covered": 191,
+      "functions": 33,
+      "functions_covered": 33
+    },
+    "game/gameconfig.cpp": {
+      "lines": 108,
+      "covered": 108,
+      "functions": 9,
+      "functions_covered": 9
+    },
+    "game/gamesession.cpp": {
+      "lines": 796,
+      "covered": 0,
+      "functions": 41,
+      "functions_covered": 0
+    },
+    "game/healthhud.cpp": {
+      "lines": 114,
+      "covered": 0,
+      "functions": 5,
+      "functions_covered": 0
+    },
+    "game/inventory.cpp": {
+      "lines": 98,
+      "covered": 94,
+      "functions": 15,
+      "functions_covered": 14
+    },
+    "game/inventory.hpp": {
+      "lines": 5,
+      "covered": 5,
+      "functions": 5,
+      "functions_covered": 5
+    },
+    "game/loot.cpp": {
+      "lines": 129,
+      "covered": 126,
+      "functions": 10,
+      "functions_covered": 10
+    },
+    "game/mobility.cpp": {
+      "lines": 34,
+      "covered": 34,
+      "functions": 3,
+      "functions_covered": 3
+    },
+    "game/mobility.hpp": {
+      "lines": 2,
+      "covered": 2,
+      "functions": 2,
+      "functions_covered": 2
+    },
+    "game/movement.cpp": {
+      "lines": 101,
+      "covered": 100,
+      "functions": 12,
+      "functions_covered": 12
+    },
+    "game/progress.cpp": {
+      "lines": 58,
+      "covered": 58,
+      "functions": 4,
+      "functions_covered": 4
+    },
+    "game/screens.cpp": {
+      "lines": 164,
+      "covered": 0,
+      "functions": 13,
+      "functions_covered": 0
+    },
+    "game/zones.cpp": {
+      "lines": 19,
+      "covered": 19,
+      "functions": 3,
+      "functions_covered": 3
+    },
+    "loader/assetresolver.cpp": {
+      "lines": 7,
+      "covered": 7,
+      "functions": 3,
+      "functions_covered": 3
+    },
+    "loader/assetresolver.hpp": {
+      "lines": 1,
+      "covered": 1,
+      "functions": 0,
+      "functions_covered": 0
+    },
+    "loader/eventloader.cpp": {
+      "lines": 22,
+      "covered": 22,
+      "functions": 2,
+      "functions_covered": 2
+    },
+    "loader/itemloader.cpp": {
+      "lines": 132,
+      "covered": 130,
+      "functions": 8,
+      "functions_covered": 8
+    },
+    "loader/levelloader.cpp": {
+      "lines": 161,
+      "covered": 161,
+      "functions": 3,
+      "functions_covered": 3
+    },
+    "systems/animation/animationsystem.cpp": {
+      "lines": 31,
+      "covered": 31,
+      "functions": 6,
+      "functions_covered": 6
+    },
+    "systems/audio/audiosystem.cpp": {
+      "lines": 25,
+      "covered": 3,
+      "functions": 5,
+      "functions_covered": 1
+    },
+    "systems/camera/camerasystem.cpp": {
+      "lines": 62,
+      "covered": 61,
+      "functions": 10,
+      "functions_covered": 10
+    },
+    "systems/camera/camerasystem.hpp": {
+      "lines": 1,
+      "covered": 1,
+      "functions": 1,
+      "functions_covered": 1
+    },
+    "systems/collision/collisionsystem.cpp": {
+      "lines": 12,
+      "covered": 11,
+      "functions": 2,
+      "functions_covered": 2
+    },
+    "systems/event_system/eventsystem.cpp": {
+      "lines": 35,
+      "covered": 35,
+      "functions": 6,
+      "functions_covered": 6
+    },
+    "systems/input/inputsystem.cpp": {
+      "lines": 25,
+      "covered": 0,
+      "functions": 9,
+      "functions_covered": 0
+    },
+    "systems/iso_grid/isogridsystem.cpp": {
+      "lines": 32,
+      "covered": 32,
+      "functions": 10,
+      "functions_covered": 10
+    },
+    "systems/z_sort/zsortsystem.cpp": {
+      "lines": 40,
+      "covered": 40,
+      "functions": 7,
+      "functions_covered": 7
+    },
+    "systems/z_sort/zsortsystem.hpp": {
+      "lines": 1,
+      "covered": 1,
+      "functions": 1,
+      "functions_covered": 1
+    }
+  },
+  "groups": {
+    "loader": {
+      "lines": 323,
+      "covered": 321,
+      "percent": 99.4
+    },
+    "events (event_system)": {
+      "lines": 35,
+      "covered": 35,
+      "percent": 100.0
+    },
+    "events (event_system + EventBindings)": {
+      "lines": 228,
+      "covered": 226,
+      "percent": 99.1
+    },
+    "grid (iso_grid)": {
+      "lines": 32,
+      "covered": 32,
+      "percent": 100.0
+    },
+    "collision (CollisionSystem)": {
+      "lines": 12,
+      "covered": 11,
+      "percent": 91.7
+    },
+    "collision (CollisionSystem + Movement)": {
+      "lines": 113,
+      "covered": 111,
+      "percent": 98.2
+    },
+    "systems/*": {
+      "lines": 264,
+      "covered": 215,
+      "percent": 81.4
+    },
+    "game/*": {
+      "lines": 2494,
+      "covered": 1085,
+      "percent": 43.5
+    },
+    "game/* sin dibujo (sin GameSession, Screens, HealthHud, CombatView, DevTools)": {
+      "lines": 1106,
+      "covered": 1085,
+      "percent": 98.1
+    },
+    "core/*": {
+      "lines": 84,
+      "covered": 41,
+      "percent": 48.8
+    },
+    "total motor": {
+      "lines": 3165,
+      "covered": 1662,
+      "percent": 52.5
+    }
+  }
+}

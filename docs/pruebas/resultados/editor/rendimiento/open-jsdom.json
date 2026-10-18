@@ -1,0 +1,296 @@
+{
+  "generatedAt": "2026-10-18T05:43:39.347Z",
+  "machine": {
+    "cpu": "AMD Ryzen 5 7600 6-Core Processor",
+    "threads": 12,
+    "mhz": 3793,
+    "totalMemGB": 31.1,
+    "platform": "win32 10.0.26200",
+    "node": "v24.20.0"
+  },
+  "data": {
+    "bootMs": 212.1,
+    "levels": [
+      {
+        "name": "combate_demo.json",
+        "bytes": 260364,
+        "entities": 20,
+        "tiles": 4321,
+        "open": {
+          "n": 5,
+          "median": 2.896,
+          "p95": 3.685,
+          "mean": 2.928,
+          "min": 2.182,
+          "max": 3.685
+        }
+      },
+      {
+        "name": "figuras.json",
+        "bytes": 10120,
+        "entities": 9,
+        "tiles": 64,
+        "open": {
+          "n": 5,
+          "median": 0.949,
+          "p95": 1.011,
+          "mean": 0.904,
+          "min": 0.766,
+          "max": 1.011
+        }
+      },
+      {
+        "name": "Grillas_tuneles_test.json",
+        "bytes": 46933,
+        "entities": 0,
+        "tiles": 679,
+        "open": {
+          "n": 5,
+          "median": 1.047,
+          "p95": 1.195,
+          "mean": 0.995,
+          "min": 0.782,
+          "max": 1.195
+        }
+      },
+      {
+        "name": "imagen test.json",
+        "bytes": 10493,
+        "entities": 2,
+        "tiles": 100,
+        "open": {
+          "n": 5,
+          "median": 0.708,
+          "p95": 0.725,
+          "mean": 0.685,
+          "min": 0.613,
+          "max": 0.725
+        }
+      },
+      {
+        "name": "nuevo_nivel.json",
+        "bytes": 11201,
+        "entities": 32,
+        "tiles": 0,
+        "open": {
+          "n": 5,
+          "median": 0.902,
+          "p95": 1,
+          "mean": 0.844,
+          "min": 0.679,
+          "max": 1
+        }
+      },
+      {
+        "name": "nuevo_nivel2.json",
+        "bytes": 3966,
+        "entities": 8,
+        "tiles": 0,
+        "open": {
+          "n": 5,
+          "median": 0.622,
+          "p95": 0.72,
+          "mean": 0.587,
+          "min": 0.471,
+          "max": 0.72
+        }
+      },
+      {
+        "name": "Pruebas tuneles y mapa.json",
+        "bytes": 15645,
+        "entities": 0,
+        "tiles": 193,
+        "open": {
+          "n": 5,
+          "median": 0.459,
+          "p95": 0.536,
+          "mean": 0.448,
+          "min": 0.386,
+          "max": 0.536
+        }
+      },
+      {
+        "name": "test-mp.json",
+        "bytes": 14151,
+        "entities": 11,
+        "tiles": 100,
+        "open": {
+          "n": 5,
+          "median": 0.404,
+          "p95": 0.591,
+          "mean": 0.433,
+          "min": 0.361,
+          "max": 0.591
+        }
+      },
+      {
+        "name": "test3.json",
+        "bytes": 16566,
+        "entities": 23,
+        "tiles": 100,
+        "open": {
+          "n": 5,
+          "median": 0.419,
+          "p95": 0.643,
+          "mean": 0.458,
+          "min": 0.386,
+          "max": 0.643
+        }
+      },
+      {
+        "name": "test4.json",
+        "bytes": 21914,
+        "entities": 33,
+        "tiles": 110,
+        "open": {
+          "n": 5,
+          "median": 0.71,
+          "p95": 1.049,
+          "mean": 0.759,
+          "min": 0.569,
+          "max": 1.049
+        }
+      },
+      {
+        "name": "test5-player.json",
+        "bytes": 15048,
+        "entities": 15,
+        "tiles": 100,
+        "open": {
+          "n": 5,
+          "median": 0.666,
+          "p95": 2.52,
+          "mean": 0.981,
+          "min": 0.417,
+          "max": 2.52
+        }
+      },
+      {
+        "name": "test6-player.json",
+        "bytes": 12626,
+        "entities": 7,
+        "tiles": 100,
+        "open": {
+          "n": 5,
+          "median": 0.354,
+          "p95": 0.507,
+          "mean": 0.38,
+          "min": 0.315,
+          "max": 0.507
+        }
+      },
+      {
+        "name": "Test_Ajuste.json",
+        "bytes": 39589,
+        "entities": 1,
+        "tiles": 577,
+        "open": {
+          "n": 5,
+          "median": 0.51,
+          "p95": 0.797,
+          "mean": 0.569,
+          "min": 0.475,
+          "max": 0.797
+        }
+      },
+      {
+        "name": "Test_imagen.json",
+        "bytes": 20582,
+        "entities": 3,
+        "tiles": 274,
+        "open": {
+          "n": 5,
+          "median": 0.412,
+          "p95": 0.464,
+          "mean": 0.414,
+          "min": 0.384,
+          "max": 0.464
+        }
+      },
+      {
+        "name": "test_level.json",
+        "bytes": 1443,
+        "entities": 2,
+        "tiles": 0,
+        "open": {
+          "n": 5,
+          "median": 0.304,
+          "p95": 0.334,
+          "mean": 0.312,
+          "min": 0.285,
+          "max": 0.334
+        }
+      },
+      {
+        "name": "test_level_1.json",
+        "bytes": 4500,
+        "entities": 10,
+        "tiles": 0,
+        "open": {
+          "n": 5,
+          "median": 0.457,
+          "p95": 0.478,
+          "mean": 0.448,
+          "min": 0.39,
+          "max": 0.478
+        }
+      },
+      {
+        "name": "test_level_2.json",
+        "bytes": 4424,
+        "entities": 1,
+        "tiles": 62,
+        "open": {
+          "n": 5,
+          "median": 0.41,
+          "p95": 0.594,
+          "mean": 0.426,
+          "min": 0.308,
+          "max": 0.594
+        }
+      },
+      {
+        "name": "Test_Level_Figuras.json",
+        "bytes": 11408,
+        "entities": 4,
+        "tiles": 100,
+        "open": {
+          "n": 5,
+          "median": 0.33,
+          "p95": 0.405,
+          "mean": 0.339,
+          "min": 0.289,
+          "max": 0.405
+        }
+      },
+      {
+        "name": "Test_menus_personajes.json",
+        "bytes": 51605,
+        "entities": 9,
+        "tiles": 763,
+        "open": {
+          "n": 5,
+          "median": 0.813,
+          "p95": 1.706,
+          "mean": 0.977,
+          "min": 0.571,
+          "max": 1.706
+        }
+      },
+      {
+        "name": "test_salas.json",
+        "bytes": 22058,
+        "entities": 3,
+        "tiles": 254,
+        "open": {
+          "n": 5,
+          "median": 0.373,
+          "p95": 0.427,
+          "mean": 0.381,
+          "min": 0.351,
+          "max": 0.427
+        }
+      }
+    ]
+  }
+}
