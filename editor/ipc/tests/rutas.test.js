@@ -243,4 +243,13 @@ describe('los canales sin rutas no usan lo que mande la UI', () => {
     assert.equal(fs.existsSync(path.join(entorno.root, 'saves', 'partida.json')), false);
     afueraIntacto();
   });
+
+  it('game:clearSave borra tambien la partida de prueba y las copias, y nada mas de saves/', async () => {
+    const saves = path.join(entorno.root, 'saves');
+    fs.mkdirSync(saves, { recursive: true });
+    const partidas = ['partida.json', 'partida.json.bak', 'prueba.json', 'prueba.json.bak', 'prueba.json.tmp'];
+    for (const nombre of [...partidas, 'notas.txt']) fs.writeFileSync(path.join(saves, nombre), '{}');
+    await entorno.invocar('game:clearSave');
+    assert.deepEqual(fs.readdirSync(saves), ['notas.txt']);
+  });
 });

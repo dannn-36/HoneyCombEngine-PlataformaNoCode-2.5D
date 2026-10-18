@@ -515,12 +515,11 @@ TEST_CASE("cargar un nivel nuevo reemplaza los eventos del anterior") {
     CHECK(runs == 0);
 }
 
-// Defecto conocido: LevelLoader solo llama a EventSystem::LoadEvents si el
-// nivel trae la clave "events" (LevelLoader.cpp, bloque "Eventos"). Un nivel
-// escrito a mano sin esa clave (el schema la exige, pero el motor no la
-// rechaza) hereda los eventos del nivel anterior al pasar de nivel, porque
-// GameSession reutiliza el mismo EventSystem.
-TEST_CASE("un nivel sin la clave events no hereda los eventos del anterior" * doctest::should_fail()) {
+// LevelLoader reemplaza SIEMPRE los eventos del EventSystem, aunque el nivel
+// no traiga la clave "events" (escrito a mano; el schema la exige, pero el
+// motor no la rechaza). Antes los heredaba del nivel anterior al pasar de
+// nivel, porque GameSession reutiliza el mismo EventSystem.
+TEST_CASE("un nivel sin la clave events no hereda los eventos del anterior") {
     LoaderFixture fx;
     int runs = 0;
     fx.events.RegisterTrigger("siempre", [](const json&) { return true; });

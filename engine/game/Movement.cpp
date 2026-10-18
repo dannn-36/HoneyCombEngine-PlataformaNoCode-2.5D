@@ -40,11 +40,21 @@ bool CanOccupy(const LoadedLevel& level, const LevelEntity& mover, Vector2 candi
                std::fabs(candidate.y - static_cast<float>(row)) < 0.5f + half.y;
     };
 
+    // Para el PISO el borde cuenta (<=): parado justo en el limite entre dos
+    // casillas con piso se esta sobre piso. Con < estricto, una entidad sin
+    // collider en x = 6.5 no tocaba ninguna de las dos y quedaba "fuera del
+    // piso", clavada. Para las paredes sigue siendo estricto: rozar el borde de
+    // una pared no la atraviesa, asi que no frena.
+    auto touchesTile = [&](int col, int row) {
+        return std::fabs(candidate.x - static_cast<float>(col)) <= 0.5f + half.x &&
+               std::fabs(candidate.y - static_cast<float>(row)) <= 0.5f + half.y;
+    };
+
     // Una forma irregular tambien es una frontera fisica: no se puede avanzar
     // a una zona que no declara piso.
     bool hasFloor = false;
     for (const auto& tile : level.floorTiles) {
-        if (overlapsTile(tile.col, tile.row)) {
+        if (touchesTile(tile.col, tile.row)) {
             hasFloor = true;
             break;
         }

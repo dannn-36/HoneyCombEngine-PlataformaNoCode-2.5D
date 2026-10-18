@@ -454,7 +454,12 @@ export class GameConfigController {
   // --- Partida guardada ------------------------------------------------------
 
   async clearSave(): Promise<void> {
-    if (!window.confirm('¿Borrar la partida guardada? «Continuar» desaparece de la portada hasta el próximo punto de control.')) {
+    if (
+      !window.confirm(
+        '¿Borrar la partida guardada? También se borran la de prueba y las copias de respaldo. ' +
+          '«Continuar» desaparece de la portada hasta el próximo punto de control.',
+      )
+    ) {
       return;
     }
     try {

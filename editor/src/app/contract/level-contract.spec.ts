@@ -369,8 +369,6 @@ function bibliotecaDeObjetos() {
 interface Escenario {
   archivo: string;
   armar: (editor: Editor) => void;
-  /** Defecto conocido que hace que abrir y volver a guardar pierda datos. */
-  pierdeAlReabrir?: string;
 }
 
 const ESCENARIOS: Escenario[] = [
@@ -392,7 +390,6 @@ const ESCENARIOS: Escenario[] = [
   },
   {
     archivo: 'pisos_por_capas.json',
-    pierdeAlReabrir: 'parseLevel no copia "floorPaint": las casillas pintadas se pierden al reabrir',
     armar: (ed) => {
       ed.niveles.createNew('pisos_por_capas', GRILLA(8, 8));
       ed.niveles.addRoom({ id: 'sala_2', col: 11, row: 2, width: 4, height: 4 }, { to: 'sala_1', width: 1 });
@@ -404,7 +401,6 @@ const ESCENARIOS: Escenario[] = [
   },
   {
     archivo: 'camara_y_fondo.json',
-    pierdeAlReabrir: 'parseLevel no copia "camera" ni "backgroundImage": se pierden al reabrir',
     armar: (ed) => {
       ed.niveles.createNew('camara_y_fondo', GRILLA(12, 10));
       ed.colocarPersonaje(ed.base('player'), 5, 5);
@@ -517,10 +513,6 @@ const TEXTURAS_FALTANTES: Record<string, string[]> = {
   'Test_imagen.json': ['textures/bf4f7e8e-9d8c-4503-8ed5-0d064c11ddd9.png', 'textures/(NieR Replicant).png'],
 };
 
-// Niveles que pierden datos al abrirlos y volver a guardarlos en el editor.
-// Defecto conocido: ProjectService.parseLevel no copia "camera", "backgroundImage" ni "floorPaint".
-const PIERDEN_AL_REABRIR = new Set(['combate_demo.json', 'Test_Ajuste.json', 'Test_imagen.json']);
-
 const NIVELES_DE_LEVELS = jsonsDe(NIVELES);
 
 // ==============================================================================
@@ -559,29 +551,14 @@ describe('contrato de niveles', () => {
       expect(nivel.grid).toEqual(leerJson<Level>(join(NIVELES, archivo)).grid);
     });
 
-    it.each(NIVELES_DE_LEVELS.filter((archivo) => !PIERDEN_AL_REABRIR.has(archivo)))(
+    it.each(NIVELES_DE_LEVELS)(
       'abrir y guardar %s en el editor deja el mismo nivel',
       async (archivo) => {
         const original = leerJson<Level>(join(NIVELES, archivo));
         const guardado = JSON.parse(JSON.stringify(levelForDisk(await abrirEnEditor(JSON.stringify(original)))));
         expect(guardado).toEqual(original);
       },
-    );
-
-    // Defecto conocido: ProjectService.parseLevel no copia "camera" ni "backgroundImage".
-    it.fails.each([...PIERDEN_AL_REABRIR])('abrir y guardar %s en el editor conserva la camara', async (archivo) => {
-      const original = leerJson<Level>(join(NIVELES, archivo));
-      const guardado = JSON.parse(JSON.stringify(levelForDisk(await abrirEnEditor(JSON.stringify(original)))));
-      expect(guardado).toEqual(original);
-    });
-
-    it.each([...PIERDEN_AL_REABRIR])('abrir y guardar %s en el editor solo pierde la camara', async (archivo) => {
-      const { camera, ...sinCamara } = leerJson<Level>(join(NIVELES, archivo));
-      expect(camera).toBeDefined();
-      const guardado = JSON.parse(JSON.stringify(levelForDisk(await abrirEnEditor(JSON.stringify(sinCamara)))));
-      expect(guardado).toEqual(sinCamara);
-    });
-  });
+    );  });
 
   describe('indice de casos', () => {
     it.each(['valid', 'invalid', 'limite'] as const)('casos.json lista exactamente los archivos de %s/', (carpeta) => {
@@ -703,8 +680,8 @@ describe('contrato de niveles', () => {
       }
     });
 
-    // Se compara el JSON ya leido y no el texto: parseLevel reordena las claves
-    // (rooms y tunnels pasan al final), y el orden no cambia lo que lee el motor.
+    // Se compara el JSON ya leido y no el texto: parseLevel puede reordenar las
+    // claves, y el orden no cambia lo que lee el motor.
     const reabrir = async (escenario: Escenario) => {
       const texto = await guardadoDe(escenario);
       const editor = armarEditor();
@@ -713,16 +690,7 @@ describe('contrato de niveles', () => {
       return { antes: JSON.parse(texto), despues: JSON.parse(await editor.guardar()) };
     };
 
-    it.each(ESCENARIOS.filter((escenario) => !escenario.pierdeAlReabrir))(
-      'guardar, abrir y volver a guardar $archivo deja el mismo nivel',
-      async (escenario) => {
-        const { antes, despues } = await reabrir(escenario);
-        expect(despues).toEqual(antes);
-      },
-    );
-
-    // Defecto conocido: ProjectService.parseLevel no copia "camera", "backgroundImage" ni "floorPaint".
-    it.fails.each(ESCENARIOS.filter((escenario) => escenario.pierdeAlReabrir))(
+    it.each(ESCENARIOS)(
       'guardar, abrir y volver a guardar $archivo deja el mismo nivel',
       async (escenario) => {
         const { antes, despues } = await reabrir(escenario);

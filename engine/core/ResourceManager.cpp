@@ -71,6 +71,20 @@ const Music& ResourceManager::GetMusic(const std::string& path) {
     return music_.emplace(path, music).first->second;
 }
 
+std::size_t ResourceManager::ReleaseTexturesExcept(const std::unordered_set<const Texture2D*>& inUse) {
+    std::size_t released = 0;
+    for (auto it = textures_.begin(); it != textures_.end();) {
+        if (inUse.count(&it->second) > 0) {
+            ++it;
+            continue;
+        }
+        UnloadTexture(it->second);
+        it = textures_.erase(it);
+        ++released;
+    }
+    return released;
+}
+
 // Libera todo lo cacheado y vacia los mapas. Lo llama el destructor, pero es
 // publico para poder descargar el nivel anterior al cambiar de nivel. Ojo:
 // despues de esto, cualquier referencia devuelta por un Get* queda colgada.

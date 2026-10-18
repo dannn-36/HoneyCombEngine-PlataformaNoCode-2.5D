@@ -19,6 +19,7 @@
 #include "game/Screens.hpp"
 #include "game/Loot.hpp"
 #include "game/Mobility.hpp"
+#include "game/Progress.hpp"
 #include "loader/AssetResolver.hpp"
 #include "loader/LevelLoader.hpp"
 #include "systems/animation/AnimationSystem.hpp"
@@ -103,6 +104,10 @@ private:
     // Rearma todo lo que depende del nivel cargado. Se llama al arrancar y
     // cada vez que se pasa de nivel.
     void PrepareLevel(LevelStart start);
+
+    // Descarga las texturas que ya nadie usa (las del nivel anterior). La
+    // llama PrepareLevel al final; la lista de lo que se conserva esta en el .cpp.
+    void ReleaseUnusedTextures();
 
     // Agenda el paso a otro nivel. No carga nada: primero corre la pantalla de
     // transicion, y la carga pasa al final del frame (ver Update).
@@ -301,6 +306,10 @@ private:
     // El ultimo punto de control que guardo: no se vuelve a guardar en el mismo
     // mientras el jugador siga parado ahi.
     std::string lastCheckpointId;
+    // Que partida se lee y se escribe (ver Progress.hpp): la de prueba cuando
+    // se abrio directo en un nivel (Ejecutar desde el editor), la del juego
+    // desde la portada. Volver a la portada pasa a la del juego.
+    std::string saveSlot = Progress::kGameSlot;
     // Imagenes del estilo de game.json, ya cargadas.
     const Texture2D *titleBackground = nullptr;
     HealthHud::Images hudImages;

@@ -908,8 +908,8 @@ TEST_CASE("pasar de nivel con una ruta unc no sale de levels" * doctest::should_
 // seguro es que Progress::Load y LoadGameConfig no entreguen una ruta que se
 // salga.
 
-// Defecto conocido: Progress::Load acepta cualquier "level".
-TEST_CASE("la partida guardada no entrega un nivel fuera de levels" * doctest::should_fail()) {
+// Progress::Load trata como rota una partida cuyo "level" sale de levels/.
+TEST_CASE("la partida guardada no entrega un nivel fuera de levels") {
     for (const std::string reference :
          {"../../fuera.json", "..\\..\\fuera.json", "C:/Windows/win.ini", "//servidor/recurso/nivel.json"}) {
         TempDir dir;

@@ -6,7 +6,7 @@ import { CatalogService } from '../services/catalog.service';
 import { CharacterPresetService } from '../services/character-preset.service';
 import { GameConfigService } from '../services/game-config.service';
 import { LevelService } from '../services/level.service';
-import { ProjectService } from '../services/project.service';
+import { LevelChangedOnDiskError, ProjectService } from '../services/project.service';
 import { TexturesController } from '../textures/textures.controller';
 import { ViewportController } from '../viewport/viewport.controller';
 import { EngineController } from './engine.controller';
@@ -128,6 +128,16 @@ export class ProjectController {
   }
 
   /**
+   * true si se puede reemplazar el nivel abierto por otro: no tiene cambios sin
+   * guardar, o la persona acepta perderlos. Lo pregunta TODO lo que cambia el
+   * nivel abierto (abrir, nuevo, el desplegable, el explorador): antes solo lo
+   * hacian cambiar de carpeta y recargar, y abrir otro nivel los perdia sin aviso.
+   */
+  confirmDiscard(action = 'Abrir otro nivel'): boolean {
+    return !this.dirty() || window.confirm(`Hay cambios sin guardar en el nivel. ¿${action} igual y perderlos?`);
+  }
+
+  /**
    * Elige otra carpeta del editor. El nivel abierto se cierra: su archivo es
    * de la carpeta anterior, y guardarlo despues escribiria en la nueva algo que
    * apunta a texturas que alli no estan.
@@ -137,7 +147,7 @@ export class ProjectController {
       this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
       return;
     }
-    if (this.dirty() && !window.confirm('Hay cambios sin guardar en el nivel. ¿Cambiar de carpeta igual y perderlos?')) {
+    if (!this.confirmDiscard('Cambiar de carpeta')) {
       return;
     }
     try {
@@ -235,6 +245,11 @@ export class ProjectController {
       this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
       return;
     }
+    // Antes del dialogo y no despues: elegir un nivel de afuera ya lo importa
+    // (lo copia a levels/), y no tiene sentido copiarlo para despues no abrirlo.
+    if (!this.confirmDiscard()) {
+      return;
+    }
     try {
       const opened = await this.project.openLevelFile();
       if (!opened) {
@@ -283,8 +298,15 @@ export class ProjectController {
     this.note(parts.join('; ') + '.');
   }
 
-  /** Abre un nivel del proyecto y recentra la camara sobre el. */
-  async loadLevel(fileName: string): Promise<void> {
+  /**
+   * Abre un nivel del proyecto y recentra la camara sobre el. Devuelve si se
+   * abrio: false si se cancelo por cambios sin guardar o si fallo la lectura
+   * (el desplegable lo usa para volver a mostrar el nivel que sigue abierto).
+   */
+  async loadLevel(fileName: string): Promise<boolean> {
+    if (!this.confirmDiscard()) {
+      return false;
+    }
     try {
       await this.levels.load(fileName);
       this.dirty.set(false);
@@ -292,13 +314,18 @@ export class ProjectController {
       // quedar fuera de la vista o entrar con un zoom que no le corresponde.
       this.view.frameAll();
       this.note('Nivel "' + fileName + '" cargado (' + this.entities().length + ' entidades).');
+      return true;
     } catch (error) {
       this.note('Error al cargar ' + fileName + ': ' + this.describe(error));
+      return false;
     }
   }
 
   /** Abre el dialogo de nivel nuevo, con los valores siempre en su default. */
   newLevel(): void {
+    if (!this.confirmDiscard('Crear un nivel nuevo')) {
+      return;
+    }
     this.newLevelName.set('nuevo_nivel');
     this.newLevelWidth.set(10);
     this.newLevelHeight.set(10);
@@ -439,23 +466,51 @@ export class ProjectController {
     }
 
     this.levels.fileName.set(fileName);
-    if (!(await this.writeLevel())) {
+    // Reemplazar otro archivo ya se pregunto recien: no se vuelve a preguntar
+    // aunque ese archivo haya cambiado en el disco.
+    if (!(await this.writeLevel(taken && !isSame))) {
       // No se escribio: el nivel sigue siendo el de antes, no el del nombre nuevo.
       this.levels.fileName.set(current);
     }
   }
 
-  /** Escribe el nivel en levels/<fileName> y deja el editor al dia. Devuelve si se pudo. */
-  private async writeLevel(): Promise<boolean> {
+  /**
+   * Escribe el nivel en levels/<fileName> y deja el editor al dia. Devuelve si
+   * se pudo. Si el archivo cambio en el disco desde que se abrio, pregunta
+   * antes de pisarlo (overwrite = ya se pregunto).
+   */
+  private async writeLevel(overwrite = false): Promise<boolean> {
     try {
-      await this.levels.save();
-      this.dirty.set(false);
+      // Escribir es asincrono, y mientras tanto se puede seguir editando. Cada
+      // cambio reemplaza el objeto del nivel, asi que si al terminar ya no es
+      // el que se escribio, ese cambio NO esta en el disco y la marca de "sin
+      // guardar" tiene que seguir prendida.
+      const written = this.levels.level();
+      await this.levels.save({ overwrite });
+      if (this.levels.level() === written) {
+        this.dirty.set(false);
+      }
       this.lastSavedPath.set(null);
       this.levelFiles.set(await this.project.listLevels());
       await this.explorer.reloadDir('levels');
       this.note('Guardado en levels/' + this.levels.fileName());
       return true;
     } catch (error) {
+      if (error instanceof LevelChangedOnDiskError && !overwrite) {
+        const replace = window.confirm(
+          `${error.relativePath} cambió en el disco desde que lo abriste (otro programa, una copia del ` +
+            'proyecto o git). ¿Reemplazarlo con lo que tienes en el editor?\n\n' +
+            `La versión del disco quedará en ${error.relativePath}.bak.`,
+        );
+        if (replace) {
+          return this.writeLevel(true);
+        }
+        this.note(
+          'No se guardó: ' + error.relativePath + ' cambió en el disco. Guarda con otro nombre (Ctrl+Shift+S) ' +
+            'para conservar los dos, o ábrelo de nuevo para ver la versión del disco.',
+        );
+        return false;
+      }
       this.note('Error al guardar: ' + this.describe(error));
       return false;
     }

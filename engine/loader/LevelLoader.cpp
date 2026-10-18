@@ -306,9 +306,15 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
     // Se cargan directo en el EventSystem (no viajan dentro de LoadedLevel):
     // el nivel describe QUE eventos hay, y el EventSystem ya tiene registrado
     // COMO se ejecuta cada type.
+    // SIEMPRE se reemplazan, aunque el nivel no traiga la clave: sin eso, un
+    // nivel sin "events" (escrito a mano; el schema la pide pero el motor no la
+    // exige) heredaba los eventos del nivel anterior al pasar de nivel, porque
+    // GameSession usa el mismo EventSystem para todos.
+    std::vector<EventDefinition> events;
     if (levelJson.contains("events")) {
-        eventSystem.LoadEvents(EventLoader::Parse(levelJson.at("events")));
+        events = EventLoader::Parse(levelJson.at("events"));
     }
+    eventSystem.LoadEvents(std::move(events));
 
     return level;
 }

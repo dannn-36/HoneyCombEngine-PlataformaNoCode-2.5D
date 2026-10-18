@@ -45,6 +45,7 @@ set(HONEYCOMB_TEST_SOURCES
     support/TestSupport.cpp
     support/HiddenWindow.cpp
     test_asset_resolver.cpp
+    test_resource_manager.cpp
     test_level_loader.cpp
     test_event_loader.cpp
     test_item_loader.cpp

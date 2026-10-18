@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "raylib.h"
 
@@ -23,6 +25,14 @@ public:
     const Music& GetMusic(const std::string& path);
 
     void UnloadAll();
+
+    // Descarga las texturas que no estan en "inUse" y devuelve cuantas libero.
+    // Es para pasar de nivel: sin esto la cache solo crecia (unos 39 MB por
+    // nivel con 300 texturas, medido en EN-11). Quien llama tiene que poner en
+    // "inUse" TODA textura que alguien siga apuntando: una que falte queda
+    // colgada. Las que quedan siguen en la misma direccion (unordered_map no
+    // mueve sus elementos al borrar otros).
+    std::size_t ReleaseTexturesExcept(const std::unordered_set<const Texture2D*>& inUse);
 
 private:
     std::unordered_map<std::string, Texture2D> textures_;

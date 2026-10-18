@@ -5,6 +5,7 @@
 
 #include "doctest/doctest.h"
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -202,6 +203,127 @@ TEST_CASE("cada evento recuerda por separado si ya se cumplia") {
     b = true;
     events.Update();
     CHECK(log == std::vector<std::string>{"a", "b"});
+}
+
+// --- Un bloque que falla no cierra el juego --------------------------------------
+
+TEST_CASE("un trigger que lanza no rompe la actualizacion y los demas eventos corren") {
+    EventFixture fx;
+    fx.events.RegisterTrigger("roto", [](const json&) -> bool { throw std::runtime_error("roto"); });
+    fx.armed = true;
+    fx.Load({Event(Step("roto"), {}, {Note("nunca")}), Event(Step("armado"), {}, {Note("b")})});
+    CHECK_NOTHROW(fx.events.Update());
+    CHECK_NOTHROW(fx.events.Update());
+    CHECK(fx.log == std::vector<std::string>{"b"});
+}
+
+TEST_CASE("una accion que lanza se saltea y las siguientes del evento corren") {
+    EventFixture fx;
+    fx.events.RegisterAction("rota", [](const json&) { throw std::runtime_error("rota"); });
+    fx.armed = true;
+    fx.Load({Event(Step("armado"), {}, {Note("a"), Step("rota"), Note("c")})});
+    CHECK_NOTHROW(fx.events.Update());
+    CHECK(fx.log == std::vector<std::string>{"a", "c"});
+}
+
+// --- Recompensas que no se repiten (partida guardada) ---------------------------
+
+// "armado" hace de trigger de una sola vez y "premio" de recompensa.
+struct RewardFixture : EventFixture {
+    RewardFixture() {
+        events.RegisterAction("premio", [this](const json&) { log.push_back("premio"); });
+        events.SetNonRepeatable({"armado"}, {"premio"});
+    }
+    void Fire() {
+        armed = false;
+        events.Update();
+        armed = true;
+        events.Update();
+    }
+};
+
+TEST_CASE("las claves de los eventos no dependen de su posicion en el nivel") {
+    EventFixture fx;
+    const EventDefinition a = Event(Step("armado"), {}, {Note("a")});
+    const EventDefinition b = Event(Step("armado"), {Step("si")}, {Note("b")});
+    fx.Load({a, b});
+    const std::vector<std::string> first = fx.events.Keys();
+    fx.Load({b, a});
+    const std::vector<std::string> swapped = fx.events.Keys();
+    REQUIRE(first.size() == 2);
+    CHECK(first[0] != first[1]);
+    CHECK(first[0] == swapped[1]);
+    CHECK(first[1] == swapped[0]);
+}
+
+TEST_CASE("dos eventos identicos tienen claves distintas") {
+    EventFixture fx;
+    const EventDefinition a = Event(Step("armado"), {}, {Note("a")});
+    fx.Load({a, a});
+    const std::vector<std::string> keys = fx.events.Keys();
+    REQUIRE(keys.size() == 2);
+    CHECK(keys[0] != keys[1]);
+}
+
+TEST_CASE("solo los eventos que ejecutaron sus acciones cuentan como disparados") {
+    EventFixture fx;
+    fx.Load({Event(Step("armado"), {}, {Note("a")}), Event(Step("nunca"), {}, {Note("b")})});
+    CHECK(fx.events.FiredKeys().empty());
+    fx.armed = true;
+    fx.events.Update();
+    CHECK(fx.events.FiredKeys() == std::vector<std::string>{fx.events.Keys()[0]});
+}
+
+TEST_CASE("un evento de una sola vez que ya dio su recompensa no la vuelve a dar") {
+    RewardFixture fx;
+    fx.Load({Event(Step("armado"), {}, {Step("premio"), Note("puerta")})});
+    fx.Fire();
+    fx.Fire();
+    // La recompensa una vez; lo demas (abrir la puerta) cada vez, para no trabar el nivel.
+    CHECK(fx.log == std::vector<std::string>{"premio", "puerta", "puerta"});
+}
+
+TEST_CASE("al continuar, un evento ya disparado no vuelve a dar su recompensa") {
+    RewardFixture saved;
+    const EventDefinition boss = Event(Step("armado"), {}, {Step("premio"), Note("puerta")});
+    saved.Load({boss});
+    saved.Fire();
+    const std::vector<std::string> fired = saved.events.FiredKeys();
+
+    // Otra ejecucion: el nivel se carga de nuevo y se restaura lo guardado.
+    RewardFixture resumed;
+    resumed.Load({boss});
+    resumed.events.RestoreFired(fired);
+    resumed.Fire();
+    CHECK(resumed.log == std::vector<std::string>{"puerta"});
+}
+
+TEST_CASE("los eventos que se pueden repetir dan su recompensa cada vez") {
+    RewardFixture fx;
+    fx.events.RegisterTrigger("repetible", [&fx](const json&) { return fx.armed; });
+    fx.Load({Event(Step("repetible"), {}, {Step("premio")})});
+    fx.Fire();
+    fx.Fire();
+    CHECK(fx.log == std::vector<std::string>{"premio", "premio"});
+}
+
+TEST_CASE("restaurar claves que no son de ningun evento no hace nada") {
+    RewardFixture fx;
+    fx.Load({Event(Step("armado"), {}, {Step("premio")})});
+    fx.events.RestoreFired({"0000000000000000", "no-existe"});
+    fx.Fire();
+    CHECK(fx.log == std::vector<std::string>{"premio"});
+}
+
+TEST_CASE("cargar otro nivel olvida lo disparado") {
+    RewardFixture fx;
+    const EventDefinition boss = Event(Step("armado"), {}, {Step("premio")});
+    fx.Load({boss});
+    fx.Fire();
+    fx.Load({boss});
+    CHECK(fx.events.FiredKeys().empty());
+    fx.Fire();
+    CHECK(fx.log == std::vector<std::string>{"premio", "premio"});
 }
 
 }  // TEST_SUITE

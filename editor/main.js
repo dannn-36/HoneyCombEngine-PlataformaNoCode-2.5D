@@ -17,7 +17,7 @@
 // un bug (o un nivel malicioso) no puede escribir donde se le antoje.
 // =============================================================================
 
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const path = require('node:path');
 const fsSync = require('node:fs');
 
@@ -84,6 +84,26 @@ function createWindow() {
     const level = String(details.level);
     if (level === 'error' || level === '3' || level === '2') {
       console.error(`[renderer] ${details.message} (${details.sourceId}:${details.lineNumber})`);
+    }
+  });
+
+  // Cerrar (o recargar) con cambios sin guardar. La UI cancela la salida en
+  // beforeunload (ver onBeforeUnload en app.ts), porque una pagina no puede
+  // preguntar por si misma, y Electron avisa aca. preventDefault() en ESTE
+  // evento quiere decir "ignorar la cancelacion y salir igual".
+  win.webContents.on('will-prevent-unload', (event) => {
+    const choice = dialog.showMessageBoxSync(win, {
+      type: 'warning',
+      title: 'Cambios sin guardar',
+      message: 'Hay cambios sin guardar.',
+      detail: 'Si sales ahora se pierden. Para conservarlos, cancela y usa Archivo › Guardar.',
+      buttons: ['Salir sin guardar', 'Cancelar'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (choice === 0) {
+      event.preventDefault();
     }
   });
 

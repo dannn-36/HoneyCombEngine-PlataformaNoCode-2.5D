@@ -282,7 +282,11 @@ const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
   // el canvas no tiene foco propio (habria que darle tabindex y pedirlo a mano).
   // El tema va como atributo en app-root: app.scss redefine los colores por
   // [data-theme], y los dialogos, que se dibujan adentro, lo heredan.
-  host: { '(window:keydown)': 'onKeyDown($event)', '[attr.data-theme]': 'theme.theme()' },
+  host: {
+    '(window:keydown)': 'onKeyDown($event)',
+    '(window:beforeunload)': 'onBeforeUnload($event)',
+    '[attr.data-theme]': 'theme.theme()',
+  },
 })
 export class App {
   // --- Servicios ------------------------------------------------------------
@@ -1127,7 +1131,29 @@ export class App {
     if (unsaved && !window.confirm(`Hay cambios sin guardar en ${unsaved}. ¿Recargar igual y perderlos?`)) {
       return;
     }
+    // Ya se pregunto: que onBeforeUnload no lo vuelva a hacer con el dialogo del sistema.
+    this.leaving = true;
     window.location.reload();
+  }
+
+  /** true cuando la salida ya se confirmo aca (recargar): no se pregunta dos veces. */
+  private leaving = false;
+
+  /**
+   * Cerrar la ventana (o recargarla con F5 del navegador, o el dev server) con
+   * cambios sin guardar. Desde aca no se puede preguntar: el navegador solo
+   * deja CANCELAR la salida. Al cancelarla, main.js recibe 'will-prevent-unload'
+   * y ahi muestra el dialogo del sistema con "Salir sin guardar" y "Cancelar".
+   */
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.leaving) {
+      return;
+    }
+    if (this.dirty() || this.sprite.dirty() || this.game.dirty()) {
+      event.preventDefault();
+      // Lo que Chromium mira todavia para decidir que hay que preguntar.
+      event.returnValue = '';
+    }
   }
 
   /** Como estaban los paneles en el mapa, para devolverlos al volver de Sprites. */
@@ -1461,6 +1487,9 @@ export class App {
    * subcarpeta de levels/.
    */
   private async openProjectLevel(node: ProjectNode): Promise<void> {
+    if (!this.proj.confirmDiscard()) {
+      return;
+    }
     try {
       const level = await this.project.readLevelAt(node.path);
       // Solo un nivel que este JUSTO en levels/ se adopta con su nombre de
@@ -1488,6 +1517,19 @@ export class App {
 
   str(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  /**
+   * El desplegable de niveles de la barra. Si no se abrio (se cancelo por
+   * cambios sin guardar, o fallo la lectura) se vuelve a mostrar el nivel que
+   * sigue abierto: el <select> ya cambio solo, y el binding [value] no lo
+   * corrige porque el nivel abierto no cambio.
+   */
+  async pickLevel(event: Event): Promise<void> {
+    const select = event.target as HTMLSelectElement;
+    if (!(await this.proj.loadLevel(select.value))) {
+      select.value = this.levels.fileName() ?? '';
+    }
   }
 
   int(event: Event): number {
@@ -1546,6 +1588,10 @@ export class App {
 
   /** Texto legible de cualquier cosa que llegue por un catch (no siempre es un Error). */
   private describe(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
+    // Electron envuelve los errores del proceso principal en "Error invoking
+    // remote method 'canal': Error: ...". Lo que sirve es lo de despues: los
+    // handlers de ipc/ ya lo escriben para que se entienda.
+    return message.replace(/^Error invoking remote method '[^']*': (?:\w*Error: )?/, '');
   }
 }

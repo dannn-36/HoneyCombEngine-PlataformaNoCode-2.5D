@@ -106,8 +106,8 @@ void RegisterAll(EventSystem &events, Context &ctx)
     // Trigger "on_collision": las dos entidades nombradas se tocan en este frame.
     events.RegisterTrigger("on_collision", [&currentCollisions, &entityById](const nlohmann::json &params) -> bool
                            {
-        auto itA = entityById.find(params.value("entityA", std::string("")));
-        auto itB = entityById.find(params.value("entityB", std::string("")));
+        auto itA = entityById.find(StringParam(params, "entityA"));
+        auto itB = entityById.find(StringParam(params, "entityB"));
         // Un id inexistente no rompe el nivel: el evento simplemente nunca
         // dispara (el editor pudo dejar guardada una referencia a algo borrado).
         if (itA == entityById.end() || itB == entityById.end()) {
@@ -129,7 +129,7 @@ void RegisterAll(EventSystem &events, Context &ctx)
     // este enemigo, pasar de nivel".
     events.RegisterTrigger("on_entity_destroyed", [&entityById](const nlohmann::json &params) -> bool
                            {
-        auto it = entityById.find(params.value("entity", std::string("")));
+        auto it = entityById.find(StringParam(params, "entity"));
         return it != entityById.end() && it->second->destroyed; });
 
     // Trigger "on_all_enemies_defeated": no queda ningun enemigo en pie. Un
@@ -167,7 +167,7 @@ void RegisterAll(EventSystem &events, Context &ctx)
     // Con "persist" dura toda la partida; sin el, como siempre, solo el nivel.
     events.RegisterAction("set_flag", [&flags, &gameFlags](const nlohmann::json &params)
                           {
-        std::string flag = params.value("flag", std::string(""));
+        std::string flag = StringParam(params, "flag");
         if (!flag.empty()) {
             (BoolParam(params, "persist") ? gameFlags : flags).insert(flag);
         } });
@@ -211,7 +211,7 @@ void RegisterAll(EventSystem &events, Context &ctx)
     // del bucle la saltea al dibujar y al colisionar.
     events.RegisterAction("destroy_entity", [&entityById](const nlohmann::json &params)
                           {
-        auto it = entityById.find(params.value("entity", std::string("")));
+        auto it = entityById.find(StringParam(params, "entity"));
         if (it != entityById.end() && !it->second->destroyed) {
             it->second->destroyed = true;
             std::cout << "Accion destroy_entity ejecutada sobre '" << it->first << "'" << std::endl;
@@ -221,7 +221,7 @@ void RegisterAll(EventSystem &events, Context &ctx)
     // varias veces no vuelve a leer el .wav del disco.
     events.RegisterAction("play_sound", [&resources, &assets, &audio](const nlohmann::json &params)
                           {
-        const Sound& sound = resources.GetSound(assets.Resolve(params.value("soundPath", std::string(""))));
+        const Sound& sound = resources.GetSound(assets.Resolve(StringParam(params, "soundPath")));
         audio.PlaySoundEffect(sound); });
 
     // Accion "load_level": agenda el paso a otro nivel de la MISMA carpeta
@@ -229,7 +229,7 @@ void RegisterAll(EventSystem &events, Context &ctx)
     // extension se le agrega .json.
     events.RegisterAction("load_level", [&beginTransition, &currentLevelPath](const nlohmann::json &params)
                           {
-        std::string file = params.value("level", std::string(""));
+        std::string file = StringParam(params, "level");
         if (file.empty()) {
             std::cerr << "load_level sin nivel de destino: se ignora." << std::endl;
             return;
@@ -238,7 +238,7 @@ void RegisterAll(EventSystem &events, Context &ctx)
         if (!target.has_extension()) {
             target += ".json";
         }
-        std::string title = params.value("message", std::string(""));
+        std::string title = StringParam(params, "message");
         beginTransition(target, title.empty() ? "¡Nivel superado!" : title, false); });
 
     // --- Eventos de combate, objetos y puzzles --------------------------------
@@ -362,6 +362,17 @@ void RegisterAll(EventSystem &events, Context &ctx)
 
     events.RegisterAction("show_message", [&showMessage](const nlohmann::json &params)
                           { showMessage(StringParam(params, "text"), kMessageSeconds); });
+
+    // Recompensas que no se repiten al continuar una partida (ver
+    // EventSystem::SetNonRepeatable). Los triggers son los que, en una misma
+    // partida, solo pueden cumplirse una vez: lo vencido sigue vencido y lo
+    // juntado sigue juntado. Solo vuelven a cumplirse porque al continuar los
+    // enemigos reaparecen. Las acciones son las que dan algo que se guarda con
+    // la partida: repetirlas duplicaria objetos, monedas o contadores.
+    events.SetNonRepeatable(
+        {"on_entity_destroyed", "on_all_enemies_defeated", "on_boss_defeated", "on_zone_cleared",
+         "on_items_collected"},
+        {"give_item", "add_coins", "add_variable"});
 }
 
 }  // namespace EventBindings

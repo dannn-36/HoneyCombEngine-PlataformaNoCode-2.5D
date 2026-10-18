@@ -31,6 +31,17 @@ import { EventCatalog } from '../models/event-catalog.model';
 import { Level } from '../models/level.model';
 
 /**
+ * El nivel cambio en el disco desde que el editor lo leyo o lo guardo por
+ * ultima vez (ver ProjectService.saveLevel). No se escribio nada.
+ */
+export class LevelChangedOnDiskError extends Error {
+  constructor(readonly relativePath: string) {
+    super(`${relativePath} cambió en el disco desde que se abrió.`);
+    this.name = 'LevelChangedOnDiskError';
+  }
+}
+
+/**
  * Convierte el texto de un archivo en un Level utilizable, o falla con un
  * mensaje que se entienda.
  *
@@ -64,21 +75,28 @@ function parseLevel(contents: string, source: string): Level {
     throw new Error(`"${source}" no parece un nivel de HoneyComb: le falta "grid".`);
   }
 
+  const isObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+  // Se parte del archivo ENTERO y se corrige encima solo lo que el editor
+  // necesita en una forma dada. Antes se copiaba campo por campo, y cada campo
+  // que se agregaba al schema sin agregarlo aca se perdia al reabrir y guardar
+  // (asi se perdieron "camera", "backgroundImage" y "floorPaint"). Ahora un
+  // campo que el editor no conoce viaja tal cual hasta el disco.
   return {
+    ...data,
     name: typeof data.name === 'string' ? data.name : 'nivel',
-    // Faltaba: abrir un nivel y volver a guardarlo le borraba el color de fondo.
-    backgroundColor: data.backgroundColor,
     grid,
     entities: Array.isArray(data.entities) ? data.entities : [],
     events: Array.isArray(data.events) ? data.events : [],
-    visuals: data.visuals,
-    tiles: data.tiles,
-    // Sin estas tres, abrir un nivel con mapa y volver a guardarlo borraria
-    // sus salas y tuneles, dejando solo las celdas ya calculadas.
-    rooms: data.rooms,
-    tunnels: data.tunnels,
-    tileEdits: data.tileEdits,
-    // Y sin estas dos, las zonas de los puzzles y los objetos que usa el nivel.
+    // Los bloques opcionales se descartan si no tienen la forma que el editor
+    // lee: uno roto haria fallar el inspector, y el motor tampoco lo usaria.
+    camera: isObject(data.camera) ? data.camera : undefined,
+    backgroundImage:
+      isObject(data.backgroundImage) && typeof data.backgroundImage.texture === 'string'
+        ? data.backgroundImage
+        : undefined,
+    floorPaint: Array.isArray(data.floorPaint) ? data.floorPaint : undefined,
     zones: Array.isArray(data.zones) ? data.zones : undefined,
     items: Array.isArray(data.items) ? data.items.map((item) => normalizeItem(item)) : undefined,
   };
@@ -108,6 +126,9 @@ export class ProjectService {
     const root = await window.honeycombProject.changeWorkspace();
     if (root) {
       this.projectRoot.set(root);
+      // Las rutas son relativas a la carpeta: lo conocido de la anterior no
+      // dice nada de los archivos de esta.
+      this.knownLevelText.clear();
     }
     return root;
   }
@@ -143,7 +164,9 @@ export class ProjectService {
    */
   async readLevelAt(relativePath: string): Promise<Level> {
     const contents = await window.honeycombProject.readFile(relativePath);
-    return parseLevel(contents, relativePath);
+    const level = parseLevel(contents, relativePath);
+    this.knownLevelText.set(relativePath, contents);
+    return level;
   }
 
   /**
@@ -197,18 +220,56 @@ export class ProjectService {
     if (result.canceled) {
       return null;
     }
-    return {
-      relativePath: result.relativePath,
-      level: parseLevel(result.contents, result.relativePath),
-      imported: result.imported,
-    };
+    const level = parseLevel(result.contents, result.relativePath);
+    this.knownLevelText.set(result.relativePath, result.contents);
+    return { relativePath: result.relativePath, level, imported: result.imported };
   }
 
-  // Indentado a 2 espacios y no minificado: el JSON del nivel se versiona en
-  // git, y asi un cambio se lee como un diff entendible en vez de una sola
-  // linea gigante.
-  async saveLevel(fileName: string, level: Level): Promise<void> {
-    await window.honeycombProject.writeFile(`levels/${fileName}`, JSON.stringify(level, null, 2));
+  /**
+   * Lo ultimo que el editor leyo o escribio de cada nivel, tal cual estaba en el
+   * disco, por ruta relativa. Es lo que permite darse cuenta, al guardar, de
+   * que el archivo cambio por fuera desde entonces (ver saveLevel).
+   */
+  private readonly knownLevelText = new Map<string, string>();
+
+  /**
+   * Guarda un nivel en levels/.
+   *
+   * Si el editor ya conocia ese archivo (lo abrio o lo guardo antes) y en el
+   * disco ya no esta igual, NO lo pisa: falla con LevelChangedOnDiskError. Lo
+   * pudo cambiar otro programa, una copia del proyecto o un "git pull", y
+   * guardar sin mirar borraria ese trabajo. Con overwrite se escribe igual
+   * (la persona eligio reemplazarlo; la version del disco queda en .bak).
+   *
+   * Indentado a 2 espacios y no minificado: el JSON del nivel se versiona en
+   * git, y asi un cambio se lee como un diff entendible en vez de una sola
+   * linea gigante.
+   */
+  async saveLevel(fileName: string, level: Level, options: { overwrite?: boolean } = {}): Promise<void> {
+    const relativePath = `levels/${fileName}`;
+    const contents = JSON.stringify(level, null, 2);
+    const known = this.knownLevelText.get(relativePath);
+    if (known !== undefined && !options.overwrite) {
+      const onDisk = await this.readTextIfExists(relativePath);
+      // Un archivo que ya no esta no se pierde por escribirlo de nuevo.
+      if (onDisk !== null && onDisk !== known) {
+        throw new LevelChangedOnDiskError(relativePath);
+      }
+    }
+    await window.honeycombProject.writeFile(relativePath, contents);
+    this.knownLevelText.set(relativePath, contents);
+  }
+
+  /** El texto de un archivo del proyecto, o null si no existe. */
+  private async readTextIfExists(relativePath: string): Promise<string | null> {
+    try {
+      return await window.honeycombProject.readFile(relativePath);
+    } catch (error) {
+      if (String(error).includes('ENOENT')) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**

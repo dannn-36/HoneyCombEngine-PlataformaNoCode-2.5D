@@ -116,7 +116,7 @@ describe('LevelService', () => {
       expect(fake.disk.has('mazmorra.json')).toBe(true);
       service.updateGrid({ width: 12 });
       await service.save();
-      expect(fake.project.saveLevel).toHaveBeenLastCalledWith('mazmorra.json', expect.anything());
+      expect(fake.project.saveLevel).toHaveBeenLastCalledWith('mazmorra.json', expect.anything(), {});
     });
 
     it('guardar resuelve las capas del piso en lo que lee el motor', async () => {
@@ -173,8 +173,7 @@ describe('LevelService', () => {
       expect(level().items).toEqual(edited.items);
     });
 
-    // Defecto conocido: ProjectService.parseLevel no lee "camera", "backgroundImage" ni "floorPaint".
-    it.fails('guardar y reabrir conserva la camara, la imagen de fondo y las casillas pintadas', async () => {
+    it('guardar y reabrir conserva la camara, la imagen de fondo y las casillas pintadas', async () => {
       service.updateCamera({ mode: 'follow', zoom: 3 });
       service.setBackgroundImage({ texture: 'textures/cielo.png', mode: 'stretch' });
       service.paintFloor([{ col: 2, row: 2 }], 'textures/metal.png');

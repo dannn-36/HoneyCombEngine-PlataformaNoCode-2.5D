@@ -13,6 +13,7 @@ const fs = require('node:fs/promises');
 const { ipcMain } = require('electron');
 
 const { getProjectRoot, resolveInProject, ensureProjectRoot } = require('./project-root');
+const { writeFileAtomic, describeWriteError } = require('./safe-write');
 const {
   TEXT_FILE_NAMES,
   TEXT_EXTENSIONS,
@@ -47,12 +48,17 @@ function register() {
     return fs.readFile(targetPath, 'utf-8');
   });
 
+  // Escritura atomica con respaldo del anterior en .bak (ver safe-write.js):
+  // un guardado que se corta a la mitad ya no deja el nivel roto.
   ipcMain.handle('project:writeFile', async (_event, { filePath, contents }) => {
     const targetPath = resolveInProject(filePath);
-    // mkdir recursivo: guardar el primer nivel de un proyecto recien creado no
-    // deberia fallar solo porque todavia no existe la carpeta levels/.
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.writeFile(targetPath, contents, 'utf-8');
+    try {
+      await writeFileAtomic(targetPath, contents);
+    } catch (err) {
+      const message = describeWriteError(err, filePath);
+      if (!message) throw err;
+      throw Object.assign(new Error(message), { code: err.code, cause: err });
+    }
   });
 
   ipcMain.handle('project:listDir', async (_event, relativeDir) => {

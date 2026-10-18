@@ -480,13 +480,11 @@ TEST_CASE("los casos tolerados quedan como dice su nota") {
     CHECK(load("ataque_sin_danio.json").items.at("espada").weapon.attack.damage == doctest::Approx(AttackDef{}.damage));
 }
 
-// Defecto conocido: un parametro de texto con otro tipo (aca "entityA": 5)
-// hace que el trigger on_collision lance nlohmann::json::type_error en el
-// primer frame (EventBindings.cpp usa params.value("entityA", std::string())
-// en vez de StringParam). GameSession::Update llama a events.Update() sin
-// try/catch, asi que la excepcion sale del bucle y main() cierra el juego con
-// "No se pudo arrancar". El schema no valida el tipo de los params.
-TEST_CASE("un parametro de evento con el tipo equivocado no cierra el juego" * doctest::should_fail()) {
+// Un parametro de texto con otro tipo (aca "entityA": 5) se toma como un id
+// que no existe (StringParam en EventBindings.cpp), y si un bloque igual lanza,
+// EventSystem::Update saltea ese evento en vez de cerrar el juego. El schema
+// no valida el tipo de los params, asi que el motor tiene que tolerarlo.
+TEST_CASE("un parametro de evento con el tipo equivocado no cierra el juego") {
     Runtime runtime;
     const fs::path file = ContractDir() / "limite" / "parametro_evento_tipo_incorrecto.json";
     REQUIRE(fs::exists(file));

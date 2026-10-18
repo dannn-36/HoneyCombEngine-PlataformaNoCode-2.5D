@@ -89,11 +89,18 @@ function register() {
     return { ok: true, executable };
   });
 
-  // La partida guardada que escribe el motor (engine/game/Progress.cpp). Una
-  // ruta fija y no una que mande la UI: este permiso borra ese archivo y nada
-  // mas. Sin partida no es un error, ya esta como se pidio.
+  // Las partidas guardadas que escribe el motor (engine/game/Progress.cpp): la
+  // del juego y la de probar desde el editor, cada una con su copia anterior.
+  // La copia se borra tambien: si quedara, el motor la recuperaria y "Borrar
+  // partida" no empezaria de cero. Rutas fijas y no unas que mande la UI: este
+  // permiso borra esos archivos y nada mas. Sin partida no es un error, ya
+  // esta como se pidio.
   ipcMain.handle('game:clearSave', async () => {
-    await fs.rm(resolveInProject('saves/partida.json'), { force: true });
+    for (const slot of ['partida', 'prueba']) {
+      for (const suffix of ['.json', '.json.bak', '.json.tmp']) {
+        await fs.rm(resolveInProject(`saves/${slot}${suffix}`), { force: true });
+      }
+    }
   });
 }
 

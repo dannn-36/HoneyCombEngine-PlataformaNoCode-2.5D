@@ -459,14 +459,12 @@ TEST_CASE("un parametro de texto escrito como numero no rompe los bloques que us
     CHECK_NOTHROW(fx.Run(Step("show_message", {{"text", 5}})));
 }
 
-// Defecto conocido: estos bloques leen sus parametros de texto con
-// params.value(clave, std::string()) (EventBindings.cpp: on_collision,
-// on_entity_destroyed, set_flag, destroy_entity, play_sound y load_level), que
-// lanza nlohmann::json::type_error si el JSON trae otro tipo, por ejemplo un
-// numero. Los demas bloques usan StringParam y lo toleran. Como
-// GameSession::Update no atrapa excepciones de events.Update(), el juego se
-// cierra. Lo correcto es tratarlo como un id que no existe.
-TEST_CASE("un parametro de texto escrito como numero no rompe ningun bloque" * doctest::should_fail()) {
+// Todos los bloques leen sus parametros de texto con StringParam: un numero
+// donde va un texto se trata como un id que no existe, sin lanzar. Antes
+// on_collision, on_entity_destroyed, set_flag, destroy_entity, play_sound y
+// load_level usaban params.value(clave, std::string()), que lanzaba
+// nlohmann::json::type_error y cerraba el juego.
+TEST_CASE("un parametro de texto escrito como numero no rompe ningun bloque") {
     Fixture fx;
     fx.Add("5", "npc", 1, 1);
     CHECK_NOTHROW(fx.Fires(Step("on_collision", {{"entityA", 5}, {"entityB", "5"}})));

@@ -11,7 +11,14 @@ import { defaultGameConfig } from '../core/game-config';
 import { levelForDisk } from '../core/floors';
 import { newItemDraft } from '../core/items';
 import { Level } from '../models/level.model';
-import { CHARACTERS_FILE, GAME_FILE, ITEMS_FILE, ProjectService, SAVE_FILE } from './project.service';
+import {
+  CHARACTERS_FILE,
+  GAME_FILE,
+  ITEMS_FILE,
+  LevelChangedOnDiskError,
+  ProjectService,
+  SAVE_FILE,
+} from './project.service';
 
 /** Un proyecto de mentira: archivos en memoria y el resto de la API grabando las llamadas. */
 function fakeProject() {
@@ -260,29 +267,42 @@ describe('ProjectService', () => {
       expect(JSON.parse(JSON.stringify(back))).toEqual(level);
     });
 
-    // Defecto conocido: parseLevel no copia "camera", asi que reabrir el nivel la vuelve a la fija de siempre.
-    it.fails('la camara vuelve igual al reabrir el nivel', async () => {
+    it('la camara vuelve igual al reabrir el nivel', async () => {
       await service.saveLevel('mazmorra.json', fullLevel());
       const back = await service.readLevel('mazmorra.json');
       expect(back.camera).toEqual(fullLevel().camera);
     });
 
-    // Defecto conocido: parseLevel no copia "backgroundImage", y reabrir el nivel le quita la imagen de fondo.
-    it.fails('la imagen de fondo vuelve igual al reabrir el nivel', async () => {
+    it('la imagen de fondo vuelve igual al reabrir el nivel', async () => {
       await service.saveLevel('mazmorra.json', fullLevel());
       const back = await service.readLevel('mazmorra.json');
       expect(back.backgroundImage).toEqual({ texture: 'textures/cielo.png', mode: 'tile' });
     });
 
-    // Defecto conocido: parseLevel no copia "floorPaint", y las casillas pintadas desaparecen al reabrir.
-    it.fails('las casillas pintadas vuelven iguales al reabrir el nivel', async () => {
+    it('las casillas pintadas vuelven iguales al reabrir el nivel', async () => {
       await service.saveLevel('mazmorra.json', fullLevel());
       const back = await service.readLevel('mazmorra.json');
       expect(back.floorPaint).toEqual(fullLevel().floorPaint);
     });
 
-    // Defecto conocido: como floorPaint no se lee, reabrir y guardar de nuevo borra del disco el piso pintado que lee el motor.
-    it.fails('reabrir y volver a guardar no cambia lo que lee el motor', async () => {
+    it('un campo que el editor no conoce vuelve igual al reabrir el nivel', async () => {
+      fake.files.set('levels/futuro.json', JSON.stringify({ name: 'f', grid: GRID, weather: { rain: true } }));
+      const back = (await service.readLevel('futuro.json')) as Level & { weather?: unknown };
+      expect(back.weather).toEqual({ rain: true });
+    });
+
+    it('un bloque opcional con forma rota se descarta al abrir', async () => {
+      fake.files.set(
+        'levels/roto.json',
+        JSON.stringify({ name: 'r', grid: GRID, camera: 'follow', backgroundImage: { mode: 'tile' }, floorPaint: {} }),
+      );
+      const back = await service.readLevel('roto.json');
+      expect(back.camera).toBeUndefined();
+      expect(back.backgroundImage).toBeUndefined();
+      expect(back.floorPaint).toBeUndefined();
+    });
+
+    it('reabrir y volver a guardar no cambia lo que lee el motor', async () => {
       const level: Level = {
         name: 'pintado',
         grid: GRID,
@@ -299,12 +319,55 @@ describe('ProjectService', () => {
     });
 
     it('el nivel completo vuelve identico al reabrirlo', async () => {
-      // Lo que si sobrevive hoy, comparado entero salvo las tres claves del defecto.
       const level = fullLevel();
       await service.saveLevel('mazmorra.json', level);
       const back = await service.readLevel('mazmorra.json');
-      const { camera: _c, backgroundImage: _b, floorPaint: _f, ...rest } = level;
-      expect(JSON.parse(JSON.stringify(back))).toEqual(rest);
+      expect(JSON.parse(JSON.stringify(back))).toEqual(level);
+    });
+  });
+
+  describe('un nivel que cambio en el disco por fuera', () => {
+    const level = (name: string): Level => ({ name, grid: GRID, entities: [], events: [] });
+
+    it('guardar encima de un nivel que cambio desde que se abrio falla sin escribir', async () => {
+      fake.files.set('levels/a.json', JSON.stringify(level('original')));
+      await service.readLevel('a.json');
+      fake.files.set('levels/a.json', JSON.stringify(level('de otro programa')));
+
+      const error = await service.saveLevel('a.json', level('del editor')).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(LevelChangedOnDiskError);
+      expect((error as LevelChangedOnDiskError).relativePath).toBe('levels/a.json');
+      expect(JSON.parse(fake.files.get('levels/a.json')!).name).toBe('de otro programa');
+    });
+
+    it('con overwrite lo reemplaza igual', async () => {
+      fake.files.set('levels/a.json', JSON.stringify(level('original')));
+      await service.readLevel('a.json');
+      fake.files.set('levels/a.json', JSON.stringify(level('de otro programa')));
+
+      await service.saveLevel('a.json', level('del editor'), { overwrite: true });
+      expect(JSON.parse(fake.files.get('levels/a.json')!).name).toBe('del editor');
+    });
+
+    it('guardar dos veces seguidas no se toma por un cambio de afuera', async () => {
+      await service.saveLevel('b.json', level('uno'));
+      await service.saveLevel('b.json', level('dos'));
+      expect(JSON.parse(fake.files.get('levels/b.json')!).name).toBe('dos');
+    });
+
+    it('un nivel que se borro por fuera se vuelve a escribir sin preguntar', async () => {
+      fake.files.set('levels/c.json', JSON.stringify(level('original')));
+      await service.readLevel('c.json');
+      fake.files.delete('levels/c.json');
+
+      await service.saveLevel('c.json', level('del editor'));
+      expect(JSON.parse(fake.files.get('levels/c.json')!).name).toBe('del editor');
+    });
+
+    it('un nivel que el editor nunca leyo se escribe sin mirar el disco', async () => {
+      fake.files.set('levels/d.json', JSON.stringify(level('ajeno')));
+      await service.saveLevel('d.json', level('del editor'));
+      expect(JSON.parse(fake.files.get('levels/d.json')!).name).toBe('del editor');
     });
   });
 

@@ -113,6 +113,9 @@ GameSession::GameSession(const std::filesystem::path &levelPath, const GameConfi
     defaultFont = GetFontDefault();
     gfx.SetTargetFPS(60);
 
+    // Directo en el nivel es probarlo desde el editor: sus puntos de control
+    // guardan en la partida de prueba y no pisan la del juego.
+    saveSlot = start == StartMode::Level ? Progress::kTestSlot : Progress::kGameSlot;
     if (start == StartMode::Title)
     {
         GoToTitle();
@@ -311,8 +314,59 @@ void GameSession::PrepareLevel(LevelStart start)
     FrameCamera();
     camera.SnapTo(CameraFocus(), cameraFixedCenter, cameraBounds);
 
+    // Al final: el nivel nuevo ya esta armado y el inventario ya es el que va.
+    ReleaseUnusedTextures();
+
     std::cout << "Nivel cargado: " << level.name
               << " (" << level.entities.size() << " entidades)" << std::endl;
+}
+
+void GameSession::ReleaseUnusedTextures()
+{
+    // Toda textura que alguien siga apuntando. Si se agrega un lugar nuevo que
+    // guarde un const Texture2D*, tiene que sumarse aca: una que falte quedaria
+    // colgando y el siguiente dibujo cerraria el juego.
+    std::unordered_set<const Texture2D *> inUse;
+    const auto keep = [&inUse](const Texture2D *texture) {
+        if (texture)
+        {
+            inUse.insert(texture);
+        }
+    };
+    // El nivel en curso.
+    keep(level.backgroundTexture);
+    keep(level.floorTexture);
+    keep(level.wallTexture);
+    for (const auto &look : level.floorVariants)
+        keep(look.texture);
+    for (const auto &entity : level.entities)
+        keep(entity.texture);
+    for (const auto &[id, item] : level.items)
+        keep(item.texture);
+    // Lo que viaja con el jugador: sus armas pueden ser de un nivel anterior.
+    for (const auto &slot : inventory.Weapons())
+        keep(slot.item.texture);
+    for (const auto &slot : inventoryAtLevelStart.Weapons())
+        keep(slot.item.texture);
+    for (const auto &ground : loot.ground)
+        keep(ground.item.texture);
+    // Lo de game.json: la portada y el HUD, cargados una vez al arrancar.
+    keep(titleBackground);
+    keep(hudImages.heartFull);
+    keep(hudImages.heartEmpty);
+    keep(hudImages.barFill);
+    keep(hudImages.barFrame);
+
+    // Las armas de todo el proyecto (para "Continuar") traen las texturas de
+    // todos los niveles: se olvidan, y se vuelven a leer si hacen falta.
+    projectItems.clear();
+    projectItemsLoaded = false;
+
+    const std::size_t released = resources.ReleaseTexturesExcept(inUse);
+    if (released > 0)
+    {
+        std::cout << "Texturas liberadas al cambiar de nivel: " << released << std::endl;
+    }
 }
 
 void GameSession::BeginTransition(const std::filesystem::path &target, const std::string &title, bool restart)
@@ -478,9 +532,11 @@ void GameSession::GoToTitle()
     screen = Screen::Title;
     paused = false;
     gameOver = false;
+    // La portada es el juego de verdad, aunque se haya llegado desde una prueba.
+    saveSlot = Progress::kGameSlot;
     // "Continuar" solo si hay una partida que continuar; "Creditos" solo si hay creditos.
     titleMenu = Screens::Menu{{kNewGame}, 0};
-    if (Progress::Exists(projectRoot))
+    if (Progress::Exists(projectRoot, saveSlot))
     {
         titleMenu.items.push_back(kContinue);
         titleMenu.selected = 1;
@@ -510,6 +566,15 @@ void GameSession::UpdateTitle()
                               : !config.name.empty()            ? config.name
                                                                 : std::string("HoneyComb");
     const int choice = Screens::RunTitle(gfx, defaultFont, config.titleScreen, title, titleBackground, titleMenu);
+    // Los avisos tambien en la portada: "Continuar" con una partida rota tiene
+    // que decir por que no hizo nada. Sobre una franja oscura, porque el fondo
+    // de la portada es del color que haya elegido el juego.
+    if (noticeRemaining > 0.0f)
+    {
+        noticeRemaining = std::max(0.0f, noticeRemaining - GetFrameTime());
+        DrawRectangle(0, 0, static_cast<int>(ScreenSize().x), 36, Fade(BLACK, 0.7f));
+        gfx.DrawText(defaultFont, notice.c_str(), {10, 9}, 18, Color{255, 140, 140, 255});
+    }
     if constexpr (DevTools::kEnabled)
     {
         DevTools::DrawBadge(gfx, defaultFont);
@@ -585,8 +650,21 @@ void GameSession::NewGame()
 bool GameSession::ContinueGame()
 {
     SaveData save;
-    if (!Progress::Load(projectRoot, save))
+    Progress::LoadStatus status = Progress::LoadStatus::Missing;
+    if (!Progress::Load(projectRoot, save, saveSlot, &status))
     {
+        // Sin partida no hay nada que decir; una rota o de otra version, si:
+        // si no, "Continuar" parece no hacer nada.
+        if (status == Progress::LoadStatus::Broken)
+        {
+            notice = "La partida guardada está dañada y no se pudo recuperar";
+            noticeRemaining = kNoticeSeconds;
+        }
+        else if (status == Progress::LoadStatus::TooNew)
+        {
+            notice = "La partida guardada es de una versión más nueva del juego";
+            noticeRemaining = kNoticeSeconds;
+        }
         return false;
     }
     const std::filesystem::path target = LevelsDir() / save.level;
@@ -625,14 +703,49 @@ bool GameSession::ContinueGame()
                       save.coins);
     inventoryAtLevelStart = inventory;
 
+    // Lo que ya se junto sigue juntado, y cuenta para "Al juntar objetos". Un
+    // id que ya no es un objeto del nivel (se edito) se ignora.
+    for (const auto &id : save.collectedItems)
+    {
+        const auto it = entityById.find(id);
+        if (it != entityById.end() && !it->second->itemId.empty())
+        {
+            it->second->destroyed = true;
+        }
+    }
+    loot.collected = save.collectedCounts;
+    loot.collectedTotal = save.collectedTotal;
+    // Los eventos que ya se dispararon no vuelven a dar su recompensa aunque
+    // los enemigos hayan reaparecido (ver EventBindings::RegisterAll).
+    events.RestoreFired(save.firedEvents);
+
     if (player)
     {
-        if (save.hasPosition)
+        // Donde aparece: donde se guardo, si todavia se puede estar ahi. Si el
+        // nivel se edito despues (una pared nueva, una sala que se movio), en
+        // el punto de control donde se guardo; y si tampoco, donde lo puso el
+        // editor. Asi una partida vieja nunca deja al jugador adentro de una pared.
+        Vector2 spot = player->precisePosition;
+        if (save.hasPosition && Movement::CanOccupy(level, *player, save.position))
         {
-            player->precisePosition = save.position;
-            player->position = GridCoord{static_cast<int>(std::round(save.position.x)),
-                                         static_cast<int>(std::round(save.position.y))};
+            spot = save.position;
         }
+        else if (save.hasPosition)
+        {
+            const auto checkpoint = entityById.find(save.checkpoint);
+            if (!save.checkpoint.empty() && checkpoint != entityById.end() &&
+                Movement::CanOccupy(level, *player, checkpoint->second->precisePosition))
+            {
+                spot = checkpoint->second->precisePosition;
+            }
+            std::cerr << "La posicion guardada ya no se puede pisar: el jugador aparece en "
+                      << (spot.x == player->precisePosition.x && spot.y == player->precisePosition.y
+                              ? "el inicio del nivel"
+                              : "su punto de control")
+                      << std::endl;
+        }
+        player->precisePosition = spot;
+        player->position = GridCoord{static_cast<int>(std::round(spot.x)), static_cast<int>(std::round(spot.y))};
         if (save.health > 0.0f)
         {
             player->health = std::min(save.health, player->maxHealth);
@@ -649,6 +762,11 @@ bool GameSession::ContinueGame()
     paused = false;
     gameOver = false;
     audio.StopMusic();
+    if (status == Progress::LoadStatus::Recovered)
+    {
+        notice = "La partida guardada estaba dañada: se recuperó la anterior";
+        noticeRemaining = kNoticeSeconds;
+    }
     std::cout << "Partida retomada en " << save.level << std::endl;
     return true;
 }
@@ -660,11 +778,29 @@ void GameSession::SaveGame()
         return;
     }
     SaveData save;
-    // La ruta del nivel relativa a levels/ (puede estar en una subcarpeta).
-    const std::filesystem::path relative = currentLevelPath.lexically_relative(LevelsDir());
-    save.level = relative.empty() || relative.native().rfind(std::filesystem::path("..").native(), 0) == 0
-                     ? currentLevelPath.filename().generic_string()
-                     : relative.generic_string();
+    // La ruta del nivel relativa a levels/ (puede estar en una subcarpeta). Un
+    // nivel de afuera no se puede guardar: antes se anotaba solo su nombre, y
+    // "Continuar" despues lo buscaba en levels/, donde no esta.
+    const std::filesystem::path relative =
+        currentLevelPath.lexically_normal().lexically_relative(LevelsDir().lexically_normal());
+    if (relative.empty() || !Progress::IsLevelInsideLevels(relative.generic_string()))
+    {
+        notice = "No se puede guardar la partida: el nivel no está dentro de levels/";
+        noticeRemaining = kNoticeSeconds;
+        return;
+    }
+    save.level = relative.generic_string();
+    save.checkpoint = CheckpointInReach();
+    for (const auto &entity : level.entities)
+    {
+        if (!entity.itemId.empty() && entity.destroyed)
+        {
+            save.collectedItems.push_back(entity.id);
+        }
+    }
+    save.collectedCounts = loot.collected;
+    save.collectedTotal = loot.collectedTotal;
+    save.firedEvents = events.FiredKeys();
     save.hasPosition = true;
     save.position = player->precisePosition;
     save.health = player->health;
@@ -674,7 +810,7 @@ void GameSession::SaveGame()
     save.levelFlags.assign(flags.begin(), flags.end());
     save.gameFlags.assign(gameFlags.begin(), gameFlags.end());
     save.variables = variables;
-    if (Progress::Write(projectRoot, save))
+    if (Progress::Write(projectRoot, save, saveSlot))
     {
         ShowMessage("Partida guardada", EventBindings::kPickupMessageSeconds);
     }
@@ -804,7 +940,7 @@ void GameSession::ShowScreenForTest(const std::string &name)
         screen = Screen::Playing;
         gameOver = true;
         gameOverMenu = Screens::Menu{
-            {Progress::Exists(projectRoot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame}, 0};
+            {Progress::Exists(projectRoot, saveSlot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame}, 0};
     }
 }
 
@@ -1057,7 +1193,8 @@ void GameSession::Update(float deltaTime)
         {
             gameOver = true;
             gameOverMenu = Screens::Menu{
-                {Progress::Exists(projectRoot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame}, 0};
+                {Progress::Exists(projectRoot, saveSlot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame},
+                0};
         }
         else if (playerAlive)
         {

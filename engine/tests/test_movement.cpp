@@ -59,16 +59,32 @@ TEST_CASE("no se puede estar donde no hay piso") {
     CHECK_FALSE(Movement::CanOccupy(level, mover, Vector2{2.0f, 2.0f}));
 }
 
-// Defecto conocido: CanOccupy busca piso con overlapsTile, que compara
-// |candidato - celda| < 0.5 + half con < estricto (Movement.cpp). Una entidad
-// sin collider (half = 0) parada EXACTAMENTE en el borde entre dos casillas
-// con piso (x = 6.5) no solapa ninguna de las dos y queda "fuera del piso":
-// TryMove la deja quieta. Pasa, por ejemplo, con un esquive de 3 celdas en
-// 0.2 s a 10 FPS de paso. Lo correcto es que el borde entre dos pisos sea piso.
-TEST_CASE("el borde entre dos casillas con piso tambien es piso" * doctest::should_fail()) {
+// Una entidad sin collider (half = 0) parada EXACTAMENTE en el borde entre dos
+// casillas con piso (x = 6.5) esta sobre piso. Antes CanOccupy comparaba con <
+// estricto, no tocaba ninguna de las dos y TryMove la dejaba clavada (pasaba
+// con un esquive de 3 celdas en 0.2 s a 10 FPS de paso).
+TEST_CASE("el borde entre dos casillas con piso tambien es piso") {
     const LoadedLevel level = OpenLevel(10, 10);
     const LevelEntity mover = MakeEntity("m", "player", 5, 5);
     CHECK(Movement::CanOccupy(level, mover, Vector2{6.5f, 5.0f}));
+}
+
+TEST_CASE("el borde de una pared no frena: rozarla no es atravesarla") {
+    LoadedLevel level = OpenLevel(10, 10);
+    level.wallTiles = {GridCoord{7, 5}};
+    level.wallTexture = TestSupport::WallTextureFlag();
+    const LevelEntity mover = MakeEntity("m", "player", 5, 5);
+    CHECK(Movement::CanOccupy(level, mover, Vector2{6.5f, 5.0f}));
+    CHECK_FALSE(Movement::CanOccupy(level, mover, Vector2{6.6f, 5.0f}));
+}
+
+TEST_CASE("el borde de afuera del ultimo piso no lleva a la nada") {
+    // Con piso solo en (0,0), a mas de media celda ya no hay piso.
+    LoadedLevel level = OpenLevel(5, 5);
+    level.floorTiles = {GridCoord{0, 0}};
+    const LevelEntity mover = MakeEntity("m", "player", 0, 0);
+    CHECK(Movement::CanOccupy(level, mover, Vector2{0.5f, 0.0f}));
+    CHECK_FALSE(Movement::CanOccupy(level, mover, Vector2{0.6f, 0.0f}));
 }
 
 TEST_CASE("las paredes por celda solo frenan si el nivel tiene textura de pared") {

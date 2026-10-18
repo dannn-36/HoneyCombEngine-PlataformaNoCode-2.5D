@@ -55,7 +55,7 @@
     <label class="levelpick" title="Nivel abierto">
       <svg hcIcon="map"></svg>
       <select class="levelpick__select" aria-label="Nivel abierto" [value]="levels.fileName() ?? ''"
-              (change)="proj.loadLevel(str($event))">
+              (change)="pickLevel($event)">
         <option value="" disabled [selected]="!levels.fileName()">Elegir nivel</option>
         @for (file of proj.levelFiles(); track file) {
           <option [value]="file" [selected]="levels.fileName() === file">{{ file }}</option>

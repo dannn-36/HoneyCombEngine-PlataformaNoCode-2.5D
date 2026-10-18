@@ -176,10 +176,12 @@ export class LevelService {
    * Guarda en levels/. Un nivel nunca guardado toma su nombre como archivo, y
    * a partir de ahi queda asociado a el (los guardados siguientes lo pisan).
    */
-  async save(): Promise<void> {
+  async save(options: { overwrite?: boolean } = {}): Promise<void> {
     const fileName = this.fileName() ?? `${this.level().name}.json`;
     // Con las capas del piso resueltas en lo que lee el motor (ver core/floors.ts).
-    await this.project.saveLevel(fileName, levelForDisk(this.level()));
+    // Si el archivo cambio en el disco por fuera, falla sin escribir salvo con
+    // overwrite (ver ProjectService.saveLevel).
+    await this.project.saveLevel(fileName, levelForDisk(this.level()), options);
     this.fileName.set(fileName);
   }
 

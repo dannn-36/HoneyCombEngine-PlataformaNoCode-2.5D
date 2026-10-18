@@ -109,7 +109,18 @@ int main(int argc, char *argv[])
         const std::string option = argv[i];
         if (option == "--bench" && i + 1 < argc)
         {
-            benchSeconds = std::max(1.0f, std::stof(argv[i + 1]));
+            // std::stof lanza si no es un numero, y aca todavia no hay nadie que
+            // lo atrape: "--bench abc" cerraba el motor con un "terminate".
+            try
+            {
+                benchSeconds = std::max(1.0f, std::stof(argv[i + 1]));
+            }
+            catch (const std::exception &)
+            {
+                std::cerr << "--bench espera los segundos a medir (por ejemplo --bench 6), no \"" << argv[i + 1]
+                          << "\"." << std::endl;
+                return 1;
+            }
         }
         else if (option == "--sin-recorte")
         {

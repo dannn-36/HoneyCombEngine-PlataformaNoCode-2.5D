@@ -373,8 +373,14 @@
               <p class="hint">
                 Coloca cualquier entidad (una bandera, un altar…) y en <b>Qué es</b> elige <b>Punto de control</b>: cuando
                 el jugador pasa cerca, el juego se guarda ahí. La acción de evento <b>Guardar partida</b> hace lo mismo
-                desde un evento. Se guarda una sola partida: «Continuar» en la portada y «Volver al punto de control» al
-                perder la retoman en ese lugar, con su vida, sus armas, sus monedas, las marcas y las variables.
+                desde un evento. Se guarda una sola partida del juego: «Continuar» en la portada y «Volver al punto de
+                control» al perder la retoman en ese lugar, con su vida, sus armas, sus monedas, las marcas, las variables
+                y los objetos que ya juntó. Los enemigos vuelven a aparecer, pero un evento que ya dio una recompensa
+                (dar un objeto, sumar monedas o sumar a una variable) no la da de nuevo.
+              </p>
+              <p class="hint">
+                Al probar con <b>Ejecutar</b> en modo <b>Nivel</b>, los puntos de control guardan aparte, en
+                saves/prueba.json: probar no toca la partida del juego.
               </p>
 
               <div class="subhead">Variables de la partida</div>

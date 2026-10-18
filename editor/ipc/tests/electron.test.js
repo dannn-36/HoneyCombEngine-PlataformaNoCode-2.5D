@@ -390,3 +390,39 @@ describe('quien le habla al proceso principal (SE-10)', () => {
     },
   );
 });
+
+describe('cerrar la ventana con cambios sin guardar', () => {
+  // La UI cancela la salida (beforeunload) y main.js pregunta con el dialogo
+  // del sistema. preventDefault() en will-prevent-unload = salir igual.
+  async function cerrarEligiendo(boton) {
+    const m = await main();
+    const pedidos = [];
+    m.electron.dialog.showMessageBoxSync = (ventana, opciones) => {
+      pedidos.push({ ventana, opciones });
+      return boton;
+    };
+    const evento = eventoNavegacion('');
+    for (const fn of listenersDe(m, 'will-prevent-unload')) fn(evento);
+    return { m, evento, pedidos };
+  }
+
+  it('pregunta con el dialogo del sistema, sobre la ventana del editor', async () => {
+    const { m, pedidos } = await cerrarEligiendo(1);
+    assert.equal(pedidos.length, 1);
+    assert.equal(pedidos[0].ventana, m.ventana);
+    assert.deepEqual(pedidos[0].opciones.buttons, ['Salir sin guardar', 'Cancelar']);
+    // Enter o Esc no pierden nada: los dos eligen Cancelar.
+    assert.equal(pedidos[0].opciones.defaultId, 1);
+    assert.equal(pedidos[0].opciones.cancelId, 1);
+  });
+
+  it('con Cancelar la ventana no se cierra', async () => {
+    const { evento } = await cerrarEligiendo(1);
+    assert.equal(evento.prevenido, false);
+  });
+
+  it('con Salir sin guardar la ventana se cierra', async () => {
+    const { evento } = await cerrarEligiendo(0);
+    assert.equal(evento.prevenido, true);
+  });
+});
