@@ -21,7 +21,7 @@ const { ensureProjectRoot, isInside } = require('./project-root');
 const { safeStem, freeName } = require('./names');
 
 /** Las claves del nivel que nombran un archivo de assets/ (ver schema/level.schema.json). */
-const ASSET_KEYS = new Set(['texture', 'soundPath']);
+const ASSET_KEYS = new Set(['texture', 'soundPath', 'floorTexture']);
 
 /** Rutas de assets/ que usa un nivel, buscadas en todo el JSON (entidades, visuales, eventos...). */
 function collectAssetRefs(value, refs = new Set()) {

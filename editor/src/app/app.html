@@ -1357,6 +1357,66 @@
                   }
                   <p class="hint hint--field">El color detrás del mapa al jugar. Se ve al ejecutar (F5), no en el editor.</p>
 
+                  <!-- Imagen de fondo: encima del color, llena la ventana del
+                       juego entera y queda quieta aunque la camara se mueva.
+                       Ver inspector/background-picker.controller.ts. -->
+                  <div class="subhead">Imagen de fondo</div>
+                  <div class="appearance">
+                    @if (bg.backgroundImage(); as image) {
+                      <span class="appearance__thumb" [appTextureThumb]="image.texture">
+                        @if (tex.textureAssets()[bg.backgroundImageName()]; as asset) {
+                          <img [src]="asset.dataUrl" alt="" />
+                        }
+                      </span>
+                      <span class="appearance__name" [title]="image.texture">{{ bg.backgroundImageName() }}</span>
+                    } @else {
+                      <span class="appearance__name">Sin imagen: solo el color</span>
+                    }
+                    <button class="btn btn--small" type="button" [attr.aria-expanded]="bg.imagePickerOpen()"
+                            (click)="bg.imagePickerOpen.set(!bg.imagePickerOpen())">
+                      {{ bg.imagePickerOpen() ? 'Listo' : 'Elegir…' }}
+                    </button>
+                  </div>
+                  @if (bg.backgroundImage() && hasFileSystem && !tex.textures().includes(bg.backgroundImageName())) {
+                    <p class="hint hint--warn hint--field">
+                      <svg hcIcon="triangle-alert"></svg>No se encontró «{{ bg.backgroundImageName() }}» en assets/textures/. Elige otra.
+                    </p>
+                  }
+                  @if (bg.imagePickerOpen()) {
+                    <div class="texpicker appearance__picker">
+                      @for (texture of tex.textures(); track texture) {
+                        <button class="texpicker__item" type="button" [title]="texture" [appTextureThumb]="texture"
+                                [class.is-active]="bg.backgroundImage()?.texture === 'textures/' + texture"
+                                (click)="bg.setBackgroundImage(texture)">
+                          @if (tex.textureAssets()[texture]; as asset) {
+                            <img [src]="asset.dataUrl" [alt]="texture" />
+                          }
+                        </button>
+                      } @empty {
+                        <p class="hint">Todavía no hay imágenes en el proyecto. Impórtalas desde Recursos › Texturas.</p>
+                      }
+                    </div>
+                  }
+                  @if (bg.backgroundImage()) {
+                    <label class="field">
+                      <span>Ajuste</span>
+                      <select class="input" (change)="bg.setBackgroundMode(str($event))">
+                        @for (mode of bg.backgroundModes; track mode.id) {
+                          <option [value]="mode.id" [selected]="bg.backgroundMode() === mode.id">{{ mode.label }}</option>
+                        }
+                      </select>
+                    </label>
+                    <button class="btn btn--small" type="button" (click)="bg.clearBackgroundImage()">
+                      <svg hcIcon="x"></svg>Quitar la imagen
+                    </button>
+                  }
+                  <p class="hint hint--field">
+                    Llena toda la ventana del juego detrás del mapa, sea cual sea su tamaño, y queda quieta aunque la
+                    cámara se mueva. <b>Cubrir</b> no la deforma y recorta lo que sobra; <b>Estirar</b> la ajusta justo a
+                    la ventana; <b>Mosaico</b> la repite a su tamaño. Lo transparente deja ver el color. Se ve al
+                    ejecutar (F5).
+                  </p>
+
                   <div class="subhead">Tamaño del mapa</div>
                   <div class="field-row">
                     <label class="field">
@@ -1500,6 +1560,49 @@
               }
             </section>
 
+            <!-- PISO: las tres capas de la textura del piso (ver core/floors.ts).
+                 Se cambian desde Recursos › Texturas; aca se ve que tiene cada
+                 una y se deshace lo propio de una sala, tunel o casilla. -->
+            <section class="panel">
+              <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('floor')" (click)="panels.togglePanel('floor')">
+                <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('floor')" hcIcon="chevron-down"></svg>
+                Piso
+              </button>
+              @if (!panels.isCollapsed('floor')) {
+                <div class="panel__body">
+                  <div class="maprow maprow--inline">
+                    <span class="maprow__name" [title]="floor.levelTexture() ?? 'Sin piso'">
+                      <svg hcIcon="grid-2x2"></svg>Todo el nivel: {{ floor.label(floor.levelTexture()) }}
+                    </span>
+                  </div>
+                  @for (section of floor.customSections(); track section.value) {
+                    <div class="maprow maprow--inline">
+                      <span class="maprow__name" [title]="section.texture ?? ''">
+                        {{ section.label }}: {{ floor.label(section.texture) }}
+                      </span>
+                      <button class="btn btn--small" type="button" title="Volver al piso del nivel"
+                              aria-label="Volver al piso del nivel" (click)="floor.resetSection(section.value)">
+                        <svg hcIcon="x"></svg>
+                      </button>
+                    </div>
+                  }
+                  @if (floor.paintedCount() > 0) {
+                    <div class="maprow maprow--inline">
+                      <span class="maprow__name">{{ floor.paintedCount() }} casillas pintadas a mano</span>
+                      <button class="btn btn--small" type="button" title="Despintarlas: vuelven al piso de su sala o del nivel"
+                              aria-label="Despintar las casillas" (click)="floor.clearPaint()">
+                        <svg hcIcon="x"></svg>
+                      </button>
+                    </div>
+                  }
+                  <p class="hint hint--field">
+                    Para cambiarlo, elige una textura en <b>Recursos › Texturas</b>: todo el nivel, una sala o túnel, o
+                    casilla por casilla con <b>Pintar casillas</b>. Cada capa pisa a la anterior.
+                  </p>
+                </div>
+              }
+            </section>
+
             <!-- Zonas de puzzle: rectangulos con nombre para "Al limpiar una
                  zona" y "Al entrar a una zona". Las salas del mapa ya cuentan
                  como zonas; esto es para lo que no es una sala entera. -->
@@ -1582,6 +1685,20 @@
                       <svg hcIcon="triangle-alert"></svg>El ancho no es el doble del alto: el mapa se va a ver deformado. Prueba con 64 × 32.
                     </p>
                   }
+
+                  <!-- El margen del recorte del motor (ver engine/game/GameSession.cpp):
+                       vale con la camara fija y con la que sigue al jugador. -->
+                  <div class="subhead">Dibujo fuera de la pantalla</div>
+                  <label class="field">
+                    <span>Casillas de margen</span>
+                    <input class="input" type="number" step="1" min="0" [max]="cullMarginMax"
+                           [value]="inspector.camera().cullMargin"
+                           (change)="inspector.patchCamera({ cullMargin: num($event) })" />
+                  </label>
+                  <p class="hint hint--field">
+                    El juego solo dibuja lo que se ve, más estas casillas alrededor: lo que está por entrar en pantalla
+                    ya aparece dibujado. Más margen dibuja más cosas que no se ven; 0 corta justo en el borde.
+                  </p>
 
                   @if (inspector.camera().mode === 'follow') {
                     <div class="subhead">Seguimiento de la cámara</div>
@@ -1861,6 +1978,39 @@
                        convertidor y las copia a assets/textures/. Cada una se
                        arrastra sobre una entidad para cambiarle el arte, o sobre
                        una celda vacia para crear una entidad nueva con ella. -->
+                  <!-- Arriba, la textura elegida como PISO: de todo el nivel,
+                       de una sala o tunel, o casilla por casilla con el pincel.
+                       Lo que ya tiene piso propio se ve y se deshace en Nivel ›
+                       Piso. Ver map/floor.controller.ts. -->
+                  <div class="browser__bar">
+                    @if (palette.activeTexture(); as texture) {
+                      <span class="browser__label">Piso con <b>{{ texture }}</b>:</span>
+                      <button class="btn btn--small" type="button" (click)="floor.applyToLevel()"
+                              title="Usarla de piso en todo el nivel. Lo que tiene piso propio lo conserva">
+                        Todo el nivel
+                      </button>
+                      @if (floor.sections().length > 0) {
+                        <select class="select-lone" aria-label="Usarla de piso en una sala o túnel"
+                                (change)="floor.applyToSection(str($event)); resetSelect($event)">
+                          <option value="">Una sala o túnel…</option>
+                          @for (section of floor.sections(); track section.value) {
+                            <option [value]="section.value">
+                              {{ section.label }}{{ section.texture ? ' (' + floor.label(section.texture) + ')' : '' }}
+                            </option>
+                          }
+                        </select>
+                      }
+                      <label class="check" title="Clic o arrastrar pinta el piso de cada casilla; Alt + clic la devuelve a la de su sala o del nivel">
+                        <input type="checkbox" [checked]="floor.painting()" (change)="floor.setPainting(checked($event))" />
+                        <span>Pintar casillas</span>
+                      </label>
+                    } @else {
+                      <p class="hint">
+                        Elige una textura para colocarla, o para usarla de piso: en todo el nivel, en una sala o túnel, o
+                        casilla por casilla.
+                      </p>
+                    }
+                  </div>
                   <div class="tiles">
                     @for (texture of tex.textures(); track texture) {
                       <button class="tile" type="button" draggable="true"

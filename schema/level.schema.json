@@ -16,6 +16,20 @@
         "b": { "type": "integer", "minimum": 0, "maximum": 255 }
       }
     },
+    "backgroundImage": {
+      "type": "object",
+      "description": "Opcional. Imagen que el runtime dibuja detras del mapa, encima de backgroundColor (lo transparente deja ver el color). Llena la ventana entera sea cual sea su resolucion y queda quieta aunque la camara se mueva.",
+      "required": ["texture"],
+      "properties": {
+        "texture": { "type": "string", "description": "Ruta relativa a assets/." },
+        "mode": {
+          "type": "string",
+          "enum": ["cover", "stretch", "tile"],
+          "default": "cover",
+          "description": "cover = cubre la ventana sin deformarse, recortando lo que sobra; stretch = la estira justo a la ventana; tile = la repite a su tamaño, en mosaico."
+        }
+      }
+    },
     "camera": {
       "type": "object",
       "description": "Opcional. Como encuadra la camara del runtime. Si falta, la de siempre: fija, con el nivel entero centrado en la ventana y zoom 1.",
@@ -31,7 +45,8 @@
             "height": { "type": "number", "minimum": 0 }
           }
         },
-        "clampToLevel": { "type": "boolean", "description": "Solo follow. No mostrar el vacio mas alla del mapa: la camara se frena antes de que el borde del nivel entre en pantalla. Por defecto true." }
+        "clampToLevel": { "type": "boolean", "description": "Solo follow. No mostrar el vacio mas alla del mapa: la camara se frena antes de que el borde del nivel entre en pantalla. Por defecto true." },
+        "cullMargin": { "type": "number", "minimum": 0, "maximum": 20, "description": "Casillas (del ancho de un tile) que el runtime sigue dibujando mas alla del borde de la pantalla, por lado. Lo de mas alla no se ordena ni se dibuja (recorte por camara). Por defecto 2." }
       }
     },
     "grid": {
@@ -60,7 +75,19 @@
       "description": "Opcional. Tiles de piso y de pared con los que el runtime dibuja el 'cuarto' del nivel. Las paredes no son entidades: el motor las genera sobre el borde de la grilla y, si estan, tambien frenan al jugador ahi. Si falta el bloque entero, el nivel se dibuja sin piso ni paredes.",
       "properties": {
         "floor": { "$ref": "#/definitions/visualTile" },
-        "wall": { "$ref": "#/definitions/visualTile" }
+        "wall": { "$ref": "#/definitions/visualTile" },
+        "floorVariants": {
+          "type": "array",
+          "description": "Las otras texturas de piso del nivel, a las que apunta 'floorVariant' de cada casilla de 'tiles'. La escribe el editor al guardar, resolviendo el piso de cada sala, tunel y casilla pintada ('floorTexture' de rooms y tunnels, y 'floorPaint'). Sin 'sourceRect' se usa la imagen entera. Todo piso se dibuja al ancho de la casilla, con su proporcion.",
+          "items": {
+            "type": "object",
+            "required": ["texture"],
+            "properties": {
+              "texture": { "type": "string", "description": "Ruta relativa a assets/." },
+              "sourceRect": { "$ref": "#/definitions/visualTile/properties/sourceRect" }
+            }
+          }
+        }
       }
     },
     "tiles": {
@@ -92,6 +119,19 @@
       "type": "array",
       "description": "Solo del editor: celdas retocadas a mano con Piso y Pared en un nivel con salas. Se aplican encima de lo que generan las salas y los tuneles, para no perderse al moverlas. Aca una clave ausente significa 'no cambiar', no el default de mapTile.",
       "items": { "$ref": "#/definitions/mapTile" }
+    },
+    "floorPaint": {
+      "type": "array",
+      "description": "Solo del editor: casillas pintadas a mano con otra textura de piso. Pisan a la de su sala o tunel y a la del nivel. El runtime no la lee: el editor la resuelve en 'tiles' (floorVariant) y 'visuals.floorVariants' al guardar.",
+      "items": {
+        "type": "object",
+        "required": ["col", "row", "texture"],
+        "properties": {
+          "col": { "type": "integer", "minimum": 0 },
+          "row": { "type": "integer", "minimum": 0 },
+          "texture": { "type": "string", "description": "Ruta relativa a assets/." }
+        }
+      }
     },
     "entities": {
       "type": "array",
@@ -289,7 +329,8 @@
         "col": { "type": "integer", "minimum": 0 },
         "row": { "type": "integer", "minimum": 0 },
         "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 }
+        "height": { "type": "integer", "minimum": 1 },
+        "floorTexture": { "type": "string", "description": "Solo del editor: textura del piso de la sala (ruta relativa a assets/). Ausente = la del nivel (visuals.floor)." }
       }
     },
     "mapTunnel": {
@@ -314,7 +355,8 @@
               "row": { "type": "integer" }
             }
           }
-        }
+        },
+        "floorTexture": { "type": "string", "description": "Solo del editor: textura del piso del pasillo. Ausente = la del nivel. Va solo en el pasillo: adentro de una sala manda la sala, con su piso propio o el del nivel." }
       }
     },
     "roomSide": {
@@ -329,7 +371,8 @@
         "col": { "type": "integer", "minimum": 0 },
         "row": { "type": "integer", "minimum": 0 },
         "floor": { "type": "boolean", "default": true },
-        "wall": { "type": "boolean", "default": false }
+        "wall": { "type": "boolean", "default": false },
+        "floorVariant": { "type": "integer", "minimum": 0, "description": "Indice en visuals.floorVariants de la textura de piso de esta casilla. Ausente = la del nivel (visuals.floor). Lo escribe el editor al guardar." }
       }
     },
     "zone": {

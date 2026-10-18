@@ -60,6 +60,19 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
         level.backgroundColor = Color{channel("r"), channel("g"), channel("b"), 255};
     }
 
+    // --- Imagen de fondo ----------------------------------------------------
+    // Opcional: va encima del color. Un modo que no se conoce se toma como
+    // "cover", el de por defecto, en vez de romper el nivel.
+    if (levelJson.contains("backgroundImage")) {
+        const auto& imageJson = levelJson.at("backgroundImage");
+        level.backgroundTexture = &resources_.GetTexture(
+            assets_.Resolve(imageJson.at("texture").get<std::string>()));
+        const std::string mode = imageJson.value("mode", std::string("cover"));
+        level.backgroundFit = mode == "stretch" ? BackgroundFit::Stretch
+                              : mode == "tile"  ? BackgroundFit::Tile
+                                                : BackgroundFit::Cover;
+    }
+
     // --- Camara -------------------------------------------------------------
     // Bloque opcional. Sin el quedan los valores por defecto de CameraSettings,
     // que son la camara de siempre: fija, con el nivel centrado y zoom 1.
@@ -80,6 +93,8 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
                                             std::max(0.0f, deadzoneJson.value("height", 0.0f))};
         }
         level.camera.clampToBounds = cameraJson.value("clampToLevel", true);
+        // No es de la camara sino del dibujo, pero se mide desde lo que ella ve.
+        level.cullMarginTiles = std::clamp(cameraJson.value("cullMargin", 2.0f), 0.0f, 20.0f);
     }
 
     // --- Visuales del nivel (piso y pared) ----------------------------------
@@ -109,6 +124,27 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
                 source.at("width").get<float>(), source.at("height").get<float>()
             };
         }
+        // Las otras texturas de piso, a las que apunta "floorVariant" de cada
+        // casilla. Sin "sourceRect" se usa la imagen entera, que es como las
+        // escribe el editor.
+        if (visualsJson.contains("floorVariants")) {
+            for (const auto& variantJson : visualsJson.at("floorVariants")) {
+                FloorLook look;
+                look.texture = &resources_.GetTexture(
+                    assets_.Resolve(variantJson.at("texture").get<std::string>()));
+                if (variantJson.contains("sourceRect")) {
+                    const auto& source = variantJson.at("sourceRect");
+                    look.source = Rectangle{
+                        source.at("x").get<float>(), source.at("y").get<float>(),
+                        source.at("width").get<float>(), source.at("height").get<float>()
+                    };
+                } else {
+                    look.source = Rectangle{0, 0, static_cast<float>(look.texture->width),
+                                            static_cast<float>(look.texture->height)};
+                }
+                level.floorVariants.push_back(look);
+            }
+        }
     }
 
     // Sin "tiles" se conserva el nivel rectangular legacy. Con "tiles", el
@@ -124,6 +160,11 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
             }
             if (tileJson.value("floor", true)) {
                 level.floorTiles.push_back(tile);
+                // Un indice que no existe se dibuja con el piso del nivel en
+                // vez de romper la carga: el JSON se puede editar a mano.
+                const int variant = tileJson.value("floorVariant", -1);
+                level.floorTileVariants.push_back(
+                    variant >= 0 && variant < static_cast<int>(level.floorVariants.size()) ? variant : -1);
             }
             if (tileJson.value("wall", false)) {
                 level.wallTiles.push_back(tile);
@@ -134,6 +175,7 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
             for (int col = 0; col < gridWidth; ++col) {
                 GridCoord tile{col, row};
                 level.floorTiles.push_back(tile);
+                level.floorTileVariants.push_back(-1);
                 if (col == 0 || row == 0 || col == gridWidth - 1 || row == gridHeight - 1) {
                     level.wallTiles.push_back(tile);
                 }

@@ -60,8 +60,8 @@ Requests HandleKeys(State& state);
 // salte de un cuadro a otro y se pueda leer.
 void RecordFrame(State& state, float workMs);
 
-// Con F4, la vista que se usa para recortar: la de verdad, achicada un cuarto
-// por lado. Lo que cae entre las dos se ve desaparecer.
+// Con F4, el limite del recorte: la vista de verdad achicada un octavo por
+// lado, para que quede en pantalla y se vea lo que desaparece al cruzarlo.
 Rectangle PreviewView(Rectangle view);
 
 // Lo que muestra el panel. Lo arma GameSession, que es quien tiene los datos.
@@ -69,7 +69,8 @@ struct Report {
     int fps = 0;
     int ground = 0;    // piso dibujado (sin ordenar)
     int sorted = 0;    // paredes y entidades dibujadas (ordenadas)
-    int culled = 0;    // fuera de la camara
+    int culled = 0;    // fuera de la camara y de su margen
+    float cullMarginTiles = 0.0f;
     int entities = 0;
     int activeEntities = 0;
     int collisions = 0;

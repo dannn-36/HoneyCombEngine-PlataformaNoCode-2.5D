@@ -1803,6 +1803,21 @@ app-puzzle-dialog {
       margin: 0;
     }
   }
+
+  /* "Piso con x.png:" en la barra de Texturas: el nombre puede ser largo. */
+  &__label {
+    max-width: 320px;
+    overflow: hidden;
+    color: var(--text-2);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    b {
+      color: var(--text);
+      font-weight: 600;
+    }
+  }
 }
 
 .tiles {

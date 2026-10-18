@@ -1,6 +1,7 @@
 import { computed, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
+import { levelForDisk } from '../core/floors';
 import { highlightJson } from '../core/json-highlight';
 import { LevelService } from '../services/level.service';
 import { SelectionService } from '../services/selection.service';
@@ -44,7 +45,8 @@ export class JsonViewController {
   readonly text = computed<string | null>(() => {
     const level = this.levels.level();
     if (this.scope() === 'nivel') {
-      return JSON.stringify(level, null, 2);
+      // El mismo nivel que escribe Guardar, con el piso ya resuelto (ver core/floors.ts).
+      return JSON.stringify(levelForDisk(level), null, 2);
     }
     const ids = new Set(this.selection.selectedEntityIds());
     const picked = level.entities.filter((entity) => ids.has(entity.id));

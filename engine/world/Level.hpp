@@ -87,6 +87,19 @@ struct LevelEntity {
     ComboState combo;
 };
 
+// Como llena la ventana la imagen de fondo ("backgroundImage.mode").
+enum class BackgroundFit {
+    Cover,    // la cubre entera sin deformarse; lo que sobra se recorta
+    Stretch,  // la estira justo a la ventana
+    Tile,     // la repite a su tamaño, en mosaico
+};
+
+// Una textura de piso con su recorte: una de "visuals.floorVariants".
+struct FloorLook {
+    const Texture2D* texture = nullptr;
+    Rectangle source{0, 0, 0, 0};
+};
+
 struct LoadedLevel {
     std::string name;
     IsoGridSystem grid;
@@ -106,4 +119,19 @@ struct LoadedLevel {
     // de "zones" mas una por cada sala de "rooms".
     ItemCatalog items;
     std::vector<Zone> zones;
+    // Las demas texturas de piso ("visuals.floorVariants"). El editor resuelve
+    // ahi el piso de cada sala, tunel o casilla pintada: el motor no sabe de
+    // esas capas, solo que casilla usa que textura (ver floorTileVariants).
+    std::vector<FloorLook> floorVariants;
+    // Por cada casilla de floorTiles, en el mismo orden: el indice en
+    // floorVariants de su textura ("floorVariant" del tile), o -1 si usa la
+    // del nivel (floorTexture).
+    std::vector<int> floorTileVariants;
+    // Casillas que se siguen dibujando mas alla del borde de la pantalla, por
+    // lado ("camera.cullMargin"). Lo de mas alla no se dibuja.
+    float cullMarginTiles = 2.0f;
+    // Imagen detras del mapa ("backgroundImage"), encima del color de fondo y
+    // quieta en la ventana. nullptr = solo el color.
+    const Texture2D* backgroundTexture = nullptr;
+    BackgroundFit backgroundFit = BackgroundFit::Cover;
 };

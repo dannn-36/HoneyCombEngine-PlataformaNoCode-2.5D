@@ -35,8 +35,9 @@ struct SpriteInstance {
 // a tiles alineados a la grilla como a entidades que se mueven libremente.
 //
 // Dos cosas para no hacer trabajo de mas en cada frame:
-//   - RECORTE: con SetView, lo que cae fuera de la camara ni se encola. No se
-//     ordena ni se dibuja, y en un mapa grande eso es casi todo.
+//   - RECORTE: con SetView, lo que cae fuera de la vista (la camara mas un
+//     margen, ver GameSession) ni se encola. No se ordena ni se dibuja, y en un
+//     mapa grande eso es casi todo.
 //   - PISO APARTE: el piso no entra al ordenamiento. Va en su propia lista y se
 //     dibuja primero, en el orden en que llego: quien lo encola ya lo manda de
 //     atras hacia adelante (ver GameSession::PrepareLevel), asi que ordenarlo
@@ -47,7 +48,7 @@ public:
     struct Stats {
         int ground = 0;  // piso dibujado, sin ordenar
         int sorted = 0;  // paredes y entidades: lo unico que se ordena
-        int culled = 0;  // fuera de la camara: ni se encolo
+        int culled = 0;  // fuera de la vista: ni se encolo
     };
 
     explicit ZSortSystem(GraphicsDevice& gfx);

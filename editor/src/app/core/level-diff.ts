@@ -97,6 +97,12 @@ export function describeLevelChange(before: Level, after: Level): string {
   if (before.backgroundColor !== after.backgroundColor) {
     return 'cambiar el fondo';
   }
+  if (before.backgroundImage !== after.backgroundImage) {
+    return after.backgroundImage ? 'cambiar la imagen de fondo' : 'quitar la imagen de fondo';
+  }
+  if (before.visuals !== after.visuals || before.floorPaint !== after.floorPaint) {
+    return 'cambiar el piso';
+  }
   if (before.name !== after.name) {
     return 'renombrar el nivel';
   }

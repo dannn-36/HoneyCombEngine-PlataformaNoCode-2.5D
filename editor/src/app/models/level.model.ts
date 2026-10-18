@@ -125,6 +125,23 @@ export interface MapTile {
   row: number;
   floor?: boolean;
   wall?: boolean;
+  /**
+   * Indice en visuals.floorVariants de la textura de piso de esta casilla.
+   * Ausente = la del nivel (visuals.floor). Solo en disco: lo escribe Guardar
+   * resolviendo las capas del piso (ver core/floors.ts), y el editor no lo lee.
+   */
+  floorVariant?: number;
+}
+
+/**
+ * Una casilla pintada a mano con otra textura de piso (Recursos › Texturas ›
+ * Pintar casillas). Pisa a la de su sala o tunel y a la del nivel.
+ */
+export interface FloorPaint {
+  col: number;
+  row: number;
+  /** Ruta relativa a assets/, como las de las entidades. */
+  texture: string;
 }
 
 /**
@@ -138,6 +155,8 @@ export interface MapRoom {
   row: number;
   width: number;
   height: number;
+  /** Textura del piso de la sala ("textures/x.png"). Ausente = la del nivel. */
+  floorTexture?: string;
 }
 
 /**
@@ -165,6 +184,8 @@ export interface MapTunnel {
    * guarda el viewport un tunel trazado a mano.
    */
   path?: GridPosition[];
+  /** Textura del piso del tunel, solo en el pasillo: adentro de una sala manda la sala. Ausente = la del nivel. */
+  floorTexture?: string;
 }
 
 /** Un paso individual (trigger, condicion o accion). 'type' referencia un ID de event_catalog.json. */
@@ -202,22 +223,53 @@ export interface CameraConfig {
   deadzone?: { width: number; height: number };
   /** Solo follow. No mostrar el vacio mas alla del mapa. */
   clampToLevel?: boolean;
+  /**
+   * Casillas que el motor sigue dibujando mas alla del borde de la pantalla,
+   * por lado. Lo de mas alla no se dibuja (recorte por camara). Ausente = 2.
+   */
+  cullMargin?: number;
+}
+
+/**
+ * Como llena la ventana la imagen de fondo:
+ *   cover    la cubre entera sin deformarse; lo que sobra se recorta
+ *   stretch  la estira justo a la ventana, aunque se deforme
+ *   tile     la repite a su tamaño, en mosaico
+ */
+export type BackgroundMode = 'cover' | 'stretch' | 'tile';
+
+/** Imagen detras del mapa, quieta en la ventana del juego aunque la camara se mueva. */
+export interface BackgroundImage {
+  /** Ruta relativa a assets/, como las de las entidades. */
+  texture: string;
+  /** Ausente = cover. */
+  mode?: BackgroundMode;
 }
 
 export interface Level {
   name: string;
   /** Color con el que el runtime pinta el fondo de la escena. Ausente = RAYWHITE (245, 245, 245). */
   backgroundColor?: RgbColor;
+  /** Imagen de fondo, encima del color: lo transparente deja ver el color. */
+  backgroundImage?: BackgroundImage;
   /** Camara del runtime. Ausente = fija, con el nivel centrado y zoom 1, como siempre. */
   camera?: CameraConfig;
   grid: GridConfig;
   entities: LevelEntity[];
   events: EventDefinition[];
   visuals?: {
+    /** El piso de todo el nivel: la capa de abajo (ver core/floors.ts). */
     floor?: { texture: string; sourceRect: SourceRect };
     wall?: { texture: string; sourceRect: SourceRect };
+    /**
+     * Las otras texturas de piso del nivel, a las que apunta "floorVariant" de
+     * cada casilla. Solo en disco: la escribe Guardar (ver core/floors.ts).
+     */
+    floorVariants?: { texture: string; sourceRect?: SourceRect }[];
   };
   tiles?: MapTile[];
+  /** Casillas pintadas a mano con otra textura de piso. */
+  floorPaint?: FloorPaint[];
   /** Grillas del mapa. Ausente = el nivel es una sola grilla, como siempre. */
   rooms?: MapRoom[];
   tunnels?: MapTunnel[];

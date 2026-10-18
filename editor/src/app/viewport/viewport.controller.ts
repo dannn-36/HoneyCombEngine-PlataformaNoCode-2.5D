@@ -2,6 +2,7 @@ import { DestroyRef, ElementRef, computed, effect, inject, signal, untracked } f
 
 import { CharactersController } from '../characters/characters.controller';
 import { EntityOpsController } from '../entities/entity-ops.controller';
+import { FloorController } from '../map/floor.controller';
 import { MapController } from '../map/map.controller';
 import { PaletteController } from '../palette/palette.controller';
 import { SelectionController } from '../selection/selection.controller';
@@ -71,6 +72,8 @@ export interface ViewportDeps {
   sel: SelectionController;
   chars: CharactersController;
   tex: TexturesController;
+  /** El pincel del piso (Recursos › Texturas › Pintar casillas). */
+  floor: FloorController;
 }
 
 /**
@@ -106,6 +109,7 @@ export class ViewportController {
   private readonly sel: SelectionController;
   private readonly chars: CharactersController;
   private readonly tex: TexturesController;
+  private readonly floor: FloorController;
 
   private readonly entities = computed(() => this.levels.level().entities);
   private readonly grid = computed(() => this.levels.level().grid);
@@ -127,6 +131,7 @@ export class ViewportController {
     this.sel = deps.sel;
     this.chars = deps.chars;
     this.tex = deps.tex;
+    this.floor = deps.floor;
 
     // El canvas no tiene tamano propio: lo estira el layout de CSS. Para
     // dibujar hay que saber cuantos pixeles ocupa realmente, y eso solo se
@@ -196,6 +201,8 @@ export class ViewportController {
 
   /** Trazo en curso de figuras pintadas arrastrando (ver startShapeStroke). */
   private shapeStroke: { shape: ShapeId; start: GridCoord; last: GridCoord; placed: number } | null = null;
+  /** Trazo del pincel del piso en curso: la ultima casilla y cuantas se pintaron. */
+  private floorStroke: { last: GridCoord; erase: boolean; painted: number } | null = null;
 
   readonly zoom = signal(3);
 
@@ -443,6 +450,12 @@ export class ViewportController {
       const character = this.palette.activeCharacter();
       const item = this.palette.activeItem();
       const shape = this.palette.activeShape();
+      // Con "Pintar casillas" (Recursos › Texturas), la textura elegida pinta
+      // el piso en vez de colocarse como entidad. Alt despinta.
+      if (this.palette.activeTexture() && this.floor.painting()) {
+        this.startFloorStroke(event);
+        return;
+      }
       if (shape && (this.palette.paintShapes() || event.shiftKey)) {
         this.startShapeStroke(event, shape);
       } else if (character) {
@@ -492,6 +505,10 @@ export class ViewportController {
       this.continueShapeStroke(event);
       return;
     }
+    if (this.floorStroke) {
+      this.continueFloorStroke(event);
+      return;
+    }
     if (this.map.roomDrag()) {
       this.map.roomToolMove(event, this.coordAt(event));
       return;
@@ -518,6 +535,10 @@ export class ViewportController {
     }
     if (this.shapeStroke) {
       this.finishShapeStroke(event);
+      return;
+    }
+    if (this.floorStroke) {
+      this.finishFloorStroke(event);
       return;
     }
     if (this.map.roomDrag()) {
@@ -893,6 +914,61 @@ export class ViewportController {
     }
     this.entityOps.addPlaced(entity);
     this.shapeStroke.placed++;
+  }
+
+  // --- Pintar el piso -----------------------------------------------------------
+  //
+  // Con "Pintar casillas" (Recursos › Texturas) y una textura elegida, mantener
+  // el clic y pasar por las casillas les pone esa textura de piso; con Alt se
+  // la quita y vuelven a la de su sala o del nivel. Todo el trazo es un solo
+  // paso de deshacer (ver services/level-history.service.ts).
+
+  private startFloorStroke(event: PointerEvent): void {
+    const cell = this.coordAt(event);
+    this.floorStroke = { last: cell, erase: event.altKey, painted: 0 };
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+    this.floorStroke.painted += this.floor.paint([cell], this.floorStroke.erase);
+  }
+
+  private continueFloorStroke(event: PointerEvent): void {
+    const stroke = this.floorStroke;
+    const cell = this.coordAt(event);
+    this.hovered.set(cell);
+    if (!stroke || (cell.col === stroke.last.col && cell.row === stroke.last.row)) {
+      return;
+    }
+    // Igual que el trazo de figuras: un movimiento rapido salta casillas, y se
+    // recorre la linea entera para no dejar huecos.
+    const from = stroke.last;
+    const steps = Math.max(Math.abs(cell.col - from.col), Math.abs(cell.row - from.row));
+    const cells: GridCoord[] = [];
+    for (let step = 1; step <= steps; step++) {
+      cells.push({
+        col: Math.round(from.col + ((cell.col - from.col) * step) / steps),
+        row: Math.round(from.row + ((cell.row - from.row) * step) / steps),
+      });
+    }
+    stroke.painted += this.floor.paint(cells, stroke.erase);
+    stroke.last = cell;
+  }
+
+  private finishFloorStroke(event: PointerEvent): void {
+    const stroke = this.floorStroke;
+    this.floorStroke = null;
+    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
+    if (!stroke) {
+      return;
+    }
+    if (stroke.painted === 0) {
+      this.note('Ahí no hay piso que pintar: el pincel solo pinta casillas con piso.');
+    } else {
+      this.note(
+        stroke.erase
+          ? stroke.painted + ' casillas vuelven al piso de su sala o del nivel.'
+          : stroke.painted + ' casillas pintadas con ' + (this.palette.activeTexture() ?? 'la textura') + '.',
+      );
+    }
   }
 
   // --- Arrastrar una primitiva al viewport ----------------------------------

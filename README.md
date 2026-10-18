@@ -44,6 +44,16 @@ El motor se compila de dos formas, y el editor deja elegir con cuál se ejecuta 
 
 Desde la terminal: `cmake --preset release` y `cmake --build engine/build-release` (en Linux, `--preset linux-release`).
 
+Los dos motores dibujan solo lo que ve la cámara **más un margen de casillas por lado**: lo que está por entrar en pantalla ya está dibujado cuando aparece, y lo demás no se ordena ni se dibuja. Las colisiones, la IA y los eventos siguen corriendo en todo el nivel. El margen es de cada nivel (*Nivel › Avanzado › Casillas de margen*, `camera.cullMargin` en el JSON; 2 si no lo dice). En Debug, `F4` muestra ese límite dentro de la ventana para verlo trabajar. Para medir: `engine.exe <nivel> --bench 6` (y `--sin-recorte` para comparar; `--captura cuadro.png` guarda además el último cuadro junto al ejecutable).
+
+#### Imagen de fondo
+
+En *Nivel › Básico*, debajo del color de fondo, *Imagen de fondo* pone cualquier imagen del proyecto detrás del mapa (`backgroundImage` en el JSON). Llena la ventana del juego entera sea cual sea su resolución y queda quieta aunque la cámara se mueva: **Cubrir** (por defecto) no la deforma y recorta lo que sobra, **Estirar** la ajusta justo a la ventana y **Mosaico** la repite a su tamaño. Lo transparente deja ver el color de fondo.
+
+#### Textura del piso
+
+El piso se arma en tres capas, y cada una pisa a la anterior: **todo el nivel**, **cada sala o túnel**, y **casillas sueltas** pintadas a mano. Se cambia desde *Recursos › Texturas*: al elegir una textura aparecen *Todo el nivel*, *Una sala o túnel…* y *Pintar casillas* (clic o arrastrar pinta; `Alt` + clic devuelve la casilla a la de su sala o del nivel). En *Nivel › Piso* se ve qué tiene cada capa y se deshace. Las mejores imágenes son rombos planos 2:1 (como `floor.png` o `presentacion/piso_*.png`); se dibujan al ancho de la casilla, y una más alta que ancha se apoya en el borde de abajo de la casilla. El motor no sabe de capas: al guardar, el editor las resuelve en `visuals.floorVariants` y en `floorVariant` de cada casilla de `tiles` (ver `editor/src/app/core/floors.ts`).
+
 Los niveles, imágenes y bibliotecas que crees con el editor se guardan en **`Documentos/HoneyComb`** (la *carpeta del editor*, ver sección 7.2), no en el repositorio. Se puede cambiar desde *Archivo › Cambiar carpeta del editor…* y abrir con *Archivo › Mostrar carpeta del editor*.
 
 El asistente **no reemplaza** la guía de abajo: si prefieres montar el entorno paso a paso, o algo falla y quieres entender qué hace cada pieza, las secciones 1 a 9 siguen siendo la referencia completa.

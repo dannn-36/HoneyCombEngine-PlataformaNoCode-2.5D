@@ -29,6 +29,7 @@ import { characterOf } from './characters';
 import { entityKindStyle } from './entity-kinds';
 import { blockCenter, entitySpan } from './entity-blocks';
 import { elbowRoute, legacyTiles, rectBetween, routeFloor } from './dungeon-layout';
+import { floorOverrides } from './floors';
 import { GridCoord, IsoProjection } from './iso-projection';
 import { usesShapeSheet } from './iso-shapes';
 import { CanvasPalette } from './themes';
@@ -324,16 +325,16 @@ export class IsoCanvasRenderer {
       ctx.stroke();
     };
 
-    // Piso con textura (visuals.floor), como lo dibuja el motor: el recorte a
-    // su tamaño, centrado en el punto de cada celda de piso. Sin la imagen
-    // cargada queda el piso liso de siempre.
+    // Piso con textura, como lo dibuja el motor: en cada celda de piso, la
+    // textura que le toca por sus capas (nivel, sala o tunel, casilla: ver
+    // core/floors.ts), al ancho de la casilla y centrada en su punto. Una
+    // imagen que todavia no cargo deja esa celda con el piso liso de siempre.
     const floorVisual = level.visuals?.floor;
-    const floorImage = floorVisual ? scene.sprite(floorVisual.texture) : null;
+    const overrides = floorOverrides(level);
     const drawFloorTextures = () => {
-      if (!floorVisual || !floorImage) {
+      if (!floorVisual && overrides.size === 0) {
         return;
       }
-      const src = floorVisual.sourceRect;
       const cellsWithFloor: GridCoord[] = level.tiles
         ? level.tiles.filter((tile) => tile.floor !== false)
         : Array.from({ length: grid.width * grid.height }, (_, i) => ({
@@ -341,12 +342,27 @@ export class IsoCanvasRenderer {
             row: Math.floor(i / grid.width),
           }));
       for (const cell of cellsWithFloor) {
+        const override = overrides.get(cell.col + ',' + cell.row);
+        const texture = override ?? floorVisual?.texture;
+        const image = texture ? scene.sprite(texture) : null;
+        if (!image) {
+          continue;
+        }
+        // La del nivel trae su recorte; las de las capas son la imagen entera.
+        const src = override || !floorVisual
+          ? { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight }
+          : floorVisual.sourceRect;
+        if (src.width <= 0 || src.height <= 0) {
+          continue;
+        }
+        const width = grid.tileWidth * zoom;
+        const height = src.height * (grid.tileWidth / src.width) * zoom;
         const { x, y } = project(cell);
-        ctx.drawImage(
-          floorImage,
-          src.x, src.y, src.width, src.height,
-          x - (src.width / 2) * zoom, y - (src.height / 2) * zoom, src.width * zoom, src.height * zoom,
-        );
+        // La misma regla que GameSession::PrepareLevel: ancha o cuadrada, centrada
+        // en la casilla; mas alta que ancha (un lienzo alto con la baldosa abajo,
+        // como las piezas de Kenney), apoyada en el vertice de abajo de la casilla.
+        const top = height > width ? y + (grid.tileHeight / 2) * zoom - height : y - height / 2;
+        ctx.drawImage(image, src.x, src.y, src.width, src.height, x - width / 2, top, width, height);
       }
     };
 

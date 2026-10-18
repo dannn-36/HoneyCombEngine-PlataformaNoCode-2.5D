@@ -80,6 +80,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 
 import { CHARACTERS } from './core/characters';
+import { CAMERA_CULL_MARGIN_MAX } from './core/camera';
 import { CharacterPresetService } from './services/character-preset.service';
 import type { ProjectNode } from './electron-api';
 import { MenuBar, MenuDef, MenuLeaf } from './menu-bar/menu-bar';
@@ -103,6 +104,7 @@ import { ItemEditorController } from './combat/item-editor.controller';
 import { PuzzleController } from './combat/puzzle.controller';
 import { ExplorerController } from './project/explorer.controller';
 import { MapController } from './map/map.controller';
+import { FloorController } from './map/floor.controller';
 import { CharactersController } from './characters/characters.controller';
 import { EventsController } from './events/events.controller';
 import { TexturesController } from './textures/textures.controller';
@@ -535,6 +537,17 @@ export class App {
   );
 
   /**
+   * La textura del piso: todo el nivel, una sala o tunel, o casilla por
+   * casilla, desde Recursos › Texturas. Ver map/floor.controller.ts.
+   */
+  readonly floor: FloorController = new FloorController({
+    note: (message) => this.note(message),
+    markDirty: () => this.dirty.set(true),
+    palette: this.palette,
+    tex: this.tex,
+  });
+
+  /**
    * El viewport: camara, gestos sobre el canvas, drops y redibujo. Ver
    * viewport/viewport.controller.ts. Va despues de los controladores que usa
    * porque los recibe ya construidos.
@@ -550,6 +563,7 @@ export class App {
     sel: this.sel,
     chars: this.chars,
     tex: this.tex,
+    floor: this.floor,
   });
 
   readonly ev: EventsController = new EventsController(
@@ -697,6 +711,9 @@ export class App {
   readonly assetTabs = ASSET_TABS;
 
   readonly dockTabs = DOCK_TABS;
+
+  /** Tope del campo "Casillas de margen" de Nivel › Avanzado. */
+  readonly cullMarginMax = CAMERA_CULL_MARGIN_MAX;
 
   readonly workspaceLabels = WORKSPACE_LABELS;
 

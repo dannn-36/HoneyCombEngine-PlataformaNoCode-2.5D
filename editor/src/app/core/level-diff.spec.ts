@@ -48,5 +48,9 @@ describe('describeLevelChange', () => {
     expect(describeLevelChange(base, { ...base, rooms: [] })).toBe('editar el mapa');
     expect(describeLevelChange(base, { ...base, grid: { ...base.grid, width: 12 } })).toBe('cambiar la grilla');
     expect(describeLevelChange(base, { ...base, name: 'otro' })).toBe('renombrar el nivel');
+    const withImage = { ...base, backgroundImage: { texture: 'textures/cielo.png' } };
+    expect(describeLevelChange(base, withImage)).toBe('cambiar la imagen de fondo');
+    expect(describeLevelChange(withImage, base)).toBe('quitar la imagen de fondo');
+    expect(describeLevelChange(base, { ...base, floorPaint: [] })).toBe('cambiar el piso');
   });
 });

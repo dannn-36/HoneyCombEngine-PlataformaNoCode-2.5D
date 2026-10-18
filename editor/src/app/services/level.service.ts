@@ -11,18 +11,22 @@ import {
   shiftLevel,
 } from '../core/dungeon-layout';
 import {
+  BackgroundImage,
   CameraConfig,
   EventDefinition,
   GridConfig,
+  GridPosition,
   Level,
   LevelEntity,
   MapRoom,
   MapTile,
   MapTunnel,
   RoomSide,
+  SourceRect,
   Zone,
 } from '../models/level.model';
 import { cameraOf, sanitizeCamera } from '../core/camera';
+import { levelForDisk, paintFloorCell } from '../core/floors';
 import { withItemDefs } from '../core/items';
 import { ItemDef } from '../models/item.model';
 import { ProjectService } from './project.service';
@@ -86,6 +90,15 @@ function convertToRooms(level: Level): Level {
     tunnels: [],
     tileEdits: legacyEdits(level.grid, level.tiles, room),
   };
+}
+
+/** Una sala o un tunel con otra textura de piso; null le quita la suya. */
+function withFloorTexture<T extends { floorTexture?: string }>(section: T, texture: string | null): T {
+  if (texture) {
+    return { ...section, floorTexture: texture };
+  }
+  const { floorTexture: _, ...rest } = section;
+  return rest as T;
 }
 
 // Se copia la grilla con spread: si se compartiera la constante, editar el
@@ -165,7 +178,8 @@ export class LevelService {
    */
   async save(): Promise<void> {
     const fileName = this.fileName() ?? `${this.level().name}.json`;
-    await this.project.saveLevel(fileName, this.level());
+    // Con las capas del piso resueltas en lo que lee el motor (ver core/floors.ts).
+    await this.project.saveLevel(fileName, levelForDisk(this.level()));
     this.fileName.set(fileName);
   }
 
@@ -391,6 +405,61 @@ export class LevelService {
   /** Olvida los retoques de Piso/Pared y deja el mapa como lo generan las salas. */
   clearTileEdits(): void {
     this.level.update((level) => withLayout({ ...level, tileEdits: [] }));
+  }
+
+  /** La imagen de fondo del nivel; null la quita y queda solo el color. */
+  setBackgroundImage(image: BackgroundImage | null): void {
+    this.level.update(({ backgroundImage: _, ...level }) =>
+      image ? { ...level, backgroundImage: { ...image } } : level,
+    );
+  }
+
+  // --- Piso: nivel, sala o tunel, y casilla ------------------------------------
+  //
+  // Las tres capas del piso (ver core/floors.ts). Solo se guardan las capas;
+  // lo que lee el motor lo arma save() con levelForDisk.
+
+  /** El piso de todo el nivel, la capa de abajo. */
+  setLevelFloor(texture: string, sourceRect: SourceRect): void {
+    this.level.update((level) => ({
+      ...level,
+      visuals: { ...(level.visuals ?? defaultVisuals()), floor: { texture, sourceRect: { ...sourceRect } } },
+    }));
+  }
+
+  /** El piso de una sala. null la devuelve al del nivel. */
+  setRoomFloor(id: string, texture: string | null): void {
+    this.level.update((level) => ({
+      ...level,
+      rooms: (level.rooms ?? []).map((room) => (room.id === id ? withFloorTexture(room, texture) : room)),
+    }));
+  }
+
+  /** El piso de un tunel. null lo devuelve al del nivel. */
+  setTunnelFloor(id: string, texture: string | null): void {
+    this.level.update((level) => ({
+      ...level,
+      tunnels: (level.tunnels ?? []).map((tunnel) => (tunnel.id === id ? withFloorTexture(tunnel, texture) : tunnel)),
+    }));
+  }
+
+  /**
+   * Pinta casillas sueltas con una textura de piso, o las despinta con null
+   * (vuelven a la de su sala o a la del nivel).
+   */
+  paintFloor(cells: readonly GridPosition[], texture: string | null): void {
+    this.level.update((level) => {
+      let current = level;
+      for (const cell of cells) {
+        current = { ...current, floorPaint: paintFloorCell(current, cell.col, cell.row, texture) };
+      }
+      return current.floorPaint?.length ? current : { ...current, floorPaint: undefined };
+    });
+  }
+
+  /** Despinta todas las casillas: el piso vuelve a ser el de las salas y el nivel. */
+  clearFloorPaint(): void {
+    this.level.update((level) => ({ ...level, floorPaint: undefined }));
   }
 
   // Los eventos no tienen id propio en el schema: se los identifica por su

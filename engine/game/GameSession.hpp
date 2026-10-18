@@ -70,7 +70,9 @@ public:
     // de FPS durante ese tiempo, imprime cuantos cuadros por segundo dio y
     // termina. Existe en las dos compilaciones, para poder comparar Debug con
     // Release con el mismo nivel; la Release no tiene el panel F3.
-    void Benchmark(float seconds);
+    // Con "screenshot" (--captura), al terminar guarda tambien lo que dibujo
+    // el ultimo cuadro: sirve para comprobar un nivel sin mirar la pantalla.
+    void Benchmark(float seconds, const std::string &screenshot = "");
 
     // Con false se dibuja todo el nivel, se vea o no ("--sin-recorte"): sirve
     // para medir cuanto ahorra el recorte por camara. Por defecto, encendido.
@@ -99,6 +101,8 @@ private:
     Vector2 CameraFocus() const;
 
     Vector2 ScreenSize() const;
+    // La imagen de fondo del nivel, en pantalla y antes que el mundo. Ver el .cpp.
+    void DrawBackgroundImage();
 
     // Un frame entero. El orden de sus pasos es semantico: ver el comentario
     // que lo encabeza en GameSession.cpp.
@@ -204,11 +208,24 @@ private:
     bool showHitboxes = false;  // F2, independiente de F1: se pueden ver los dos
     DevTools::State dev;
     bool culling = true;
+    // Archivo donde guardar el cuadro que se esta dibujando (ver Benchmark).
+    // Vacio = ninguno.
+    std::string pendingScreenshot;
 
-    // Donde va cada baldosa de piso en el mundo, ya ordenadas de atras hacia
-    // adelante. El piso no se mueve: se calcula y se ordena una vez al cargar el
-    // nivel (PrepareLevel) y no en cada frame (ver ZSortSystem).
-    std::vector<Vector2> floorDrawOrder;
+    // Una baldosa de piso lista para encolar: su textura (la del nivel o la de
+    // su sala, tunel o casilla), su recorte y donde va, al ancho de la casilla.
+    struct FloorSprite
+    {
+        const Texture2D *texture;
+        Rectangle source;
+        Vector2 topLeft;
+        Vector2 center;
+        Vector2 size;
+    };
+    // Las baldosas de piso, ya ordenadas de atras hacia adelante. El piso no se
+    // mueve: se calcula y se ordena una vez al cargar el nivel (PrepareLevel) y
+    // no en cada frame (ver ZSortSystem).
+    std::vector<FloorSprite> floorDrawOrder;
 
     std::vector<HealthBarMark> healthBars;
 };

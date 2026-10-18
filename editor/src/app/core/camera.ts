@@ -13,6 +13,8 @@ import { CameraConfig, Level } from '../models/level.model';
 export const CAMERA_ZOOM_MIN = 0.25;
 export const CAMERA_ZOOM_MAX = 8;
 export const CAMERA_SMOOTHING_MAX = 2;
+/** Tope del margen del recorte, en casillas: mas alla ya no se ahorra nada. */
+export const CAMERA_CULL_MARGIN_MAX = 20;
 
 /** Una camara con todos sus campos resueltos. */
 export interface ResolvedCamera {
@@ -21,6 +23,8 @@ export interface ResolvedCamera {
   smoothing: number;
   deadzone: { width: number; height: number };
   clampToLevel: boolean;
+  /** Casillas que se dibujan mas alla del borde de la pantalla, por lado. */
+  cullMargin: number;
 }
 
 /**
@@ -34,6 +38,7 @@ export const DEFAULT_CAMERA: ResolvedCamera = {
   smoothing: 0.15,
   deadzone: { width: 0, height: 0 },
   clampToLevel: true,
+  cullMargin: 2,
 };
 
 /** La camara de un nivel tal como la va a leer el motor: faltantes completados y todo en rango. */
@@ -63,5 +68,6 @@ export function sanitizeCamera(camera: CameraConfig): ResolvedCamera {
       height: Math.max(0, finite(deadzone.height, 0)),
     },
     clampToLevel: camera.clampToLevel !== false,
+    cullMargin: clamp(finite(camera.cullMargin, DEFAULT_CAMERA.cullMargin), 0, CAMERA_CULL_MARGIN_MAX),
   };
 }

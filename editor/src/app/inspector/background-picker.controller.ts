@@ -1,11 +1,22 @@
 import { inject, signal } from '@angular/core';
 
 import { Hsv, clampChannel, hexToRgb, hsvToRgb, rgbToHex, rgbToHsv } from '../core/color';
-import { RgbColor } from '../models/level.model';
+import { textureName } from '../core/sprite-style';
+import { BackgroundImage, BackgroundMode, RgbColor } from '../models/level.model';
 import { LevelService } from '../services/level.service';
 
 /**
- * El selector de color del fondo de la escena.
+ * Como puede llenar la ventana la imagen de fondo. Nombres cortos: el
+ * inspector es angosto, y lo que hace cada uno lo explica la nota de abajo.
+ */
+export const BACKGROUND_MODES: readonly { id: BackgroundMode; label: string }[] = [
+  { id: 'cover', label: 'Cubrir' },
+  { id: 'stretch', label: 'Estirar' },
+  { id: 'tile', label: 'Mosaico' },
+];
+
+/**
+ * El fondo de la escena: el selector de color y la imagen de fondo.
  *
  * El nivel guarda un RGB ("backgroundColor"), que es lo que el motor pinta
  * antes de dibujar nada. El selector trabaja en HSV porque es con lo que se
@@ -93,6 +104,55 @@ export class BackgroundPickerController {
 
   private storeBackground(backgroundColor: RgbColor): void {
     this.levels.level.update((level) => ({ ...level, backgroundColor }));
+    this.markDirty();
+  }
+
+  // --- Imagen de fondo -----------------------------------------------------------
+  //
+  // Va encima del color y llena la ventana del juego entera, sea cual sea su
+  // tamaño: por eso la resolucion de la imagen no importa. Queda quieta aunque
+  // la camara se mueva (ver GameSession::DrawBackgroundImage en el motor).
+
+  readonly backgroundModes = BACKGROUND_MODES;
+
+  /** El selector de imagenes del fondo, desplegado o no. */
+  readonly imagePickerOpen = signal(false);
+
+  backgroundImage(): BackgroundImage | null {
+    return this.levels.level().backgroundImage ?? null;
+  }
+
+  /** "cielo.png", sin la carpeta. */
+  backgroundImageName(): string {
+    const image = this.backgroundImage();
+    return image ? textureName(image.texture) : '';
+  }
+
+  backgroundMode(): BackgroundMode {
+    return this.backgroundImage()?.mode ?? 'cover';
+  }
+
+  /** Pone de fondo una imagen de la biblioteca ("cielo.png"), con el modo que ya tenia. */
+  setBackgroundImage(name: string): void {
+    const mode = this.backgroundImage()?.mode;
+    this.levels.setBackgroundImage({ texture: 'textures/' + name, ...(mode && mode !== 'cover' ? { mode } : {}) });
+    this.markDirty();
+  }
+
+  /** El <select> devuelve texto: se valida antes de aceptarlo. "cover" no se escribe: es el default. */
+  setBackgroundMode(value: string): void {
+    const image = this.backgroundImage();
+    const mode = BACKGROUND_MODES.find((entry) => entry.id === value)?.id;
+    if (!image || !mode) {
+      return;
+    }
+    this.levels.setBackgroundImage({ texture: image.texture, ...(mode !== 'cover' ? { mode } : {}) });
+    this.markDirty();
+  }
+
+  clearBackgroundImage(): void {
+    this.levels.setBackgroundImage(null);
+    this.imagePickerOpen.set(false);
     this.markDirty();
   }
 

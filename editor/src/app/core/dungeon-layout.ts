@@ -374,13 +374,18 @@ export function legacyEdits(
  */
 export function sanitizeRoom(room: MapRoom): MapRoom {
   const whole = (value: number) => Math.round(value) || 0;
-  return {
+  const clean: MapRoom = {
     id: room.id,
     col: Math.max(1, whole(room.col)),
     row: Math.max(1, whole(room.row)),
     width: Math.max(1, whole(room.width)),
     height: Math.max(1, whole(room.height)),
   };
+  // Su piso viaja con ella: moverla o agrandarla no se lo cambia.
+  if (room.floorTexture) {
+    clean.floorTexture = room.floorTexture;
+  }
+  return clean;
 }
 
 /** Primer id libre de la forma "base_N". */
@@ -452,7 +457,7 @@ export function rectBetween(a: Cell, b: Cell): { col: number; row: number; width
 }
 
 /**
- * Corre el mapa entero: salas, trazados de tunel, retoques y entidades. La
+ * Corre el mapa entero: salas, trazados de tunel, retoques, piso pintado y entidades. La
  * grilla del motor empieza en 0 y no puede crecer hacia atras, asi que ubicar
  * una sala a la izquierda o arriba del mapa se resuelve corriendo todo lo demas
  * hacia el otro lado. Las entidades van con el mapa para seguir paradas donde
@@ -469,6 +474,7 @@ export function shiftLevel(level: Level, deltaCol: number, deltaRow: number): Le
     rooms: level.rooms?.map(move),
     tunnels: level.tunnels?.map((tunnel) => (tunnel.path ? { ...tunnel, path: tunnel.path.map(move) } : tunnel)),
     tileEdits: level.tileEdits?.map(move),
+    floorPaint: level.floorPaint?.map(move),
     entities: level.entities.map((entity) => ({ ...entity, position: move(entity.position) })),
   };
 }

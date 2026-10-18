@@ -93,8 +93,8 @@ void RecordFrame(State& state, float workMs) {
 }
 
 Rectangle PreviewView(Rectangle view) {
-    return Rectangle{view.x + view.width / 4.0f, view.y + view.height / 4.0f, view.width / 2.0f,
-                     view.height / 2.0f};
+    return Rectangle{view.x + view.width / 8.0f, view.y + view.height / 8.0f, view.width * 0.75f,
+                     view.height * 0.75f};
 }
 
 void DrawPanel(GraphicsDevice& gfx, const Font& font, const State& state, const Report& report) {
@@ -102,8 +102,9 @@ void DrawPanel(GraphicsDevice& gfx, const Font& font, const State& state, const 
     lines.push_back(VersionLabel() + " (desarrollo, sin optimizar)");
     lines.push_back(Format("FPS %d (%s)   cuadro %.2f ms", report.fps,
                            state.uncapped ? "sin tope" : "tope 60", state.workMs));
-    lines.push_back(Format("Sprites %d dibujados, %d fuera de camara", report.ground + report.sorted,
+    lines.push_back(Format("Sprites %d dibujados, %d recortados", report.ground + report.sorted,
                            report.culled));
+    lines.push_back(Format("  recorte: la ventana + %.0f casillas por lado", report.cullMarginTiles));
     lines.push_back(Format("  piso %d sin ordenar | %d ordenados", report.ground, report.sorted));
     lines.push_back(Format("Entidades %d (%d activas)   colisiones %d", report.entities,
                            report.activeEntities, report.collisions));

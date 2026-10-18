@@ -30,6 +30,7 @@
 // Uso:  engine.exe [ruta/al/nivel.json]     (por defecto: levels/test_level.json)
 //       engine.exe <nivel> --bench <segundos>   mide los FPS sin tope y sale
 //       ... --sin-recorte                       dibuja todo, aunque no se vea
+//       ... --captura <archivo.png>             guarda el ultimo cuadro (junto al .exe)
 // Teclas: flechas o WASD = mover | clic izquierdo, Espacio o J = atacar hacia
 //         el mouse | Q = habilidad | Shift = esquivar | clic derecho o K =
 //         defender | 1-9 o rueda = elegir arma | E = cambiar arma / tienda |
@@ -93,6 +94,7 @@ int main(int argc, char *argv[])
     // no se vea: es para medir cuanto ahorra el recorte por camara.
     float benchSeconds = 0.0f;
     bool culling = true;
+    std::string screenshot;
     for (int i = 2; i < argc; ++i)
     {
         const std::string option = argv[i];
@@ -104,6 +106,10 @@ int main(int argc, char *argv[])
         {
             culling = false;
         }
+        else if (option == "--captura" && i + 1 < argc)
+        {
+            screenshot = argv[i + 1];
+        }
     }
 
     try
@@ -112,7 +118,7 @@ int main(int argc, char *argv[])
         session.SetCulling(culling);
         if (benchSeconds > 0.0f)
         {
-            session.Benchmark(benchSeconds);
+            session.Benchmark(benchSeconds, screenshot);
         }
         else
         {

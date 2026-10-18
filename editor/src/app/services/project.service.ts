@@ -316,9 +316,34 @@ export class ProjectService {
     }
   }
 
-  /** Imagenes de assets/textures/, que son las que aparecen en el panel Recursos. */
+  /**
+   * Imagenes de assets/textures/, que son las que aparecen en el panel
+   * Recursos. Tambien las de sus subcarpetas, con la carpeta en el nombre
+   * ("presentacion/piso_pasto.png"): el nivel las guarda igual, como
+   * "textures/presentacion/piso_pasto.png", y el motor las encuentra. Antes
+   * solo se listaba la carpeta de arriba, y lo de una subcarpeta no se podia
+   * elegir en ningun lado. Primero las de cada carpeta y despues sus
+   * subcarpetas, hasta tres niveles.
+   */
   async listTextures(): Promise<string[]> {
-    const names = await window.honeycombProject.listDir('assets/textures');
-    return names.filter((name) => /\.(png|jpg|jpeg|gif)$/i.test(name));
+    const names: string[] = [];
+    const walk = async (dir: string, prefix: string, depth: number): Promise<void> => {
+      const entries = await window.honeycombProject.listEntries(dir);
+      for (const entry of entries) {
+        if (entry.kind === 'file' && /\.(png|jpg|jpeg|gif)$/i.test(entry.name)) {
+          names.push(prefix + entry.name);
+        }
+      }
+      if (depth >= 3) {
+        return;
+      }
+      for (const entry of entries) {
+        if (entry.kind === 'dir') {
+          await walk(entry.path, prefix + entry.name + '/', depth + 1);
+        }
+      }
+    };
+    await walk('assets/textures', '', 0);
+    return names;
   }
 }

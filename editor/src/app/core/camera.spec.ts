@@ -1,4 +1,11 @@
-import { CAMERA_ZOOM_MAX, CAMERA_ZOOM_MIN, DEFAULT_CAMERA, cameraOf, sanitizeCamera } from './camera';
+import {
+  CAMERA_CULL_MARGIN_MAX,
+  CAMERA_ZOOM_MAX,
+  CAMERA_ZOOM_MIN,
+  DEFAULT_CAMERA,
+  cameraOf,
+  sanitizeCamera,
+} from './camera';
 
 describe('cameraOf', () => {
   it('un nivel sin camara tiene la de siempre: fija y con zoom 1', () => {
@@ -14,7 +21,20 @@ describe('cameraOf', () => {
       smoothing: 0.15,
       deadzone: { width: 0, height: 0 },
       clampToLevel: true,
+      cullMargin: 2,
     });
+  });
+});
+
+describe('margen del recorte', () => {
+  it('por defecto dibuja 2 casillas mas alla de la pantalla, como el motor', () => {
+    expect(cameraOf({}).cullMargin).toBe(2);
+  });
+
+  it('se lleva a rango: nunca negativo ni mas del tope', () => {
+    expect(sanitizeCamera({ mode: 'fixed', cullMargin: -3 }).cullMargin).toBe(0);
+    expect(sanitizeCamera({ mode: 'fixed', cullMargin: 999 }).cullMargin).toBe(CAMERA_CULL_MARGIN_MAX);
+    expect(sanitizeCamera({ mode: 'fixed', cullMargin: NaN }).cullMargin).toBe(2);
   });
 });
 

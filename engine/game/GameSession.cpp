@@ -14,6 +14,8 @@
 #include <exception>
 #include <iostream>
 
+#include "rlgl.h"
+
 #include "game/CombatView.hpp"
 #include "game/Movement.hpp"
 #include "game/Zones.hpp"
@@ -25,6 +27,11 @@ namespace {
 constexpr float kTransitionSeconds = 2.0f;
 // Cuanto se ve un aviso de error (por ejemplo, un nivel siguiente que no existe).
 constexpr float kNoticeSeconds = 4.0f;
+
+// El rectangulo agrandado "margin" por cada lado (achicado, si es negativo).
+Rectangle Grow(Rectangle rect, float margin) {
+    return Rectangle{rect.x - margin, rect.y - margin, rect.width + 2.0f * margin, rect.height + 2.0f * margin};
+}
 
 // Dibuja un texto centrado en X. raylib no centra solo: hay que medirlo.
 void DrawCentered(GraphicsDevice& gfx, const Font& font, const std::string& text, float centerX,
@@ -129,14 +136,41 @@ void GameSession::PrepareLevel(LevelStart start)
     // que ordenar por col + row es ordenar por profundidad. Es el mismo orden
     // en que el ZSortSystem lo ordenaba en cada frame; las baldosas de una
     // misma fila no se tocan entre si, y el empate da igual.
-    std::vector<GridCoord> floorCells = level.floorTiles;
-    std::stable_sort(floorCells.begin(), floorCells.end(), [](const GridCoord &a, const GridCoord &b)
-                     { return a.col + a.row < b.col + b.row; });
-    floorDrawOrder.clear();
-    floorDrawOrder.reserve(floorCells.size());
-    for (const auto &cell : floorCells)
+    //
+    // Cada baldosa lleva su textura: la de su sala, tunel o casilla pintada si
+    // el editor le puso una (floorTileVariants), o la del nivel. Se dibuja al
+    // ANCHO de la casilla, con su proporcion, para que cualquier imagen sirva
+    // de piso; una del ancho justo (la de siempre) queda igual que antes.
+    // Ancha o cuadrada, va centrada en la casilla; mas alta que ancha (un
+    // lienzo alto con la baldosa abajo, como las piezas de Kenney), apoyada en
+    // el vertice de abajo de la casilla. El editor dibuja con la misma regla
+    // (core/iso-canvas-renderer.ts).
+    std::vector<size_t> floorOrder(level.floorTiles.size());
+    for (size_t i = 0; i < floorOrder.size(); ++i)
     {
-        floorDrawOrder.push_back(level.grid.GridToScreen(cell));
+        floorOrder[i] = i;
+    }
+    std::stable_sort(floorOrder.begin(), floorOrder.end(), [&](size_t a, size_t b)
+                     { return level.floorTiles[a].col + level.floorTiles[a].row <
+                              level.floorTiles[b].col + level.floorTiles[b].row; });
+    const float tileWidth = static_cast<float>(level.grid.GetTileWidth());
+    const float tileHeight = static_cast<float>(level.grid.GetTileHeight());
+    floorDrawOrder.clear();
+    floorDrawOrder.reserve(floorOrder.size());
+    for (const size_t index : floorOrder)
+    {
+        const int variant = index < level.floorTileVariants.size() ? level.floorTileVariants[index] : -1;
+        const FloorLook look = variant >= 0 ? level.floorVariants[static_cast<size_t>(variant)]
+                                            : FloorLook{level.floorTexture, level.floorSourceRect};
+        if (!look.texture || look.source.width <= 0.0f || look.source.height <= 0.0f)
+        {
+            continue;
+        }
+        const Vector2 center = level.grid.GridToScreen(level.floorTiles[index]);
+        const Vector2 size{tileWidth, look.source.height * tileWidth / look.source.width};
+        const float top = size.y > size.x ? center.y + tileHeight / 2.0f - size.y : center.y - size.y / 2.0f;
+        floorDrawOrder.push_back(
+            FloorSprite{look.texture, look.source, Vector2{center.x - size.x / 2.0f, top}, center, size});
     }
 
     // AnimationSystem: un clip por entidad animada, armado desde el nivel.
@@ -191,6 +225,13 @@ void GameSession::PrepareLevel(LevelStart start)
         break;
     }
     inventoryAtLevelStart = inventory;
+
+    // En mosaico, la imagen de fondo se repite en la GPU (ver
+    // DrawBackgroundImage): su textura tiene que estar en modo repeticion.
+    if (level.backgroundTexture && level.backgroundTexture->id != 0 && level.backgroundFit == BackgroundFit::Tile)
+    {
+        SetTextureWrap(*level.backgroundTexture, TEXTURE_WRAP_REPEAT);
+    }
 
     // La camara del nivel nuevo, puesta en su lugar sin transicion. Va al
     // final porque necesita saber quien es el jugador.
@@ -287,6 +328,51 @@ Vector2 GameSession::ScreenSize() const
     return Vector2{static_cast<float>(gfx.GetScreenWidth()), static_cast<float>(gfx.GetScreenHeight())};
 }
 
+// La imagen de fondo llena la VENTANA, no el mundo: se dibuja en pantalla,
+// antes de la pasada del mundo, y por eso queda quieta aunque la camara se
+// mueva y no depende de su resolucion. Va encima del color con el que
+// BeginFrame limpio la pantalla: lo transparente deja ver ese color.
+void GameSession::DrawBackgroundImage()
+{
+    const Texture2D *texture = level.backgroundTexture;
+    // Una imagen que no se pudo cargar queda con id 0 y medida 0: se dibujaria
+    // como un rectangulo blanco tapando el color, o dividiria por cero.
+    if (!texture || texture->id == 0 || texture->width <= 0 || texture->height <= 0)
+    {
+        return;
+    }
+    const Vector2 screen = ScreenSize();
+    const float width = static_cast<float>(texture->width);
+    const float height = static_cast<float>(texture->height);
+    switch (level.backgroundFit)
+    {
+    case BackgroundFit::Stretch:
+        gfx.DrawSprite(*texture, Rectangle{0, 0, width, height}, Rectangle{0, 0, screen.x, screen.y},
+                       Vector2{0, 0}, 0.0f, WHITE);
+        break;
+    case BackgroundFit::Tile:
+        // Un solo dibujo: un recorte del tamaño de la ventana sobre una textura
+        // con repeticion (ver PrepareLevel) la repite sola en la GPU. Con un
+        // bucle, una imagen de 1x1 serian millones de dibujos por cuadro.
+        gfx.DrawSprite(*texture, Rectangle{0, 0, screen.x, screen.y}, Rectangle{0, 0, screen.x, screen.y},
+                       Vector2{0, 0}, 0.0f, WHITE);
+        break;
+    case BackgroundFit::Cover:
+    default:
+    {
+        // La escala que cubre los dos lados; lo que sobra queda fuera de la
+        // ventana, centrado.
+        const float scale = std::max(screen.x / width, screen.y / height);
+        const float drawWidth = width * scale;
+        const float drawHeight = height * scale;
+        gfx.DrawSprite(*texture, Rectangle{0, 0, width, height},
+                       Rectangle{(screen.x - drawWidth) / 2.0f, (screen.y - drawHeight) / 2.0f, drawWidth, drawHeight},
+                       Vector2{0, 0}, 0.0f, WHITE);
+        break;
+    }
+    }
+}
+
 void GameSession::Run()
 {
     while (!gfx.ShouldClose())
@@ -297,7 +383,7 @@ void GameSession::Run()
     // destructores (RAII), en orden inverso al de declaracion en el header.
 }
 
-void GameSession::Benchmark(float seconds)
+void GameSession::Benchmark(float seconds, const std::string &screenshot)
 {
     gfx.SetTargetFPS(0);
     // El primer medio segundo no cuenta: subir texturas a la GPU y llenar las
@@ -329,7 +415,16 @@ void GameSession::Benchmark(float seconds)
               << (culling ? "" : " sin recorte") << " | " << level.name << " | "
               << frames << " cuadros en " << elapsed << " s | " << (frames / elapsed) << " FPS | "
               << (elapsed * 1000.0 / frames) << " ms por cuadro | sprites dibujados "
-              << (drawn.ground + drawn.sorted) << ", fuera de camara " << drawn.culled << std::endl;
+              << (drawn.ground + drawn.sorted) << ", recortados " << drawn.culled << std::endl;
+
+    // Un cuadro mas, que se guarda como imagen al terminar de dibujarse (ver
+    // el final de Update). raylib lo deja junto al ejecutable, con ese nombre.
+    if (!screenshot.empty() && !gfx.ShouldClose())
+    {
+        pendingScreenshot = screenshot;
+        Update(gfx.GetDeltaTime());
+        std::cout << "CAPTURA " << screenshot << std::endl;
+    }
 }
 
 // =============================================================================
@@ -537,22 +632,38 @@ void GameSession::Update(float deltaTime)
         0.299f * background.r + 0.587f * background.g + 0.114f * background.b < 128.0f;
     const Color hudText = darkBackground ? LIGHTGRAY : DARKGRAY;
     gfx.BeginFrame(background);
+    // La imagen de fondo, si el nivel tiene, en pantalla y debajo de todo.
+    DrawBackgroundImage();
     // Pasada del MUNDO: todo lo que sigue, hasta los proyectiles, pasa por la
     // camara. El HUD se dibuja despues de EndWorld, en pantalla.
     gfx.BeginWorld(camera.GetCamera());
 
-    // --- Recorte: lo que ve la camara ------------------------------------
-    // Las dos esquinas de la ventana llevadas al mundo. Lo que cae afuera no
-    // se ordena ni se dibuja (ver ZSortSystem::Submit). Solo el dibujo: las
-    // colisiones, la IA y los eventos siguen corriendo en todo el nivel.
+    // --- Recorte: lo que ve la camara, y un margen ------------------------
+    // Las dos esquinas de la ventana llevadas al mundo, agrandadas
+    // level.cullMarginTiles casillas por lado ("camera.cullMargin", 2 si el
+    // nivel no lo dice; se cambia en el editor, Nivel › Avanzado). Lo que esta
+    // por entrar en pantalla -- la camara avanzando, un enemigo que se acerca
+    // -- ya esta dibujado cuando aparece. Lo que cae afuera no se ordena ni se
+    // dibuja (ver ZSortSystem::Submit). Solo el dibujo: las colisiones, la IA
+    // y los eventos siguen corriendo en todo el nivel. Vale igual en Debug y
+    // en Release: es parte del motor, no de las herramientas.
     const Vector2 viewTopLeft = camera.ScreenToWorld(Vector2{0, 0});
     const Vector2 viewBottomRight = camera.ScreenToWorld(ScreenSize());
     const Rectangle cameraView{viewTopLeft.x, viewTopLeft.y, viewBottomRight.x - viewTopLeft.x,
                                viewBottomRight.y - viewTopLeft.y};
-    // F4 (solo Debug): se recorta contra un rectangulo mas chico, dibujado
-    // abajo, para ver las cosas desaparecer al salir de el.
+    const float cullMargin = level.cullMarginTiles * static_cast<float>(level.grid.GetTileWidth());
+    Rectangle visibleView = cameraView;
+    Rectangle cullView = Grow(cameraView, cullMargin);
+    // F4 (solo Debug): el limite del recorte se mete dentro de la ventana, para
+    // que se vea, y la "ventana" queda adentro de el, a cullMargin. Abajo se
+    // dibujan los dos bordes: lo que sale del de afuera desaparece. Con mucho
+    // zoom o una ventana chica el margen no entra, y solo se ve el de afuera.
     const bool previewCulling = DevTools::kEnabled && dev.showCulling;
-    const Rectangle cullView = previewCulling ? DevTools::PreviewView(cameraView) : cameraView;
+    if (previewCulling)
+    {
+        cullView = DevTools::PreviewView(cameraView);
+        visibleView = Grow(cullView, -cullMargin);
+    }
     // Un rectangulo vacio apaga el recorte (ver SetCulling).
     zsort.SetView(culling ? cullView : Rectangle{0, 0, 0, 0});
 
@@ -563,30 +674,27 @@ void GameSession::Update(float deltaTime)
     //
     // El piso es la excepcion: va en el orden de floorDrawOrder, ya de atras
     // hacia adelante, y el ZSortSystem lo dibuja entero primero sin ordenarlo.
-    for (const Vector2 &screenPos : floorDrawOrder)
+    for (const FloorSprite &tile : floorDrawOrder)
     {
-        if (level.floorTexture)
-        {
-            zsort.Submit(SpriteInstance{
-                level.floorTexture,
-                level.floorSourceRect,
+        zsort.Submit(SpriteInstance{
+            tile.texture,
+            tile.source,
 
-                // posición visual: la textura se centra sobre el rombo
-                Vector2{
-                    screenPos.x - level.floorSourceRect.width / 2.0f,
-                    screenPos.y - level.floorSourceRect.height / 2.0f},
+            // posición visual: la textura se centra sobre el rombo
+            tile.topLeft,
 
-                // posición para Z-sort: el centro de la celda, que es el
-                // punto de apoyo real. Va separado de la posicion visual
-                // justamente para que el offset de arriba no altere el
-                // orden de profundidad.
-                screenPos,
+            // posición para Z-sort: el centro de la celda, que es el punto de
+            // apoyo real. Va separado de la posicion visual justamente para que
+            // el offset de arriba no altere el orden de profundidad.
+            tile.center,
 
-                Vector2{0, 0},
-                0.0f,
-                WHITE,
-                SpriteLayer::Ground});
-        }
+            Vector2{0, 0},
+            0.0f,
+            WHITE,
+            SpriteLayer::Ground,
+
+            // Al ancho de la casilla (ver PrepareLevel).
+            tile.size});
     }
 
     // --- Paredes (SpriteLayer::Object) -----------------------------------
@@ -849,10 +957,16 @@ void GameSession::Update(float deltaTime)
     CombatView::DrawEffects(combatState, gridToWorld);
     CombatView::DrawProjectiles(combatState, gridToWorld);
 
-    // F4: el borde del recorte achicado. Lo que esta del otro lado no se dibujo.
+    // F4: adentro, lo que haria de ventana (fino); afuera, hasta donde se
+    // dibuja con el margen (grueso). Lo que esta mas alla del grueso no se dibujo.
     if (previewCulling)
     {
-        DrawRectangleLinesEx(cullView, 2.0f / camera.GetCamera().zoom, Color{242, 179, 61, 255});
+        const float pixel = 1.0f / camera.GetCamera().zoom;
+        if (visibleView.width > 8.0f * pixel && visibleView.height > 8.0f * pixel)
+        {
+            DrawRectangleLinesEx(visibleView, pixel, Color{242, 179, 61, 160});
+        }
+        DrawRectangleLinesEx(cullView, 2.0f * pixel, Color{242, 179, 61, 255});
     }
     gfx.EndWorld();
 
@@ -960,6 +1074,7 @@ void GameSession::Update(float deltaTime)
             report.ground = drawn.ground;
             report.sorted = drawn.sorted;
             report.culled = drawn.culled;
+            report.cullMarginTiles = level.cullMarginTiles;
             report.entities = static_cast<int>(level.entities.size());
             report.activeEntities = static_cast<int>(std::count_if(
                 level.entities.begin(), level.entities.end(),
@@ -977,6 +1092,16 @@ void GameSession::Update(float deltaTime)
         {
             DevTools::DrawBadge(gfx, defaultFont);
         }
+    }
+
+    // Captura pedida por Benchmark ("--captura"): lo dibujado se lee del
+    // buffer ANTES de presentarlo. Primero se vacia el lote de raylib, que
+    // todavia puede tener sprites sin mandar a la GPU.
+    if (!pendingScreenshot.empty())
+    {
+        rlDrawRenderBatchActive();
+        TakeScreenshot(pendingScreenshot.c_str());
+        pendingScreenshot.clear();
     }
 
     gfx.EndFrame();
