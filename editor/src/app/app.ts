@@ -815,6 +815,7 @@ export class App {
           },
           separator,
           { kind: 'action', label: 'Configuración del juego…', run: () => void this.game.open() },
+          { kind: 'action', label: 'Exportar juego…', run: () => void this.proj.exportGame() },
           separator,
           { kind: 'action', label: 'Mostrar carpeta del editor', run: () => void this.proj.revealWorkspace() },
           { kind: 'action', label: 'Cambiar carpeta del editor…', run: () => void this.proj.changeWorkspace() },
@@ -1092,6 +1093,12 @@ export class App {
             run: () => void this.proj.run(this.engine.otherStart()),
           },
           { kind: 'action', label: 'Configuración del juego…', run: () => void this.game.open() },
+          {
+            kind: 'action',
+            label: 'Exportar juego…',
+            disabled: this.engine.building() !== null || !this.hasFileSystem,
+            run: () => void this.proj.exportGame(),
+          },
           separator,
           // Donde arranca con Ejecutar y F5: lo mismo que el selector de la barra.
           ...this.engine.starts.map((start) => ({

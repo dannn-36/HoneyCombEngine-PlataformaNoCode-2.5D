@@ -34,7 +34,8 @@ set(HONEYCOMB_ENGINE_SOURCES core/GraphicsDevice.cpp core/ResourceManager.cpp
     loader/LevelLoader.cpp loader/ItemLoader.cpp game/Movement.cpp game/Combat.cpp
     game/Inventory.cpp game/Mobility.cpp game/Loot.cpp game/Zones.cpp game/CombatView.cpp
     systems/camera/CameraSystem.cpp game/EventBindings.cpp game/GameSession.cpp
-    game/DevTools.cpp game/GameConfig.cpp game/Progress.cpp game/Screens.cpp game/HealthHud.cpp)
+    game/DevTools.cpp game/GameConfig.cpp game/Progress.cpp game/Screens.cpp game/HealthHud.cpp
+    game/ExportedGame.cpp)
 
 add_executable(engine main.cpp ${HONEYCOMB_ENGINE_SOURCES})
 target_link_libraries(engine PRIVATE raylib SDL2::SDL2 nlohmann_json::nlohmann_json)

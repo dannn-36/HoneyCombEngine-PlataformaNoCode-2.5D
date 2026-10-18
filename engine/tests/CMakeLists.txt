@@ -64,6 +64,7 @@ set(HONEYCOMB_TEST_SOURCES
     test_zones.cpp
     test_game_config.cpp
     test_progress.cpp
+    test_exported_game.cpp
     test_contract.cpp
     test_security.cpp
 )

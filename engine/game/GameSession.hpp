@@ -68,7 +68,11 @@ public:
     //   Continue  retomando la partida guardada, o en el nivel si no hay
     enum class StartMode { Level, Title, Continue };
 
-    GameSession(const std::filesystem::path &levelPath, const GameConfig &gameConfig, StartMode start);
+    // "savesRoot": donde va la carpeta saves/. Vacio = la raiz del proyecto
+    // (<nivel>/../..), que es lo de siempre; un juego exportado pasa la carpeta
+    // del usuario (ver game/ExportedGame.hpp).
+    GameSession(const std::filesystem::path &levelPath, const GameConfig &gameConfig, StartMode start,
+                const std::filesystem::path &savesRoot = {});
 
     GameSession(const GameSession &) = delete;
     GameSession &operator=(const GameSession &) = delete;
@@ -187,6 +191,9 @@ private:
     // guarda en un miembro porque raylib se queda con el puntero.
     GameConfig config;
     std::filesystem::path projectRoot;
+    // Donde se leen y escriben las partidas (<saveRoot>/saves/). Va despues
+    // de projectRoot: se construyen en orden de declaracion.
+    std::filesystem::path saveRoot;
     std::string windowTitle;
 
     // --- Capa 1 + Capa 3: ventana, recursos y carga del nivel ---------------

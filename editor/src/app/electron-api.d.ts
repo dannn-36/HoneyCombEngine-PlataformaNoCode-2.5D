@@ -120,12 +120,39 @@ export interface HoneycombProjectApi {
   /** Borra la partida guardada del juego (saves/partida.json). Sin partida no hace nada. */
   clearSave(): Promise<void>;
 
+  /**
+   * Exporta el juego para Windows (ver ipc/export.js): pide la carpeta con el
+   * dialogo del sistema y arma ahi la carpeta del juego y su .zip. "startLevel"
+   * es el nivel inicial (archivo dentro de levels/); sin el, el de game.json.
+   */
+  exportGame(startLevel: string | null): Promise<GameExportResult>;
+  /** Muestra la ultima exportacion en el explorador de archivos. */
+  revealExport(): Promise<void>;
+
   /** Que motores estan compilados (ver ipc/engine-modes.js). */
   engineStatus(): Promise<Record<EngineMode, boolean>>;
   /** Compila el motor de un modo con CMake. La salida llega por onEngineBuildLog. */
   buildEngine(mode: EngineMode): Promise<{ ok: boolean; executable?: string | null; error?: string }>;
   /** Escucha la salida de la compilacion, de a una linea. Devuelve como dejar de escucharla. */
   onEngineBuildLog(callback: (line: string) => void): () => void;
+}
+
+/**
+ * Como termino una exportacion. "canceled": se cerro el dialogo. "missing": el
+ * motor Release no esta compilado (se puede compilar con buildEngine). Con ok,
+ * donde quedo y lo que le falta al juego (imagenes o niveles que no estan).
+ */
+export interface GameExportResult {
+  ok: boolean;
+  canceled?: boolean;
+  missing?: boolean;
+  error?: string;
+  folder?: string;
+  zip?: string;
+  exe?: string;
+  files?: number;
+  zipBytes?: number;
+  warnings?: string[];
 }
 
 /**

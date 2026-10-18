@@ -516,6 +516,89 @@ export class ProjectController {
     }
   }
 
+  /**
+   * Archivo › Exportar juego…: arma el juego para Windows en una carpeta y un
+   * .zip que se juegan sin el editor (ver ipc/export.js).
+   *
+   * Se exporta lo que esta en el DISCO, igual que Ejecutar corre lo del disco:
+   * por eso guarda antes si hay cambios. Empieza en el nivel inicial de
+   * game.json o, si no dice ninguno, en el nivel abierto.
+   */
+  async exportGame(confirmed = false): Promise<void> {
+    if (!this.hasFileSystem) {
+      this.note('Exportar necesita el editor de escritorio. Ábrelo con "npm run electron".');
+      return;
+    }
+    if (this.dirty()) {
+      await this.save();
+      if (this.dirty()) {
+        this.note('Guarda el nivel antes de exportar el juego.');
+        return;
+      }
+    }
+
+    const config = this.gameConfig.config();
+    const startLevel = config.startLevel || this.levels.fileName();
+    if (!startLevel) {
+      this.note('Falta el nivel inicial: elígelo en Archivo › Configuración del juego › General, o guarda el nivel abierto.');
+      return;
+    }
+    const name = config.name.trim() || 'Mi juego';
+    if (
+      !confirmed &&
+      !window.confirm(
+        `Exportar «${name}» para Windows, empezando en ${startLevel}.\n\n` +
+          'Se copian todos los niveles y recursos de la carpeta del editor. Después eliges dónde guardarlo.',
+      )
+    ) {
+      return;
+    }
+
+    this.note('Exportando «' + name + '»…');
+    let result;
+    try {
+      result = await this.project.exportGame(startLevel);
+    } catch (error) {
+      this.note('No se pudo exportar el juego: ' + this.describe(error));
+      return;
+    }
+    if (result.canceled) {
+      this.note('Exportación cancelada.');
+      return;
+    }
+    if (result.missing) {
+      // El juego exportado lleva el motor Release. Sin el, se ofrece compilarlo
+      // y se sigue sin volver a preguntar lo mismo.
+      if (
+        window.confirm(
+          'Para exportar hace falta el motor Release, que todavía no está compilado. ¿Compilarlo ahora? ' +
+            'La primera vez tarda unos minutos.',
+        ) &&
+        (await this.engine.build('release'))
+      ) {
+        await this.exportGame(true);
+      }
+      return;
+    }
+    if (!result.ok) {
+      this.note('No se pudo exportar el juego: ' + (result.error ?? 'error desconocido'));
+      return;
+    }
+
+    const megabytes = ((result.zipBytes ?? 0) / (1024 * 1024)).toFixed(1);
+    this.note(`Juego exportado en ${result.folder} (${result.files} archivos; el .zip pesa ${megabytes} MB).`);
+    const warnings = result.warnings ?? [];
+    for (const warning of warnings.slice(0, 5)) {
+      this.note('Aviso: ' + warning);
+    }
+    if (warnings.length > 5) {
+      this.note(`… y ${warnings.length - 5} avisos más del mismo tipo.`);
+    }
+    if (window.confirm('Juego exportado. ¿Abrir la carpeta donde quedó?')) {
+      await this.project.revealExport();
+    }
+  }
+
   /** Ruta absoluta de algo de la carpeta del editor, a partir de su ruta relativa. */
   private absolutePath(relativePath: string): string | null {
     const root = this.project.projectRoot();

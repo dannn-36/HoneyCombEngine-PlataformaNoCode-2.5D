@@ -70,6 +70,18 @@ El piso se arma en tres capas, y cada una pisa a la anterior: **todo el nivel**,
 
 **Variables y marcas.** Las variables duran toda la partida, aunque se cambie de nivel: *Fijar variable* y *Sumar a variable* las cambian y *Si la variable…* las compara (en el desplegable de un evento, *+ Nueva variable…* crea una). Las marcas de *Activar marca* se borran al pasar de nivel, salvo que se marque su casilla `persist`.
 
+**Exportar el juego.** *Archivo › Exportar juego…* arma el juego terminado para **Windows**, para jugarlo o mandarlo sin el editor. Hay que elegir dónde, y ahí quedan una carpeta con el nombre del juego y su `.zip`:
+
+| En la carpeta | Qué es |
+| :--- | :--- |
+| `<Juego>.exe` | El motor **Release** renombrado. Abre sin ventana de consola y arranca en la portada. |
+| `*.dll` | Lo que necesita para correr en una PC sin nada instalado (SDL2 y el runtime de MinGW). |
+| `game.json`, `levels/`, `assets/` | Todo lo de la carpeta del editor, menos los respaldos `.bak` y los temporales. |
+| `LEEME.txt`, `AVISOS-DE-TERCEROS.txt` | Cómo se juega, y las licencias de raylib, SDL2 y nlohmann-json. |
+| `honeycomb-export.json` | La marca de juego exportado (ver `engine/game/ExportedGame.hpp`). |
+
+Empieza en el nivel inicial de *Configuración del juego › General* o, si no hay, en el nivel abierto. Si hay cambios, guarda antes. Si el motor Release no está compilado, ofrece compilarlo. Avisa en la Consola de lo que falte: imágenes o sonidos que un nivel usa y no están, o niveles de *Pasar de nivel* que no existen. La partida del juego exportado se guarda en `%APPDATA%\<Juego>\saves`, no junto al juego. Exportar de nuevo reemplaza la exportación anterior, pero nunca una carpeta que no sea una exportación. Por ahora solo para Windows.
+
 **Nivel o Portada al ejecutar.** Junto a *Debug / Release* hay un segundo selector, **Nivel / Portada** (también en el menú *Ejecutar*), que se recuerda entre sesiones. Con **Nivel**, *Ejecutar* y `F5` abren directo el nivel que se está editando, para probarlo rápido. Con **Portada** arrancan como el juego terminado: la portada, y *Nueva partida* empieza en el nivel inicial. `Shift+F5` arranca en el que no está elegido, sin cambiar el selector.
 
 Los niveles, imágenes y bibliotecas que crees con el editor se guardan en **`Documentos/HoneyComb`** (la *carpeta del editor*, ver sección 7.2), no en el repositorio. Se puede cambiar desde *Archivo › Cambiar carpeta del editor…* y abrir con *Archivo › Mostrar carpeta del editor*.

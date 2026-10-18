@@ -182,6 +182,9 @@ function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}
       async openExternal(url) {
         abiertosShell.push(url);
       },
+      showItemInFolder(p) {
+        abiertosShell.push(p);
+      },
     },
     contextBridge: {
       exposeInMainWorld(nombre, api) {
@@ -329,6 +332,7 @@ async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = fal
   cargar('textures.js').register();
   cargar('run.js').register();
   cargar('engine-build.js').register();
+  cargar('export.js').register();
 
   const remitente = new WebContentsDePrueba();
   const handlers = electron.__prueba.handlers;

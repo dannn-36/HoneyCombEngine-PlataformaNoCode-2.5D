@@ -52,6 +52,11 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   // Borra la partida guardada del juego, y solo esa (ver ipc/run.js).
   clearSave: () => ipcRenderer.invoke('game:clearSave'),
 
+  // Exportar el juego (ver ipc/export.js). Recibe solo el nivel inicial: la
+  // carpeta de destino la elige el dialogo en el proceso principal.
+  exportGame: (startLevel) => ipcRenderer.invoke('game:export', { startLevel }),
+  revealExport: () => ipcRenderer.invoke('game:revealExport'),
+
   // Los dos motores: cuales estan compilados, y compilar uno (ver
   // ipc/engine-build.js). La salida de la compilacion llega de a una linea.
   engineStatus: () => ipcRenderer.invoke('engine:status'),

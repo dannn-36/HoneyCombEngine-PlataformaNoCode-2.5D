@@ -31,6 +31,7 @@ const ipcConvert = require('./ipc/convert');
 const ipcTextures = require('./ipc/textures');
 const ipcRun = require('./ipc/run');
 const ipcEngineBuild = require('./ipc/engine-build');
+const ipcExport = require('./ipc/export');
 const { initWorkspace } = require('./ipc/project-root');
 
 const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
@@ -168,6 +169,7 @@ app.whenReady().then(async () => {
   ipcTextures.register();
   ipcRun.register();
   ipcEngineBuild.register();
+  ipcExport.register();
 
   createWindow();
 

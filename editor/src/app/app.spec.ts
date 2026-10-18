@@ -7,6 +7,7 @@
 
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import type { GameExportResult } from './electron-api';
 import { LevelChangedOnDiskError, ProjectService } from './services/project.service';
 
 describe('App', () => {
@@ -168,6 +169,86 @@ describe('App', () => {
       const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
       app.onBeforeUnload(event);
       expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe('exportar juego', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    // Un editor "de escritorio" con un nivel abierto y guardado; exportGame del
+    // servicio contesta lo que diga cada prueba.
+    function editorQueExporta(...answers: GameExportResult[]) {
+      const app = TestBed.createComponent(App).componentInstance;
+      (app.proj as unknown as { hasFileSystem: boolean }).hasFileSystem = true;
+      app.levels.fileName.set('inicio.json');
+      const project = TestBed.inject(ProjectService);
+      const exportGame = vi.spyOn(project, 'exportGame');
+      for (const answer of answers) exportGame.mockResolvedValueOnce(answer);
+      const reveal = vi.spyOn(project, 'revealExport').mockResolvedValue();
+      return { app, exportGame, reveal };
+    }
+    const lastNotes = (app: App) => app.log().join('\n');
+
+    it('pregunta antes, y exporta desde el nivel abierto si game.json no dice otro', async () => {
+      const { app, exportGame } = editorQueExporta({ ok: true, folder: 'D:/J/Mi juego', files: 9, zipBytes: 1 });
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(true).mockReturnValueOnce(false);
+      await app.proj.exportGame();
+      expect(confirm.mock.calls[0][0]).toContain('inicio.json');
+      expect(exportGame).toHaveBeenCalledWith('inicio.json');
+      expect(lastNotes(app)).toContain('Juego exportado en D:/J/Mi juego');
+    });
+
+    it('cancelar la pregunta no exporta nada', async () => {
+      const { app, exportGame } = editorQueExporta();
+      vi.spyOn(window, 'confirm').mockReturnValue(false);
+      await app.proj.exportGame();
+      expect(exportGame).not.toHaveBeenCalled();
+    });
+
+    it('muestra los avisos de lo que le falta al juego', async () => {
+      const warnings = ['levels/a.json usa assets/x.png, que no está', 'game.json usa assets/y.png, que no está'];
+      const { app } = editorQueExporta({ ok: true, folder: 'D:/J', files: 3, zipBytes: 1, warnings });
+      vi.spyOn(window, 'confirm').mockReturnValueOnce(true).mockReturnValueOnce(false);
+      await app.proj.exportGame();
+      expect(lastNotes(app)).toContain('Aviso: levels/a.json usa assets/x.png');
+      expect(lastNotes(app)).toContain('Aviso: game.json usa assets/y.png');
+    });
+
+    it('al terminar ofrece abrir la carpeta', async () => {
+      const { app, reveal } = editorQueExporta({ ok: true, folder: 'D:/J', files: 3, zipBytes: 1 });
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      await app.proj.exportGame();
+      expect(reveal).toHaveBeenCalledOnce();
+    });
+
+    it('sin motor Release ofrece compilarlo y despues exporta sin volver a preguntar', async () => {
+      const { app, exportGame } = editorQueExporta(
+        { ok: false, missing: true, error: 'sin motor' },
+        { ok: true, folder: 'D:/J', files: 3, zipBytes: 1 },
+      );
+      const build = vi.spyOn(app.engine, 'build').mockResolvedValue(true);
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      await app.proj.exportGame();
+      expect(build).toHaveBeenCalledWith('release');
+      expect(exportGame).toHaveBeenCalledTimes(2);
+      // Exportar, compilar y abrir la carpeta: el "exportar?" no se repite.
+      expect(confirm).toHaveBeenCalledTimes(3);
+    });
+
+    it('un error de la exportacion se muestra en la consola', async () => {
+      const { app } = editorQueExporta({ ok: false, error: 'Ya existe una carpeta "Mi juego" que no es una exportación' });
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      await app.proj.exportGame();
+      expect(lastNotes(app)).toContain('No se pudo exportar el juego: Ya existe una carpeta');
+    });
+
+    it('con cambios sin guardar guarda antes, y si no se guarda no exporta', async () => {
+      const { app, exportGame } = editorQueExporta();
+      app.dirty.set(true);
+      vi.spyOn(app.proj, 'save').mockResolvedValue();
+      await app.proj.exportGame();
+      expect(exportGame).not.toHaveBeenCalled();
+      expect(lastNotes(app)).toContain('Guarda el nivel antes de exportar');
     });
   });
 

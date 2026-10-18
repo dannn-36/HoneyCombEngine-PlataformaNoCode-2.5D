@@ -9,6 +9,7 @@ import type {
   EngineMode,
   EngineRunResult,
   EngineStart,
+  GameExportResult,
   LevelImport,
   ProjectFileData,
   ProjectNode,
@@ -387,6 +388,16 @@ export class ProjectService {
   /** Borra la partida guardada, para probar el juego desde cero. */
   async clearSave(): Promise<void> {
     await window.honeycombProject.clearSave();
+  }
+
+  /** Exporta el juego para Windows (ver ipc/export.js). La carpeta la elige el dialogo del sistema. */
+  async exportGame(startLevel: string | null): Promise<GameExportResult> {
+    return window.honeycombProject.exportGame(startLevel);
+  }
+
+  /** Muestra la ultima exportacion en el explorador de archivos. */
+  async revealExport(): Promise<void> {
+    return window.honeycombProject.revealExport();
   }
 
   /** El catalogo de eventos es del programa: se lee de la instalacion, no de la carpeta del editor. */

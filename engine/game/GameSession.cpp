@@ -59,11 +59,15 @@ void DrawHealthBar(float x, float y, float width, float height, float ratio, Col
 // El orden de la lista de inicializacion sigue al de declaracion en el header,
 // que es el que importa: la ventana antes que los recursos, y el loader antes
 // que el nivel que carga.
-GameSession::GameSession(const std::filesystem::path &levelPath, const GameConfig &gameConfig, StartMode start)
+GameSession::GameSession(const std::filesystem::path &levelPath, const GameConfig &gameConfig, StartMode start,
+                         const std::filesystem::path &savesRoot)
     : config(gameConfig),
       // La raiz del proyecto: levels/ esta adentro, y ahi viven game.json,
       // assets/ y saves/.
       projectRoot(levelPath.parent_path().parent_path()),
+      // Donde va saves/: la del proyecto, salvo en un juego exportado (ver
+      // game/ExportedGame.hpp), que guarda en la carpeta del usuario.
+      saveRoot(savesRoot.empty() ? levelPath.parent_path().parent_path() : savesRoot),
       // El titulo dice cual es: el nombre del juego, y si es la de desarrollo.
       windowTitle(WindowTitle(gameConfig, DevTools::kEnabled)),
       gfx(gameConfig.width, gameConfig.height, windowTitle.c_str()),
@@ -536,7 +540,7 @@ void GameSession::GoToTitle()
     saveSlot = Progress::kGameSlot;
     // "Continuar" solo si hay una partida que continuar; "Creditos" solo si hay creditos.
     titleMenu = Screens::Menu{{kNewGame}, 0};
-    if (Progress::Exists(projectRoot, saveSlot))
+    if (Progress::Exists(saveRoot, saveSlot))
     {
         titleMenu.items.push_back(kContinue);
         titleMenu.selected = 1;
@@ -651,7 +655,7 @@ bool GameSession::ContinueGame()
 {
     SaveData save;
     Progress::LoadStatus status = Progress::LoadStatus::Missing;
-    if (!Progress::Load(projectRoot, save, saveSlot, &status))
+    if (!Progress::Load(saveRoot, save, saveSlot, &status))
     {
         // Sin partida no hay nada que decir; una rota o de otra version, si:
         // si no, "Continuar" parece no hacer nada.
@@ -810,7 +814,7 @@ void GameSession::SaveGame()
     save.levelFlags.assign(flags.begin(), flags.end());
     save.gameFlags.assign(gameFlags.begin(), gameFlags.end());
     save.variables = variables;
-    if (Progress::Write(projectRoot, save, saveSlot))
+    if (Progress::Write(saveRoot, save, saveSlot))
     {
         ShowMessage("Partida guardada", EventBindings::kPickupMessageSeconds);
     }
@@ -940,7 +944,7 @@ void GameSession::ShowScreenForTest(const std::string &name)
         screen = Screen::Playing;
         gameOver = true;
         gameOverMenu = Screens::Menu{
-            {Progress::Exists(projectRoot, saveSlot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame}, 0};
+            {Progress::Exists(saveRoot, saveSlot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame}, 0};
     }
 }
 
@@ -1193,7 +1197,7 @@ void GameSession::Update(float deltaTime)
         {
             gameOver = true;
             gameOverMenu = Screens::Menu{
-                {Progress::Exists(projectRoot, saveSlot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame},
+                {Progress::Exists(saveRoot, saveSlot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame},
                 0};
         }
         else if (playerAlive)

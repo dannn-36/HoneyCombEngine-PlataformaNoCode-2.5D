@@ -64,6 +64,8 @@ function fakeProject() {
     clearSave: vi.fn(async () => {
       files.delete(SAVE_FILE);
     }),
+    exportGame: vi.fn(async (startLevel: string | null) => ({ ok: true, folder: 'D:/Juego', startLevel })),
+    revealExport: vi.fn(async () => undefined),
     engineStatus: vi.fn(async () => ({ debug: true, release: false })),
     buildEngine: vi.fn(async () => {
       for (const listener of buildListeners) {

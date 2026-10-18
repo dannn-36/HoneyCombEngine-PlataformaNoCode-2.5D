@@ -27,7 +27,8 @@
 // nivel (ver schema/level.schema.json). Cambiar el juego = cambiar el JSON, sin
 // recompilar. Eso es lo que hace que el editor NoCode tenga sentido.
 //
-// Uso:  engine.exe [ruta/al/nivel.json]     (por defecto: levels/test_level.json)
+// Uso:  engine.exe [ruta/al/nivel.json]     (por defecto: levels/test_level.json;
+//                                            en un juego exportado, su portada)
 //       engine.exe <nivel> --bench <segundos>   mide los FPS sin tope y sale
 //       ... --sin-recorte                       dibuja todo, aunque no se vea
 //       ... --captura <archivo.png>             guarda el ultimo cuadro (junto al .exe)
@@ -48,6 +49,7 @@
 #include <iostream>
 #include <string>
 
+#include "game/ExportedGame.hpp"
 #include "game/GameSession.hpp"
 
 int main(int argc, char *argv[])
@@ -70,8 +72,23 @@ int main(int argc, char *argv[])
         std::filesystem::current_path(executableDirectory);
     }
 
+    // Un juego exportado desde el editor (ver game/ExportedGame.hpp): su marca
+    // esta junto al ejecutable. Sin marca, el motor de siempre.
+    const ExportedGame::Info exported = ExportedGame::Detect(executableDirectory);
+    const std::string gameTitle = exported.name.empty() ? std::string("HoneyComb") : exported.name;
+
     std::filesystem::path levelPath = "levels/test_level.json";
-    if (argc >= 2)
+    if (argc < 2 && exported.exported)
+    {
+        // Doble clic en el juego exportado: su nivel inicial, desde la portada.
+        levelPath = ExportedGame::StartLevel(executableDirectory, exported);
+        if (levelPath.empty())
+        {
+            ExportedGame::ShowFatalError(gameTitle, "No se encontró ningún nivel en la carpeta levels del juego.");
+            return 1;
+        }
+    }
+    else if (argc >= 2)
     {
         levelPath = std::filesystem::path(argv[1]);
         if (levelPath.is_relative())
@@ -103,7 +120,9 @@ int main(int argc, char *argv[])
     bool culling = true;
     std::string screenshot;
     std::string testScreen;
-    GameSession::StartMode start = GameSession::StartMode::Level;
+    // El juego exportado abierto sin argumentos arranca como un juego: en la portada.
+    GameSession::StartMode start =
+        argc < 2 && exported.exported ? GameSession::StartMode::Title : GameSession::StartMode::Level;
     for (int i = 2; i < argc; ++i)
     {
         const std::string option = argv[i];
@@ -149,7 +168,11 @@ int main(int argc, char *argv[])
         // La configuracion del juego, de la raiz del proyecto (<nivel>/../..),
         // antes de abrir la ventana: de ahi salen su tamaño y su titulo.
         const GameConfig config = LoadGameConfig(levelPath.parent_path().parent_path());
-        GameSession session(levelPath, config, start);
+        // Las partidas de un juego exportado van a la carpeta del usuario
+        // (%APPDATA%\<Juego>); las del editor, a la del proyecto, como siempre.
+        const std::filesystem::path saveRoot =
+            exported.exported ? ExportedGame::UserSaveRoot(exported.name) : std::filesystem::path();
+        GameSession session(levelPath, config, start, saveRoot);
         session.SetCulling(culling);
         if (!testScreen.empty())
         {
@@ -167,8 +190,16 @@ int main(int argc, char *argv[])
     catch (const std::exception &error)
     {
         // Un nivel inicial roto o inexistente: se avisa por consola en vez de
-        // morir con un "terminate called after throwing...".
-        std::cerr << "No se pudo arrancar: " << error.what() << std::endl;
+        // morir con un "terminate called after throwing...". El juego
+        // exportado no tiene consola: ahi se avisa con una ventana.
+        if (exported.exported)
+        {
+            ExportedGame::ShowFatalError(gameTitle, std::string("No se pudo abrir el juego.\n\n") + error.what());
+        }
+        else
+        {
+            std::cerr << "No se pudo arrancar: " << error.what() << std::endl;
+        }
         return 1;
     }
     return 0;
