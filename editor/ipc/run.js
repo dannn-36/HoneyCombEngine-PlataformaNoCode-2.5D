@@ -16,10 +16,11 @@
 
 const path = require('node:path');
 const fsSync = require('node:fs');
+const fs = require('node:fs/promises');
 const { spawn } = require('node:child_process');
 const { ipcMain } = require('electron');
 
-const { INSTALL_ROOT, getProjectRoot } = require('./project-root');
+const { INSTALL_ROOT, getProjectRoot, resolveInProject } = require('./project-root');
 const { MODES, isMode, findEngineExecutable } = require('./engine-modes');
 
 /**
@@ -35,7 +36,8 @@ function engineRoots(levelPath) {
 
 function register() {
   // mode: 'debug' (desarrollo, con F3) o 'release' (optimizado). Ver engine-modes.js.
-  ipcMain.handle('project:run', async (_event, { levelPath, mode }) => {
+  // start: 'level' (directo en el nivel) o 'title' (en la portada de game.json).
+  ipcMain.handle('project:run', async (_event, { levelPath, mode, start }) => {
     if (!levelPath) {
       return { ok: false, error: 'No hay un nivel guardado para ejecutar.' };
     }
@@ -59,7 +61,9 @@ function register() {
     //
     // detached + unref: el juego es un proceso aparte con su propia ventana, y
     // no debe morir si se cierra el editor ni bloquear este handler.
-    const child = spawn(executable, [levelPath], {
+    // --portada: arranca como el juego terminado, en la portada (ver engine/main.cpp).
+    const args = start === 'title' ? [levelPath, '--portada'] : [levelPath];
+    const child = spawn(executable, args, {
       cwd: path.dirname(executable),
       detached: true,
       stdio: 'ignore',
@@ -83,6 +87,13 @@ function register() {
     }
 
     return { ok: true, executable };
+  });
+
+  // La partida guardada que escribe el motor (engine/game/Progress.cpp). Una
+  // ruta fija y no una que mande la UI: este permiso borra ese archivo y nada
+  // mas. Sin partida no es un error, ya esta como se pidio.
+  ipcMain.handle('game:clearSave', async () => {
+    await fs.rm(resolveInProject('saves/partida.json'), { force: true });
   });
 }
 

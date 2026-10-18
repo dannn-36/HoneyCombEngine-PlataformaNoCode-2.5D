@@ -63,6 +63,15 @@ public:
     OnFullInventory OnFull() const { return onFull_; }
     const std::vector<InventorySlot>& Weapons() const { return weapons_; }
 
+    // Lo que se guarda en la partida: los ids de las armas, en orden.
+    std::vector<std::string> WeaponIds() const;
+
+    // Vuelve a un inventario guardado (ver game/Progress.hpp): los casilleros
+    // los decide el nivel ("config"), las armas salen de "items" por id, en el
+    // orden en que estaban. Un id que no esta en el catalogo se pierde.
+    void Restore(const InventoryConfig& config, const ItemCatalog& items, const std::vector<std::string>& weaponIds,
+                 int activeIndex, int coinCount);
+
     int coins = 0;
 
 private:

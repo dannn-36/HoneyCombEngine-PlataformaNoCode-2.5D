@@ -226,12 +226,20 @@ export class EventsController {
    * siempre la forma completa que el motor espera, y para que el formulario
    * dinamico tenga algo a que enlazarse desde el primer render.
    * entity_ref y string comparten default (''): un id vacio es "sin elegir".
+   * Un "choice" arranca en su primera opcion, y un parametro con "default"
+   * en el catalogo, en ese ("Sumar a variable" suma 1, no 0).
    */
   private defaultParams(entry: CatalogEntry): Record<string, unknown> {
     const params: Record<string, unknown> = {};
     for (const key of Object.keys(entry.params)) {
-      const type = entry.params[key].type;
-      params[key] = type === 'number' ? 0 : type === 'boolean' ? false : '';
+      const def = entry.params[key];
+      if (def.default !== undefined) {
+        params[key] = def.default;
+      } else if (def.type === 'choice') {
+        params[key] = def.options?.[0]?.value ?? '';
+      } else {
+        params[key] = def.type === 'number' ? 0 : def.type === 'boolean' ? false : '';
+      }
     }
     return params;
   }

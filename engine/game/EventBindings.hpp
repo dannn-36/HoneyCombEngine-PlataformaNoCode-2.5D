@@ -52,7 +52,13 @@ struct Context {
     LevelEntity** player = nullptr;
     std::unordered_map<std::string, LevelEntity*>* entityById = nullptr;
     // Marcas del puzzle ("tiene_llave"): las activa set_flag, las lee flag_is_set.
+    // Las del nivel se borran al cambiar de nivel; las de la partida (set_flag
+    // con "persist") duran hasta empezar otra partida y se guardan con ella.
     std::unordered_set<std::string>* flags = nullptr;
+    std::unordered_set<std::string>* gameFlags = nullptr;
+    // Variables de la partida ("llaves", "puntos"): set_variable, add_variable y
+    // la condicion variable_compare. Duran la partida y se guardan con ella.
+    std::unordered_map<std::string, float>* variables = nullptr;
     // La llena cada frame CollisionSystem::Flush(); la lee on_collision.
     std::vector<CollisionPair>* collisions = nullptr;
     Inventory* inventory = nullptr;
@@ -71,6 +77,8 @@ struct Context {
     std::function<void(const std::filesystem::path& target, const std::string& title, bool restart)>
         beginTransition;
     std::function<void(const std::string& text, float seconds)> showMessage;
+    // "Guardar partida": la escribe GameSession, que es quien sabe que guardar.
+    std::function<void()> saveGame;
 };
 
 // Registra los triggers, condiciones y acciones del catalogo en "events".

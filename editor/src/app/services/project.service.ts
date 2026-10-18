@@ -1,12 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 
 import { normalizePreset } from '../core/characters';
+import { gameConfigForDisk, normalizeGameConfig } from '../core/game-config';
 import { normalizeItem } from '../core/items';
 import type {
   ConvertSession,
   ConvertSource,
   EngineMode,
   EngineRunResult,
+  EngineStart,
   LevelImport,
   ProjectFileData,
   ProjectNode,
@@ -14,12 +16,17 @@ import type {
   WorkspaceInfo,
 } from '../electron-api';
 import { CharacterPreset } from '../models/character-preset.model';
+import { GameConfig } from '../models/game-config.model';
 import { ItemDef } from '../models/item.model';
 
 /** Archivo del proyecto con los personajes configurados, junto a levels/ y assets/. */
 export const CHARACTERS_FILE = 'characters.json';
 /** Archivo del proyecto con la biblioteca de objetos (armas, curaciones, monedas). */
 export const ITEMS_FILE = 'items.json';
+/** Archivo del proyecto con la configuracion del juego: ventana, portada, HUD, variables. */
+export const GAME_FILE = 'game.json';
+/** La partida guardada que escribe el motor (ver engine/game/Progress.hpp). */
+export const SAVE_FILE = 'saves/partida.json';
 import { EventCatalog } from '../models/event-catalog.model';
 import { Level } from '../models/level.model';
 
@@ -277,6 +284,50 @@ export class ProjectService {
     await window.honeycombProject.writeFile(ITEMS_FILE, JSON.stringify({ items }, null, 2));
   }
 
+  /**
+   * La configuracion del juego (game.json). Sin archivo es la de siempre, y
+   * "exists" dice si lo habia. Un JSON roto SI se informa, por lo mismo que
+   * characters.json: tratarlo como vacio haria que guardar pise lo que habia.
+   */
+  async readGameConfig(): Promise<{ config: GameConfig; exists: boolean }> {
+    let contents: string;
+    try {
+      contents = await window.honeycombProject.readFile(GAME_FILE);
+    } catch (error) {
+      if (String(error).includes('ENOENT')) {
+        return { config: normalizeGameConfig(undefined), exists: false };
+      }
+      throw error;
+    }
+    try {
+      return { config: normalizeGameConfig(JSON.parse(contents)), exists: true };
+    } catch {
+      throw new Error(`${GAME_FILE} no es un JSON valido.`);
+    }
+  }
+
+  async writeGameConfig(config: GameConfig): Promise<void> {
+    await window.honeycombProject.writeFile(GAME_FILE, JSON.stringify(gameConfigForDisk(config), null, 2));
+  }
+
+  /**
+   * La partida guardada del motor, si hay: en que nivel quedo. Solo se lee
+   * para mostrarlo; la escribe el juego, nunca el editor.
+   */
+  async readSaveInfo(): Promise<{ level: string } | null> {
+    try {
+      const raw = JSON.parse(await window.honeycombProject.readFile(SAVE_FILE)) as { level?: unknown };
+      return { level: typeof raw?.level === 'string' ? raw.level : '' };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Borra la partida guardada, para probar el juego desde cero. */
+  async clearSave(): Promise<void> {
+    await window.honeycombProject.clearSave();
+  }
+
   /** El catalogo de eventos es del programa: se lee de la instalacion, no de la carpeta del editor. */
   async readEventCatalog(): Promise<EventCatalog> {
     const contents = await window.honeycombProject.readEventCatalog();
@@ -291,8 +342,8 @@ export class ProjectService {
    * el propio motor para encontrar los assets. "mode" elige cual de los dos
    * motores (ver ipc/engine-modes.js).
    */
-  async runLevel(levelPath: string, mode: EngineMode): Promise<EngineRunResult> {
-    return window.honeycombProject.run(levelPath, mode);
+  async runLevel(levelPath: string, mode: EngineMode, start: EngineStart = 'level'): Promise<EngineRunResult> {
+    return window.honeycombProject.run(levelPath, mode, start);
   }
 
   /** Que motores estan compilados. */
@@ -344,6 +395,28 @@ export class ProjectService {
       }
     };
     await walk('assets/textures', '', 0);
+    return names;
+  }
+
+  /**
+   * Los audios de assets/ (OGG, MP3, WAV), con su ruta relativa a assets/
+   * ("sounds/tema.ogg"), que es como los guarda game.json y como los busca
+   * el motor. Se recorre assets/ entero hasta tres niveles: la musica no
+   * tiene una carpeta obligatoria.
+   */
+  async listSounds(): Promise<string[]> {
+    const names: string[] = [];
+    const walk = async (dir: string, prefix: string, depth: number): Promise<void> => {
+      const entries = await window.honeycombProject.listEntries(dir);
+      for (const entry of entries) {
+        if (entry.kind === 'file' && /\.(ogg|mp3|wav)$/i.test(entry.name)) {
+          names.push(prefix + entry.name);
+        } else if (entry.kind === 'dir' && depth < 3) {
+          await walk(entry.path, prefix + entry.name + '/', depth + 1);
+        }
+      }
+    };
+    await walk('assets', '', 0);
     return names;
   }
 }

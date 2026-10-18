@@ -31,7 +31,7 @@ add_executable(engine main.cpp core/GraphicsDevice.cpp core/ResourceManager.cpp
     loader/LevelLoader.cpp loader/ItemLoader.cpp game/Movement.cpp game/Combat.cpp
     game/Inventory.cpp game/Mobility.cpp game/Loot.cpp game/Zones.cpp game/CombatView.cpp
     systems/camera/CameraSystem.cpp game/EventBindings.cpp game/GameSession.cpp
-    game/DevTools.cpp)
+    game/DevTools.cpp game/GameConfig.cpp game/Progress.cpp game/Screens.cpp game/HealthHud.cpp)
 target_link_libraries(engine PRIVATE raylib SDL2::SDL2 nlohmann_json::nlohmann_json)
 target_include_directories(engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

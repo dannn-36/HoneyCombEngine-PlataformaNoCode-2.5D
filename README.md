@@ -54,6 +54,24 @@ En *Nivel › Básico*, debajo del color de fondo, *Imagen de fondo* pone cualqu
 
 El piso se arma en tres capas, y cada una pisa a la anterior: **todo el nivel**, **cada sala o túnel**, y **casillas sueltas** pintadas a mano. Se cambia desde *Recursos › Texturas*: al elegir una textura aparecen *Todo el nivel*, *Una sala o túnel…* y *Pintar casillas* (clic o arrastrar pinta; `Alt` + clic devuelve la casilla a la de su sala o del nivel). En *Nivel › Piso* se ve qué tiene cada capa y se deshace. Las mejores imágenes son rombos planos 2:1 (como `floor.png` o `presentacion/piso_*.png`); se dibujan al ancho de la casilla, y una más alta que ancha se apoya en el borde de abajo de la casilla. El motor no sabe de capas: al guardar, el editor las resuelve en `visuals.floorVariants` y en `floorVariant` de cada casilla de `tiles` (ver `editor/src/app/core/floors.ts`).
 
+#### Configuración del juego
+
+*Archivo › Configuración del juego…* arma lo que es del **juego** y no de un nivel. Se guarda en `game.json`, en la raíz de la carpeta del editor (formato en `schema/game.schema.json`); sin ese archivo el motor arranca como siempre. Cada pestaña tiene su vista previa a la proporción de la ventana del juego:
+
+| Pestaña | Qué se elige |
+| :--- | :--- |
+| **General** | Nombre del juego (título de la ventana), ícono, resolución (de una lista o a mano), pantalla completa (`F11` la alterna jugando) y el **nivel inicial** de *Nueva partida*. |
+| **Portada** | Estilo **Centrado**, **Lateral** (panel tipo RPG) o **Minimalista**; título y subtítulo con su color y tamaño; fondo de color o imagen (*Cubrir*, *Estirar*, *Mosaico*); colores de las opciones; música. El menú trae *Nueva partida*, *Continuar* (si hay partida guardada), *Créditos* (si hay) y *Salir*. |
+| **Pausa y créditos** | Título de la pausa (`Esc`), título y color de la pantalla de derrota, y los créditos (un renglón por línea; `# ` al principio = título de sección). |
+| **HUD** | La vida como **barra**, **corazones**, **segmentos** o **número**; esquina, tamaño, colores, borde, la palabra *Vida* y el número; imágenes propias (corazón lleno/vacío, relleno y marco de la barra); y qué más se ve: monedas, inventario, barra del jefe, barras sobre las cabezas, ayuda de teclas. |
+| **Progreso** | Las **variables de la partida** con su valor inicial, y la partida guardada (se puede borrar para probar desde cero). |
+
+**Guardar la partida.** Una entidad con *Qué es › Punto de control* guarda la partida cuando el jugador pasa cerca, y la acción de evento *Guardar partida* hace lo mismo. Hay una sola partida (`saves/partida.json`): *Continuar* en la portada y *Volver al punto de control* al perder la retoman con la vida, las armas, las monedas, las marcas y las variables.
+
+**Variables y marcas.** Las variables duran toda la partida, aunque se cambie de nivel: *Fijar variable* y *Sumar a variable* las cambian y *Si la variable…* las compara (en el desplegable de un evento, *+ Nueva variable…* crea una). Las marcas de *Activar marca* se borran al pasar de nivel, salvo que se marque su casilla `persist`.
+
+**Nivel o Portada al ejecutar.** Junto a *Debug / Release* hay un segundo selector, **Nivel / Portada** (también en el menú *Ejecutar*), que se recuerda entre sesiones. Con **Nivel**, *Ejecutar* y `F5` abren directo el nivel que se está editando, para probarlo rápido. Con **Portada** arrancan como el juego terminado: la portada, y *Nueva partida* empieza en el nivel inicial. `Shift+F5` arranca en el que no está elegido, sin cambiar el selector.
+
 Los niveles, imágenes y bibliotecas que crees con el editor se guardan en **`Documentos/HoneyComb`** (la *carpeta del editor*, ver sección 7.2), no en el repositorio. Se puede cambiar desde *Archivo › Cambiar carpeta del editor…* y abrir con *Archivo › Mostrar carpeta del editor*.
 
 El asistente **no reemplaza** la guía de abajo: si prefieres montar el entorno paso a paso, o algo falla y quieres entender qué hace cada pieza, las secciones 1 a 9 siguen siendo la referencia completa.
@@ -391,7 +409,9 @@ Documentos/HoneyComb/              # o la que se elija en Archivo › Cambiar ca
 │   ├── textures/                  # Imágenes ya convertidas a PNG, con nombres que el motor puede abrir
 │   └── sounds/
 ├── characters.json                # Personajes configurados
-└── items.json                     # Biblioteca de objetos
+├── items.json                     # Biblioteca de objetos
+├── game.json                      # Configuración del juego: ventana, portada, HUD, variables
+└── saves/partida.json             # La partida guardada (la escribe el juego, no el editor)
 ```
 
 La primera vez que se abre el editor, si esta carpeta no existe, se crea con una **copia** de `levels/`, `assets/`, `characters.json` e `items.json` del repositorio. El runtime no necesita saber nada de esto: busca los assets en `<nivel>/../../assets`, así que un nivel guardado en `levels/` corre tal cual. La carpeta elegida se recuerda en `honeycomb-settings.json`, dentro de los datos de Electron.

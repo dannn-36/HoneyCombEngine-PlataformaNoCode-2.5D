@@ -440,11 +440,10 @@ app-puzzle-dialog {
 
 /* Ejecutar: el boton mas visible de la ventana. Guarda y lanza el nivel en el
    motor, que es lo que cierra el ciclo editar, probar, corregir. */
-/* Con que motor ejecuta: Debug o Release. Primero del lado derecho y empujando
-   el resto: queda pegado a Ejecutar. */
+/* Con que motor ejecuta: Debug o Release. Primero del lado derecho: queda
+   pegado a Ejecutar. */
 .runmode {
   flex: none;
-  margin-right: auto;
 
   > .tool {
     height: 26px;
@@ -461,10 +460,33 @@ app-puzzle-dialog {
   }
 }
 
+/* Donde arranca el juego: Nivel o Portada. Va despues del motor y empuja el
+   resto (zoom, paneles) al borde derecho. */
+.runstart {
+  flex: none;
+  margin-right: auto;
+
+  > .tool {
+    height: 26px;
+    padding: 0 9px;
+  }
+
+  .icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 /* Ventana angosta: Grilla y Colisiones se quedan con el icono (el nombre sigue
-   en su title) antes que pasar por debajo de Ejecutar. */
+   en su title) antes que pasar por debajo de Ejecutar. Nivel y Portada al
+   reves: se quedan con la palabra, que se entiende mejor que el dibujo, y
+   recien en la ventana mas angosta (abajo) pasan a solo icono. */
 @media (max-width: 1400px) {
   .toolbar .tbtn--label > span {
+    display: none;
+  }
+
+  .runstart .icon {
     display: none;
   }
 }
@@ -477,6 +499,15 @@ app-puzzle-dialog {
   }
 
   .toolbar__sep {
+    display: none;
+  }
+
+  /* Nivel y Portada, solo con su icono: el nombre sigue en su title. */
+  .runstart .icon {
+    display: inline-block;
+  }
+
+  .runstart > .tool > span {
     display: none;
   }
 }

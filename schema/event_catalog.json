@@ -1,5 +1,5 @@
 {
-  "$comment": "Catalogo de bloques disponibles para armar eventos en el editor. Es la lista de piezas del NoCode: el editor genera los formularios del panel de eventos leyendo esto, sin nada hardcodeado, asi que sumar un bloque aca lo hace aparecer en la interfaz sin tocar codigo Angular. Del lado del motor, cada 'type' necesita ademas su implementacion registrada una vez en C++ (RegisterTrigger / RegisterCondition / RegisterAction, ver engine/main.cpp). Un type declarado aca pero no registrado alla simplemente no hace nada: el nivel sigue corriendo. Un evento ejecuta sus acciones UNA vez, cuando su trigger y sus condiciones pasan a cumplirse; para repetirse tiene que dejar de cumplirse primero. Tipos de parametro: entity_ref (entidad del nivel), level_ref (archivo de levels/), item_ref (objeto de 'items' del nivel; vacio = cualquiera), zone_ref (sala o zona del nivel), string, number, boolean.",
+  "$comment": "Catalogo de bloques disponibles para armar eventos en el editor. Es la lista de piezas del NoCode: el editor genera los formularios del panel de eventos leyendo esto, sin nada hardcodeado, asi que sumar un bloque aca lo hace aparecer en la interfaz sin tocar codigo Angular. Del lado del motor, cada 'type' necesita ademas su implementacion registrada una vez en C++ (RegisterTrigger / RegisterCondition / RegisterAction, ver engine/main.cpp). Un type declarado aca pero no registrado alla simplemente no hace nada: el nivel sigue corriendo. Un evento ejecuta sus acciones UNA vez, cuando su trigger y sus condiciones pasan a cumplirse; para repetirse tiene que dejar de cumplirse primero. Tipos de parametro: entity_ref (entidad del nivel), level_ref (archivo de levels/), item_ref (objeto de 'items' del nivel; vacio = cualquiera), zone_ref (sala o zona del nivel), variable_ref (variable de la partida, declarada en game.json), choice (una de las \"options\" del parametro), string, number, boolean. Un parametro puede traer \"default\": el valor con que arranca al agregar el bloque.",
   "triggers": [
     {
       "type": "on_collision",
@@ -98,6 +98,27 @@
       }
     },
     {
+      "type": "variable_compare",
+      "label": "Si la variable…",
+      "description": "Compara una variable de la partida con un número. Una variable que nunca se fijó vale 0.",
+      "params": {
+        "variable": { "type": "variable_ref", "description": "Variable" },
+        "comparison": {
+          "type": "choice",
+          "description": "Comparación",
+          "options": [
+            { "value": ">=", "label": "es al menos" },
+            { "value": ">", "label": "es mayor que" },
+            { "value": "==", "label": "es igual a" },
+            { "value": "!=", "label": "es distinta de" },
+            { "value": "<", "label": "es menor que" },
+            { "value": "<=", "label": "es como mucho" }
+          ]
+        },
+        "value": { "type": "number", "description": "Número" }
+      }
+    },
+    {
       "type": "player_in_zone",
       "label": "Si el jugador está en la zona",
       "description": "Se cumple mientras el jugador este dentro de la sala o zona.",
@@ -142,10 +163,35 @@
     {
       "type": "set_flag",
       "label": "Activar marca",
-      "description": "Activa una marca con nombre que despues consulta la condicion 'Si la marca está activa'. Las marcas se borran al cambiar de nivel.",
+      "description": "Activa una marca con nombre que despues consulta la condicion 'Si la marca está activa'. Sin 'persist' se borra al cambiar de nivel; con 'persist' dura toda la partida y se guarda con ella.",
       "params": {
-        "flag": { "type": "string", "description": "Nombre de la marca" }
+        "flag": { "type": "string", "description": "Nombre de la marca" },
+        "persist": { "type": "boolean", "description": "Conservar en toda la partida (no se borra al pasar de nivel)" }
       }
+    },
+    {
+      "type": "set_variable",
+      "label": "Fijar variable",
+      "description": "La variable de la partida pasa a valer ese número. Las variables duran toda la partida y se guardan con ella (Configuración del juego › Progreso).",
+      "params": {
+        "variable": { "type": "variable_ref", "description": "Variable" },
+        "value": { "type": "number", "description": "Valor" }
+      }
+    },
+    {
+      "type": "add_variable",
+      "label": "Sumar a variable",
+      "description": "Le suma ese número a la variable de la partida (con un número negativo, resta). Una variable que nunca se fijó empieza en 0.",
+      "params": {
+        "variable": { "type": "variable_ref", "description": "Variable" },
+        "amount": { "type": "number", "description": "Cuánto sumar", "default": 1 }
+      }
+    },
+    {
+      "type": "save_game",
+      "label": "Guardar partida",
+      "description": "Guarda la partida donde está el jugador, como un punto de control: Continuar en la portada y Volver al punto de control al perder la retoman ahí.",
+      "params": {}
     },
     {
       "type": "give_item",

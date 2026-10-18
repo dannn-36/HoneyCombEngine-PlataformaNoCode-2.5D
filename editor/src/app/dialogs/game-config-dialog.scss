@@ -1,0 +1,406 @@
+// Estilos de Archivo > Configuración del juego (ver game-config-dialog.html).
+// Van aca y no en app.scss porque solo los usa este dialogo: se bajan con su
+// codigo la primera vez que se abre. Lo comun (.field, .input, .btn, .modal...)
+// sigue siendo el tema de app.scss, que no esta encapsulado.
+
+/* ---------- Configuracion del juego ---------- */
+/* Pestañas arriba; abajo el formulario y, en Portada, Pausa y HUD, la vista
+   previa a la derecha. Cada columna se desplaza por su cuenta, y la vista
+   previa queda quieta mientras se recorre el formulario. */
+.gameconf {
+  &__tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line-soft);
+    overflow-x: auto;
+  }
+
+  &__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--text-2);
+    font: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+
+    .icon {
+      width: 15px;
+      height: 15px;
+    }
+
+    &:hover {
+      color: var(--text);
+    }
+
+    &.is-active {
+      border-bottom-color: var(--honey);
+      color: var(--text);
+    }
+  }
+
+  &__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    border-bottom: 1px solid var(--line-soft);
+
+    &--single {
+      grid-template-columns: minmax(0, 1fr);
+
+      .gameconf__form {
+        max-width: 620px;
+      }
+    }
+  }
+
+  &__form,
+  &__side {
+    max-height: 64vh;
+    overflow: auto;
+    padding: 12px 16px;
+  }
+
+  &__side {
+    border-left: 1px solid var(--line-soft);
+    background: var(--surface-1);
+  }
+
+  &__previewhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 28px;
+    margin-bottom: 8px;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  &__previewhealth {
+    margin-top: 8px;
+  }
+
+  /* El cuadro de color del sistema y su valor, que se puede copiar. */
+  &__color {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    input[type="color"] {
+      flex: none;
+      width: 34px;
+      height: 26px;
+      padding: 1px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--ground);
+      cursor: pointer;
+    }
+
+    code {
+      color: var(--text-2);
+      font-size: 12px;
+    }
+  }
+
+  &__border {
+    align-items: center;
+
+    > .check {
+      flex: none;
+      margin-bottom: 6px;
+    }
+  }
+
+  &__checks {
+    max-height: none;
+  }
+
+  &__credits {
+    height: auto;
+    min-height: 140px;
+    padding: 6px 8px;
+    font-family: var(--mono, ui-monospace, monospace);
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  &__vars {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  &__var {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 110px 26px;
+    align-items: center;
+    gap: 8px;
+
+    /* La fila de agregar: el nombre a todo lo ancho y el boton a su medida. */
+    &--add {
+      grid-template-columns: minmax(0, 1fr) auto;
+      margin-top: 4px;
+    }
+  }
+
+  &__varname {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 13px;
+    text-overflow: ellipsis;
+  }
+
+  &__nofs {
+    flex: 1;
+    margin: 0;
+    align-self: center;
+  }
+}
+
+/* Vista previa de la portada, las pantallas y el HUD. Todo se mide en pixeles
+   del juego y se pasa a cqw (ver GameConfigController.gp): la caja tiene la
+   proporcion de la ventana del juego y lo de adentro escala con su ancho. */
+.gpreview {
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: #e6e6e6;
+  font-family: var(--mono, ui-monospace, monospace);
+  line-height: 1;
+  user-select: none;
+
+  /* Una escena de mentira para el HUD: un piso oscuro con la grilla isometrica
+     (lineas a 26.565 grados, la pendiente de una casilla de 2 x 1). */
+  &--scene {
+    background:
+      repeating-linear-gradient(26.565deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3.6cqw),
+      repeating-linear-gradient(-26.565deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3.6cqw),
+      linear-gradient(180deg, #27322b, #1b211d);
+  }
+
+  &__panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(0, 0, 0, 0.59);
+  }
+
+  &__veil {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Texto con la sombra corta del motor, para leerse sobre cualquier fondo. */
+  &__text {
+    position: absolute;
+    white-space: nowrap;
+    text-shadow: 0.07em 0.07em 0 rgba(0, 0, 0, 0.7);
+
+    &.is-centered {
+      transform: translateX(-50%);
+    }
+  }
+
+  &__menu {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    white-space: nowrap;
+    text-shadow: 0.07em 0.07em 0 rgba(0, 0, 0, 0.7);
+
+    &.is-centered {
+      align-items: center;
+      transform: translateX(-50%);
+    }
+
+    &.is-row {
+      flex-direction: row;
+    }
+
+    > span {
+      position: relative;
+      line-height: 1;
+    }
+
+    /* La opcion elegida: un ">" al costado, o en fila una raya abajo. */
+    &:not(.is-row) > .is-active::before {
+      content: ">";
+      position: absolute;
+      left: -0.9em;
+    }
+
+    &.is-row > .is-active {
+      border-bottom: 0.12em solid;
+      padding-bottom: 0.1em;
+    }
+  }
+
+  &__credits {
+    position: absolute;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  &__health {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  &__label {
+    flex: none;
+  }
+
+  &__bar,
+  &__segments {
+    position: relative;
+    display: flex;
+    flex: none;
+
+    > i {
+      display: block;
+      height: 100%;
+      background-repeat: no-repeat;
+    }
+  }
+
+  &__segments > i {
+    flex: 1;
+  }
+
+  &__frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__hearts {
+    display: flex;
+  }
+
+  &__heart {
+    position: relative;
+    flex: none;
+
+    > img,
+    > svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    > img.is-dim {
+      filter: brightness(0.3);
+      opacity: 0.67;
+    }
+  }
+
+  &__heartfill {
+    position: absolute;
+    inset: 0;
+
+    > img,
+    > svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+  }
+
+  &__coins {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+
+    > i {
+      display: block;
+      border-radius: 50%;
+      background: #f2c94c;
+    }
+  }
+
+  &__boss {
+    position: absolute;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3em;
+    color: #ffd666;
+    transform: translateX(-50%);
+
+    > i {
+      display: block;
+      border: 1px solid rgba(255, 214, 102, 0.8);
+      background: linear-gradient(90deg, #c8323c 65%, rgba(30, 30, 30, 0.86) 65%);
+    }
+  }
+
+  &__slots {
+    position: absolute;
+    left: 50%;
+    display: flex;
+    transform: translateX(-50%);
+
+    > i {
+      display: block;
+      padding: 0.2em;
+      border: 1px solid #8a8a8a;
+      background: rgba(20, 20, 24, 0.75);
+      color: #c8c8c8;
+      font-style: normal;
+
+      &.is-active {
+        border: 2px solid #ffd666;
+      }
+    }
+  }
+
+  &__controls {
+    position: absolute;
+    right: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Un personaje de mentira, para mostrar la barrita sobre su cabeza. */
+  &__actor {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    border-radius: 45% 45% 20% 20%;
+    background: #6a7d8f;
+    transform: translate(-50%, -50%);
+  }
+
+  &__overhead {
+    position: absolute;
+    left: 50%;
+    display: flex;
+    transform: translateX(-50%);
+
+    > i {
+      display: block;
+      height: 100%;
+    }
+  }
+}

@@ -28,6 +28,34 @@ void Inventory::CarryInto(const InventoryConfig& config, const ItemCatalog& item
     AddStartingWeapons(config, items);
 }
 
+std::vector<std::string> Inventory::WeaponIds() const {
+    std::vector<std::string> ids;
+    ids.reserve(weapons_.size());
+    for (const auto& slot : weapons_) {
+        ids.push_back(slot.item.id);
+    }
+    return ids;
+}
+
+void Inventory::Restore(const InventoryConfig& config, const ItemCatalog& items,
+                        const std::vector<std::string>& weaponIds, int activeIndex, int coinCount) {
+    slots_ = std::clamp(config.slots, 1, 9);
+    locked_ = config.locked;
+    onFull_ = config.onFull;
+    weapons_.clear();
+    active_ = -1;
+    for (const auto& id : weaponIds) {
+        auto it = items.find(id);
+        if (it == items.end() || it->second.kind != ItemKind::Weapon) {
+            continue;
+        }
+        ItemDef ignored;
+        AddWeapon(it->second, false, ignored);
+    }
+    active_ = weapons_.empty() ? -1 : std::clamp(activeIndex, 0, static_cast<int>(weapons_.size()) - 1);
+    coins = coinCount;
+}
+
 void Inventory::AddStartingWeapons(const InventoryConfig& config, const ItemCatalog& items) {
     for (const auto& id : config.items) {
         auto it = items.find(id);

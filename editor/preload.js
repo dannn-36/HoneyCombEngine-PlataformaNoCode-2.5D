@@ -47,7 +47,10 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   // Lanza el runtime con un nivel ya guardado. Recibe la ruta del nivel y no
   // la del ejecutable: quien decide que binario correr es el proceso principal,
   // no la UI. "mode" elige el motor: 'debug' o 'release' (ver ipc/engine-modes.js).
-  run: (levelPath, mode) => ipcRenderer.invoke('project:run', { levelPath, mode }),
+  // "start": 'level' arranca en el nivel, 'title' en la portada de game.json.
+  run: (levelPath, mode, start) => ipcRenderer.invoke('project:run', { levelPath, mode, start }),
+  // Borra la partida guardada del juego, y solo esa (ver ipc/run.js).
+  clearSave: () => ipcRenderer.invoke('game:clearSave'),
 
   // Los dos motores: cuales estan compilados, y compilar uno (ver
   // ipc/engine-build.js). La salida de la compilacion llega de a una linea.

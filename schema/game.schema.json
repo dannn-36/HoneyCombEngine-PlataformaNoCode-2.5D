@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://honeycomb.engine/schema/game.schema.json",
+  "title": "HoneyComb Game",
+  "description": "Configuracion del JUEGO, no de un nivel: vive en la raiz del proyecto (junto a levels/ y assets/) como game.json. La arma el editor en Archivo › Configuración del juego… y la lee el runtime al arrancar (engine/game/GameConfig.cpp). Todo es opcional: sin el archivo, o sin una clave, queda lo de siempre (ventana de 800x450, el nivel que se abre, el HUD de antes).",
+  "type": "object",
+  "definitions": {
+    "color": {
+      "type": "object",
+      "required": ["r", "g", "b"],
+      "properties": {
+        "r": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "g": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "b": { "type": "integer", "minimum": 0, "maximum": 255 }
+      }
+    },
+    "assetPath": { "type": "string", "description": "Ruta relativa a assets/, como las texturas de los niveles." }
+  },
+  "properties": {
+    "name": { "type": "string", "description": "Nombre del juego: titulo de la ventana y de la portada si esta no trae uno propio." },
+    "icon": { "$ref": "#/definitions/assetPath", "description": "Icono de la ventana (PNG)." },
+    "window": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "integer", "minimum": 320, "maximum": 7680, "default": 800 },
+        "height": { "type": "integer", "minimum": 240, "maximum": 4320, "default": 450 },
+        "fullscreen": { "type": "boolean", "default": false, "description": "Pantalla completa sin bordes: ocupa el monitor a su resolucion." }
+      }
+    },
+    "startLevel": { "type": "string", "description": "Archivo dentro de levels/ con el que empieza 'Nueva partida'. Vacio = el que se abre." },
+    "titleScreen": {
+      "type": "object",
+      "description": "La portada: estilo, textos, colores, fondo y musica. Su menu trae Nueva partida, Continuar (si hay partida guardada), Créditos (si hay) y Salir.",
+      "properties": {
+        "style": { "type": "string", "enum": ["centered", "side", "minimal"], "default": "centered" },
+        "title": { "type": "string", "description": "Vacio = el nombre del juego." },
+        "subtitle": { "type": "string" },
+        "titleColor": { "$ref": "#/definitions/color" },
+        "subtitleColor": { "$ref": "#/definitions/color" },
+        "titleSize": { "type": "number", "minimum": 10, "maximum": 200, "default": 56 },
+        "subtitleSize": { "type": "number", "minimum": 8, "maximum": 120, "default": 22 },
+        "backgroundColor": { "$ref": "#/definitions/color" },
+        "backgroundImage": { "$ref": "#/definitions/assetPath" },
+        "backgroundMode": { "type": "string", "enum": ["cover", "stretch", "tile"], "default": "cover" },
+        "buttonColor": { "$ref": "#/definitions/color" },
+        "buttonHighlight": { "$ref": "#/definitions/color" },
+        "music": { "$ref": "#/definitions/assetPath", "description": "Musica de la portada (OGG, MP3 o WAV)." }
+      }
+    },
+    "hud": {
+      "type": "object",
+      "description": "El estilo del HUD durante el juego.",
+      "properties": {
+        "healthStyle": { "type": "string", "enum": ["bar", "hearts", "segments", "number"], "default": "bar" },
+        "healthPosition": { "type": "string", "enum": ["top-left", "top-right", "bottom-left", "bottom-right"], "default": "top-left" },
+        "healthScale": { "type": "number", "minimum": 0.5, "maximum": 3, "default": 1 },
+        "healthFill": { "$ref": "#/definitions/color" },
+        "healthEmpty": { "$ref": "#/definitions/color" },
+        "healthBorder": { "$ref": "#/definitions/color", "description": "Sin la clave, sin borde." },
+        "showHealthLabel": { "type": "boolean", "default": true, "description": "La palabra 'Vida'." },
+        "showHealthNumber": { "type": "boolean", "default": true, "description": "El '70 / 100'." },
+        "healthPerHeart": { "type": "number", "minimum": 1, "default": 20, "description": "Vida que vale cada corazon." },
+        "segments": { "type": "integer", "minimum": 2, "maximum": 40, "default": 10 },
+        "heartFull": { "$ref": "#/definitions/assetPath", "description": "Imagen del corazon lleno." },
+        "heartEmpty": { "$ref": "#/definitions/assetPath", "description": "Imagen del corazon vacio." },
+        "barFill": { "$ref": "#/definitions/assetPath", "description": "Imagen del relleno de la barra (se recorta al ancho de la vida)." },
+        "barFrame": { "$ref": "#/definitions/assetPath", "description": "Imagen del marco de la barra (se estira encima)." },
+        "showCoins": { "type": "boolean", "default": true },
+        "showInventory": { "type": "boolean", "default": true },
+        "showControls": { "type": "boolean", "default": true, "description": "La linea de ayuda de teclas de abajo." },
+        "showBossBar": { "type": "boolean", "default": true },
+        "showOverheadBars": { "type": "boolean", "default": true, "description": "Las barritas de vida sobre las cabezas." }
+      }
+    },
+    "screens": {
+      "type": "object",
+      "properties": {
+        "pauseTitle": { "type": "string", "default": "Pausa" },
+        "gameOverTitle": { "type": "string", "default": "Derrotado" },
+        "gameOverColor": { "$ref": "#/definitions/color" },
+        "credits": {
+          "type": "array",
+          "description": "Una linea por renglon. Las que empiezan con '# ' son titulos de seccion.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "variables": {
+      "type": "object",
+      "description": "Variables de la partida y su valor al empezar una nueva. Las usan las acciones 'Fijar variable' y 'Sumar a variable' y la condicion 'Si la variable…'.",
+      "additionalProperties": { "type": "number" }
+    }
+  }
+}

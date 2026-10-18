@@ -141,7 +141,7 @@
         "required": ["id", "position", "texture", "sourceRect"],
         "properties": {
           "id": { "type": "string", "description": "Identificador unico dentro del nivel, referenciado por eventos (entity_ref)." },
-          "type": { "type": "string", "description": "Tipo/categoria de la entidad (ej. player, obstaculo, item). Libre, uso del editor." },
+          "type": { "type": "string", "description": "Tipo/categoria de la entidad (ej. player, enemy, npc, item, obstacle). Libre; el motor le da comportamiento a los que conoce, como checkpoint: al pasar cerca guarda la partida (ver game.schema.json)." },
           "position": {
             "type": "object",
             "description": "Celda de la grilla donde arranca la entidad. Solo enteros: el editor coloca sobre la grilla. En ejecucion el motor mueve en continuo a partir de esta celda.",

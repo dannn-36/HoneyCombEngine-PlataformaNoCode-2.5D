@@ -1,9 +1,10 @@
 import { inject, signal } from '@angular/core';
 
-import type { EngineMode } from '../electron-api';
+import type { EngineMode, EngineStart } from '../electron-api';
 import { ProjectService } from '../services/project.service';
 
 const STORAGE_KEY = 'honeycomb.engineMode';
+const START_STORAGE_KEY = 'honeycomb.engineStart';
 
 /** Los dos motores, con lo que cada uno es en palabras de quien lo usa. */
 export const ENGINE_MODES: readonly { id: EngineMode; label: string; hint: string }[] = [
@@ -19,6 +20,25 @@ export const ENGINE_MODES: readonly { id: EngineMode; label: string; hint: strin
   },
 ];
 
+/**
+ * Donde arranca el juego al ejecutar: el nivel que se esta editando (para
+ * probar) o la portada (el juego como terminado). Ver Configuración del juego.
+ */
+export const ENGINE_STARTS: readonly { id: EngineStart; label: string; hint: string }[] = [
+  {
+    id: 'level',
+    label: 'Nivel',
+    hint: 'Nivel: abre directo el nivel que estás editando, para probarlo rápido.',
+  },
+  {
+    id: 'title',
+    label: 'Portada',
+    hint:
+      'Portada: el juego completo, como terminado. Arranca en la portada y «Nueva partida» va al nivel inicial ' +
+      '(Archivo › Configuración del juego).',
+  },
+];
+
 function isEngineMode(value: unknown): value is EngineMode {
   return value === 'debug' || value === 'release';
 }
@@ -30,6 +50,15 @@ function storedMode(): EngineMode {
     return isEngineMode(value) ? value : 'debug';
   } catch {
     return 'debug';
+  }
+}
+
+/** Donde se arranco la ultima vez. Sin almacenamiento, en el nivel: lo de siempre. */
+function storedStart(): EngineStart {
+  try {
+    return globalThis.localStorage?.getItem(START_STORAGE_KEY) === 'title' ? 'title' : 'level';
+  } catch {
+    return 'level';
   }
 }
 
@@ -59,6 +88,11 @@ export class EngineController {
   readonly modes = ENGINE_MODES;
 
   readonly mode = signal<EngineMode>(storedMode());
+
+  readonly starts = ENGINE_STARTS;
+
+  /** Donde arranca el juego con Ejecutar y F5. Shift+F5 arranca en el otro. */
+  readonly start = signal<EngineStart>(storedStart());
 
   /** Cuales estan compilados. null mientras no se sepa (sin disco, o antes de preguntar). */
   readonly compiled = signal<Record<EngineMode, boolean> | null>(null);
@@ -94,6 +128,29 @@ export class EngineController {
       // Sin almacenamiento la eleccion vale para esta sesion y nada mas.
     }
     this.deps.note('Motor: ' + this.hint(mode));
+  }
+
+  startLabel(start: EngineStart): string {
+    return ENGINE_STARTS.find((entry) => entry.id === start)?.label ?? start;
+  }
+
+  startHint(start: EngineStart): string {
+    return ENGINE_STARTS.find((entry) => entry.id === start)?.hint ?? '';
+  }
+
+  /** El arranque que no esta elegido: el de Shift+F5. */
+  otherStart(): EngineStart {
+    return this.start() === 'title' ? 'level' : 'title';
+  }
+
+  setStart(start: EngineStart): void {
+    this.start.set(start);
+    try {
+      globalThis.localStorage?.setItem(START_STORAGE_KEY, start);
+    } catch {
+      // Sin almacenamiento la eleccion vale para esta sesion y nada mas.
+    }
+    this.deps.note('Al ejecutar: ' + this.startHint(start));
   }
 
   /** Vuelve a mirar que motores hay compilados. */
@@ -145,14 +202,15 @@ export class EngineController {
   /**
    * Ejecuta un nivel ya guardado con el motor elegido. Si ese motor no esta
    * compilado, pregunta si compilarlo y, si se acepta, lo compila y ejecuta.
+   * Arranca donde diga el selector (Nivel o Portada), salvo que se pida otro.
    */
-  async launch(levelPath: string): Promise<void> {
+  async launch(levelPath: string, start: EngineStart = this.start()): Promise<void> {
     const mode = this.mode();
     if (this.building()) {
       this.deps.note('Espera a que termine de compilar el motor ' + this.label(this.building() as EngineMode) + '.');
       return;
     }
-    let result = await this.project.runLevel(levelPath, mode);
+    let result = await this.project.runLevel(levelPath, mode, start);
     if (!result.ok && result.missing) {
       const accepted = window.confirm(
         (result.error ?? 'Ese motor no está compilado.') + ' ¿Compilarlo ahora? La primera vez tarda unos minutos.',
@@ -164,11 +222,12 @@ export class EngineController {
       if (!(await this.build(mode))) {
         return;
       }
-      result = await this.project.runLevel(levelPath, mode);
+      result = await this.project.runLevel(levelPath, mode, start);
     }
     this.deps.note(
       result.ok
-        ? 'Ejecutando ' + levelPath + ' con el motor ' + this.label(mode) + (mode === 'debug' ? ' (F3: herramientas).' : '.')
+        ? (start === 'title' ? 'Ejecutando el juego desde la portada' : 'Ejecutando ' + levelPath) +
+          ' con el motor ' + this.label(mode) + (mode === 'debug' ? ' (F3: herramientas).' : '.')
         : result.error ?? 'No se pudo ejecutar el motor.',
     );
   }

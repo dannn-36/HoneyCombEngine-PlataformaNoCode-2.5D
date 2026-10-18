@@ -33,6 +33,8 @@ const ICONS = [
   'brush', 'eraser', 'paint-bucket', 'pipette', 'slash', 'square', 'diamond', 'minus', 'undo-2', 'redo-2',
   'file-plus', 'save', 'chevron-left', 'pause', 'arrow-left', 'arrow-right', 'arrow-up', 'arrow-down',
   'arrow-left-right', 'ghost', 'eye', 'eye-off', 'flip-horizontal-2', 'flip-vertical-2',
+  // Configuracion del juego y punto de control
+  'settings', 'monitor-play', 'scroll-text', 'heart', 'flag',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));

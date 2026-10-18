@@ -4,6 +4,7 @@ import { EventsController } from '../events/events.controller';
 import { ItemLibraryService } from '../services/item-library.service';
 import { CatalogService } from '../services/catalog.service';
 import { CharacterPresetService } from '../services/character-preset.service';
+import { GameConfigService } from '../services/game-config.service';
 import { LevelService } from '../services/level.service';
 import { ProjectService } from '../services/project.service';
 import { TexturesController } from '../textures/textures.controller';
@@ -13,7 +14,7 @@ import { ExplorerController } from './explorer.controller';
 import { DEFAULT_STARTER_TEXTURE } from '../entities/entity-ops.controller';
 import { GridConfig } from '../models/level.model';
 import { levelFileName } from '../core/file-names';
-import type { LevelImport } from '../electron-api';
+import type { EngineStart, LevelImport } from '../electron-api';
 import { NamePromptController } from '../ui/name-prompt.controller';
 
 /** Plantillas del dialogo "nivel nuevo": vacio, con jugador, o escena de prueba. */
@@ -53,6 +54,7 @@ export class ProjectController {
   private readonly catalog = inject(CatalogService);
   private readonly itemLibrary = inject(ItemLibraryService);
   private readonly presetsService = inject(CharacterPresetService);
+  private readonly gameConfig = inject(GameConfigService);
 
   private readonly note: ProjectDeps['note'];
   private readonly describe: ProjectDeps['describe'];
@@ -208,6 +210,15 @@ export class ProjectController {
       await this.itemLibrary.load();
     } catch (error) {
       this.note('No se pudo leer items.json: ' + this.describe(error));
+    }
+
+    // Y la configuracion del juego: sin ella (o rota) se edita igual, con la de
+    // siempre. Rota se avisa, porque guardar desde la ventana la reemplazaria.
+    try {
+      await this.gameConfig.load();
+    } catch (error) {
+      this.gameConfig.reset();
+      this.note('No se pudo leer game.json: ' + this.describe(error));
     }
   }
 
@@ -473,8 +484,12 @@ export class ProjectController {
    * Guarda antes de lanzar. No es una comodidad: el motor lee el nivel del
    * DISCO, asi que sin guardar correria la version anterior y uno estaria
    * probando algo distinto de lo que tiene en pantalla.
+   *
+   * Arranca donde diga el selector de la barra (Nivel o Portada); Shift+F5
+   * pasa el otro. En la portada se ve el juego completo, con su menu: Nueva
+   * partida empieza en el nivel inicial de game.json, o en este si no hay uno.
    */
-  async run(): Promise<void> {
+  async run(start: EngineStart = this.engine.start()): Promise<void> {
     if (!this.hasFileSystem) {
       this.note('Sin acceso a disco. Abre el editor con "npm run electron".');
       return;
@@ -491,6 +506,6 @@ export class ProjectController {
       return;
     }
 
-    await this.engine.launch(levelPath);
+    await this.engine.launch(levelPath, start);
   }
 }

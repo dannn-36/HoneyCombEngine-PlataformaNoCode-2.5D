@@ -12,9 +12,14 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <fstream>
 #include <iostream>
 
+#include "nlohmann/json.hpp"
 #include "rlgl.h"
+
+#include "game/Progress.hpp"
+#include "loader/ItemLoader.hpp"
 
 #include "game/CombatView.hpp"
 #include "game/Movement.hpp"
@@ -54,9 +59,14 @@ void DrawHealthBar(float x, float y, float width, float height, float ratio, Col
 // El orden de la lista de inicializacion sigue al de declaracion en el header,
 // que es el que importa: la ventana antes que los recursos, y el loader antes
 // que el nivel que carga.
-GameSession::GameSession(const std::filesystem::path &levelPath)
-    // El titulo dice cual es: la de desarrollo (Debug) o la que se juega.
-    : gfx(800, 450, DevTools::kEnabled ? "HoneyComb Engine - Runtime (Debug)" : "HoneyComb Engine - Runtime"),
+GameSession::GameSession(const std::filesystem::path &levelPath, const GameConfig &gameConfig, StartMode start)
+    : config(gameConfig),
+      // La raiz del proyecto: levels/ esta adentro, y ahi viven game.json,
+      // assets/ y saves/.
+      projectRoot(levelPath.parent_path().parent_path()),
+      // El titulo dice cual es: el nombre del juego, y si es la de desarrollo.
+      windowTitle(WindowTitle(gameConfig, DevTools::kEnabled)),
+      gfx(gameConfig.width, gameConfig.height, windowTitle.c_str()),
       assets((levelPath.parent_path().parent_path() / "assets").string()),
       loader(resources, assets),
       // Load() concentra todo el trabajo de Capa 3: parsea el JSON, construye
@@ -64,13 +74,68 @@ GameSession::GameSession(const std::filesystem::path &levelPath)
       // deja los eventos del nivel ya cargados dentro de "events".
       level(loader.Load(levelPath.string(), events)),
       currentLevelPath(levelPath),
-      zsort(gfx)
+      zsort(gfx),
+      initialLevelPath(levelPath)
 {
+    // Esc es la pausa: sin esto, raylib cierra la ventana con Esc.
+    SetExitKey(KEY_NULL);
+    if (!config.icon.empty())
+    {
+        Image icon = LoadImage(assets.Resolve(config.icon).c_str());
+        if (icon.data)
+        {
+            SetWindowIcon(icon);
+            UnloadImage(icon);
+        }
+    }
+    // Pantalla completa "sin bordes": ocupa el monitor a su resolucion, sin
+    // cambiar el modo de video (F11 hace lo mismo).
+    if (config.fullscreen)
+    {
+        ToggleBorderlessWindowed();
+    }
+
+    // Las imagenes del estilo, ya con la ventana abierta (la GPU existe).
+    titleBackground = StyleTexture(config.titleScreen.backgroundImage);
+    if (titleBackground && config.titleScreen.backgroundFit == BackgroundFit::Tile)
+    {
+        SetTextureWrap(*titleBackground, TEXTURE_WRAP_REPEAT);
+    }
+    hudImages.heartFull = StyleTexture(config.hud.heartFull);
+    hudImages.heartEmpty = StyleTexture(config.hud.heartEmpty);
+    hudImages.barFill = StyleTexture(config.hud.barFill);
+    hudImages.barFrame = StyleTexture(config.hud.barFrame);
+
+    variables = config.variables;
     PrepareLevel(LevelStart::Fresh);
     BindInput();
     RegisterEvents();
     defaultFont = GetFontDefault();
     gfx.SetTargetFPS(60);
+
+    if (start == StartMode::Title)
+    {
+        GoToTitle();
+    }
+    else if (start == StartMode::Continue)
+    {
+        ContinueGame();
+    }
+}
+
+const Texture2D *GameSession::StyleTexture(const std::string &relativePath)
+{
+    if (relativePath.empty())
+    {
+        return nullptr;
+    }
+    const Texture2D &texture = resources.GetTexture(assets.Resolve(relativePath));
+    return texture.id != 0 ? &texture : nullptr;
+}
+
+std::filesystem::path GameSession::LevelsDir() const
+{
+    return projectRoot / "levels";
 }
 
 // Cada accion se enlaza dos veces (flechas y WASD, Espacio y J) en vez de leer
@@ -103,6 +168,10 @@ void GameSession::RegisterEvents()
     eventContext.player = &player;
     eventContext.entityById = &entityById;
     eventContext.flags = &flags;
+    eventContext.gameFlags = &gameFlags;
+    eventContext.variables = &variables;
+    eventContext.saveGame = [this]()
+    { SaveGame(); };
     eventContext.collisions = &currentCollisions;
     eventContext.inventory = &inventory;
     eventContext.loot = &loot;
@@ -125,7 +194,9 @@ void GameSession::PrepareLevel(LevelStart start)
 {
     entityById.clear();
     animInstances.clear();
+    // Las marcas del nivel se borran; las de la partida (gameFlags) siguen.
     flags.clear();
+    lastCheckpointId.clear();
     for (auto &entity : level.entities)
     {
         entityById[entity.id] = &entity;
@@ -334,53 +405,407 @@ Vector2 GameSession::ScreenSize() const
 // BeginFrame limpio la pantalla: lo transparente deja ver ese color.
 void GameSession::DrawBackgroundImage()
 {
-    const Texture2D *texture = level.backgroundTexture;
-    // Una imagen que no se pudo cargar queda con id 0 y medida 0: se dibujaria
-    // como un rectangulo blanco tapando el color, o dividiria por cero.
-    if (!texture || texture->id == 0 || texture->width <= 0 || texture->height <= 0)
-    {
-        return;
-    }
-    const Vector2 screen = ScreenSize();
-    const float width = static_cast<float>(texture->width);
-    const float height = static_cast<float>(texture->height);
-    switch (level.backgroundFit)
-    {
-    case BackgroundFit::Stretch:
-        gfx.DrawSprite(*texture, Rectangle{0, 0, width, height}, Rectangle{0, 0, screen.x, screen.y},
-                       Vector2{0, 0}, 0.0f, WHITE);
-        break;
-    case BackgroundFit::Tile:
-        // Un solo dibujo: un recorte del tamaño de la ventana sobre una textura
-        // con repeticion (ver PrepareLevel) la repite sola en la GPU. Con un
-        // bucle, una imagen de 1x1 serian millones de dibujos por cuadro.
-        gfx.DrawSprite(*texture, Rectangle{0, 0, screen.x, screen.y}, Rectangle{0, 0, screen.x, screen.y},
-                       Vector2{0, 0}, 0.0f, WHITE);
-        break;
-    case BackgroundFit::Cover:
-    default:
-    {
-        // La escala que cubre los dos lados; lo que sobra queda fuera de la
-        // ventana, centrado.
-        const float scale = std::max(screen.x / width, screen.y / height);
-        const float drawWidth = width * scale;
-        const float drawHeight = height * scale;
-        gfx.DrawSprite(*texture, Rectangle{0, 0, width, height},
-                       Rectangle{(screen.x - drawWidth) / 2.0f, (screen.y - drawHeight) / 2.0f, drawWidth, drawHeight},
-                       Vector2{0, 0}, 0.0f, WHITE);
-        break;
-    }
-    }
+    // El mismo dibujo que la portada (cubrir, estirar o mosaico): ver
+    // Screens::DrawFillImage.
+    Screens::DrawFillImage(gfx, level.backgroundTexture, level.backgroundFit, ScreenSize());
 }
 
 void GameSession::Run()
 {
-    while (!gfx.ShouldClose())
+    while (!gfx.ShouldClose() && !quitRequested)
     {
-        Update(gfx.GetDeltaTime());
+        Frame(gfx.GetDeltaTime());
     }
     // Sin limpieza manual: ResourceManager y GraphicsDevice liberan todo en sus
     // destructores (RAII), en orden inverso al de declaracion en el header.
+}
+
+// =============================================================================
+// LA PARTIDA: portada, creditos, guardado y puntos de control
+// =============================================================================
+
+namespace
+{
+// Las opciones de los menus. La fuente por defecto de raylib trae los
+// caracteres de Latin-1, asi que las tildes se ven (probado con "isométrica").
+const char *const kNewGame = "Nueva partida";
+const char *const kContinue = "Continuar";
+const char *const kCredits = "Créditos";
+const char *const kQuit = "Salir";
+const char *const kResume = "Continuar";
+const char *const kRestartLevel = "Reiniciar el nivel";
+const char *const kBackToTitle = "Volver a la portada";
+const char *const kQuitGame = "Salir del juego";
+const char *const kBackToCheckpoint = "Volver al punto de control";
+const char *const kRetryLevel = "Reintentar el nivel";
+// A cuantas celdas del centro de un punto de control hay que estar para que guarde.
+constexpr float kCheckpointReach = 0.9f;
+} // namespace
+
+void GameSession::Frame(float deltaTime)
+{
+    switch (screen)
+    {
+    case Screen::Title:
+        UpdateTitle();
+        break;
+    case Screen::Credits:
+        UpdateCredits(deltaTime);
+        break;
+    case Screen::Playing:
+    default:
+        Update(deltaTime);
+        break;
+    }
+}
+
+void GameSession::FinishFrame()
+{
+    // Captura pedida por Benchmark ("--captura"): lo dibujado se lee del
+    // buffer ANTES de presentarlo. Primero se vacia el lote de raylib, que
+    // todavia puede tener sprites sin mandar a la GPU.
+    if (!pendingScreenshot.empty())
+    {
+        rlDrawRenderBatchActive();
+        TakeScreenshot(pendingScreenshot.c_str());
+        pendingScreenshot.clear();
+    }
+    gfx.EndFrame();
+}
+
+void GameSession::GoToTitle()
+{
+    screen = Screen::Title;
+    paused = false;
+    gameOver = false;
+    // "Continuar" solo si hay una partida que continuar; "Creditos" solo si hay creditos.
+    titleMenu = Screens::Menu{{kNewGame}, 0};
+    if (Progress::Exists(projectRoot))
+    {
+        titleMenu.items.push_back(kContinue);
+        titleMenu.selected = 1;
+    }
+    if (!config.screens.credits.empty())
+    {
+        titleMenu.items.push_back(kCredits);
+    }
+    titleMenu.items.push_back(kQuit);
+
+    if (!config.titleScreen.music.empty())
+    {
+        // GetMusic devuelve la cache: la musica es un stream que se reproduce
+        // en su lugar, no una copia.
+        Music &music = const_cast<Music &>(resources.GetMusic(assets.Resolve(config.titleScreen.music)));
+        if (music.frameCount > 0)
+        {
+            audio.PlayMusic(music);
+        }
+    }
+}
+
+void GameSession::UpdateTitle()
+{
+    gfx.BeginFrame(config.titleScreen.backgroundColor);
+    const std::string title = !config.titleScreen.title.empty() ? config.titleScreen.title
+                              : !config.name.empty()            ? config.name
+                                                                : std::string("HoneyComb");
+    const int choice = Screens::RunTitle(gfx, defaultFont, config.titleScreen, title, titleBackground, titleMenu);
+    if constexpr (DevTools::kEnabled)
+    {
+        DevTools::DrawBadge(gfx, defaultFont);
+    }
+    audio.Update();
+    FinishFrame();
+
+    if (choice < 0)
+    {
+        return;
+    }
+    const std::string picked = titleMenu.items[static_cast<size_t>(choice)];
+    if (picked == kNewGame)
+    {
+        NewGame();
+    }
+    else if (picked == kContinue)
+    {
+        ContinueGame();
+    }
+    else if (picked == kCredits)
+    {
+        screen = Screen::Credits;
+        creditsElapsed = 0.0f;
+    }
+    else if (picked == kQuit)
+    {
+        quitRequested = true;
+    }
+}
+
+void GameSession::UpdateCredits(float deltaTime)
+{
+    creditsElapsed += deltaTime;
+    gfx.BeginFrame(config.titleScreen.backgroundColor);
+    const bool back = Screens::RunCredits(gfx, defaultFont, config.titleScreen, config.screens.credits,
+                                          titleBackground, creditsElapsed);
+    audio.Update();
+    FinishFrame();
+    if (back)
+    {
+        screen = Screen::Title;
+    }
+}
+
+void GameSession::NewGame()
+{
+    const std::filesystem::path target =
+        !config.startLevel.empty() ? LevelsDir() / config.startLevel : initialLevelPath;
+    try
+    {
+        level = loader.Load(target.string(), events);
+    }
+    catch (const std::exception &error)
+    {
+        std::cerr << "No se pudo cargar " << target.string() << ": " << error.what() << std::endl;
+        notice = "No se pudo cargar " + target.filename().string();
+        noticeRemaining = kNoticeSeconds;
+        return;
+    }
+    currentLevelPath = target;
+    gameFlags.clear();
+    variables = config.variables;
+    PrepareLevel(LevelStart::Fresh);
+    currentCollisions.clear();
+    transition = Transition{};
+    screen = Screen::Playing;
+    paused = false;
+    gameOver = false;
+    audio.StopMusic();
+}
+
+bool GameSession::ContinueGame()
+{
+    SaveData save;
+    if (!Progress::Load(projectRoot, save))
+    {
+        return false;
+    }
+    const std::filesystem::path target = LevelsDir() / save.level;
+    try
+    {
+        level = loader.Load(target.string(), events);
+    }
+    catch (const std::exception &error)
+    {
+        std::cerr << "No se pudo cargar la partida (" << target.string() << "): " << error.what() << std::endl;
+        notice = "No se pudo cargar la partida guardada";
+        noticeRemaining = kNoticeSeconds;
+        return false;
+    }
+    currentLevelPath = target;
+    PrepareLevel(LevelStart::Fresh);
+    currentCollisions.clear();
+    transition = Transition{};
+
+    // Las armas salen del catalogo del nivel; una que se trajo de otro nivel
+    // se busca en los demas niveles del proyecto.
+    ItemCatalog catalog = level.items;
+    for (const auto &id : save.weapons)
+    {
+        if (catalog.count(id) == 0)
+        {
+            const ItemCatalog &all = ProjectItems();
+            const auto it = all.find(id);
+            if (it != all.end())
+            {
+                catalog.emplace(id, it->second);
+            }
+        }
+    }
+    inventory.Restore(player ? player->inventory : InventoryConfig{}, catalog, save.weapons, save.activeWeapon,
+                      save.coins);
+    inventoryAtLevelStart = inventory;
+
+    if (player)
+    {
+        if (save.hasPosition)
+        {
+            player->precisePosition = save.position;
+            player->position = GridCoord{static_cast<int>(std::round(save.position.x)),
+                                         static_cast<int>(std::round(save.position.y))};
+        }
+        if (save.health > 0.0f)
+        {
+            player->health = std::min(save.health, player->maxHealth);
+        }
+        camera.SnapTo(CameraFocus(), cameraFixedCenter, cameraBounds);
+    }
+    flags = std::unordered_set<std::string>(save.levelFlags.begin(), save.levelFlags.end());
+    gameFlags = std::unordered_set<std::string>(save.gameFlags.begin(), save.gameFlags.end());
+    variables = save.variables;
+    // Aparece parado en su punto de control: ese no vuelve a guardar hasta salir de el.
+    lastCheckpointId = CheckpointInReach();
+
+    screen = Screen::Playing;
+    paused = false;
+    gameOver = false;
+    audio.StopMusic();
+    std::cout << "Partida retomada en " << save.level << std::endl;
+    return true;
+}
+
+void GameSession::SaveGame()
+{
+    if (!player)
+    {
+        return;
+    }
+    SaveData save;
+    // La ruta del nivel relativa a levels/ (puede estar en una subcarpeta).
+    const std::filesystem::path relative = currentLevelPath.lexically_relative(LevelsDir());
+    save.level = relative.empty() || relative.native().rfind(std::filesystem::path("..").native(), 0) == 0
+                     ? currentLevelPath.filename().generic_string()
+                     : relative.generic_string();
+    save.hasPosition = true;
+    save.position = player->precisePosition;
+    save.health = player->health;
+    save.coins = inventory.coins;
+    save.weapons = inventory.WeaponIds();
+    save.activeWeapon = inventory.ActiveIndex();
+    save.levelFlags.assign(flags.begin(), flags.end());
+    save.gameFlags.assign(gameFlags.begin(), gameFlags.end());
+    save.variables = variables;
+    if (Progress::Write(projectRoot, save))
+    {
+        ShowMessage("Partida guardada", EventBindings::kPickupMessageSeconds);
+    }
+    else
+    {
+        notice = "No se pudo guardar la partida";
+        noticeRemaining = kNoticeSeconds;
+    }
+}
+
+std::string GameSession::CheckpointInReach() const
+{
+    if (!player)
+    {
+        return "";
+    }
+    const Vector2 at = Movement::BoxCenter(*player);
+    for (const auto &entity : level.entities)
+    {
+        if (entity.type != "checkpoint" || entity.destroyed || entity.hidden)
+        {
+            continue;
+        }
+        const Vector2 center = Movement::BoxCenter(entity);
+        if (std::hypot(center.x - at.x, center.y - at.y) <= kCheckpointReach)
+        {
+            return entity.id;
+        }
+    }
+    return "";
+}
+
+void GameSession::CheckCheckpoints()
+{
+    const std::string id = CheckpointInReach();
+    if (!id.empty() && id != lastCheckpointId)
+    {
+        lastCheckpointId = id;
+        SaveGame();
+    }
+}
+
+ItemCatalog GameSession::ProjectItems()
+{
+    if (!projectItemsLoaded)
+    {
+        projectItemsLoaded = true;
+        std::error_code error;
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(LevelsDir(), error))
+        {
+            if (entry.path().extension() != ".json")
+            {
+                continue;
+            }
+            try
+            {
+                std::ifstream stream(entry.path());
+                const nlohmann::json levelJson = nlohmann::json::parse(stream);
+                if (levelJson.contains("items"))
+                {
+                    for (auto &[id, item] : ItemLoader::ParseItems(levelJson.at("items"), resources, assets))
+                    {
+                        projectItems.emplace(id, item);
+                    }
+                }
+            }
+            catch (const std::exception &)
+            {
+                // Un nivel roto no impide continuar: solo no aporta sus armas.
+            }
+        }
+    }
+    return projectItems;
+}
+
+void GameSession::RunMenuAction(const std::string &action)
+{
+    if (action == kResume)
+    {
+        paused = false;
+    }
+    else if (action == kRestartLevel || action == kRetryLevel)
+    {
+        paused = false;
+        gameOver = false;
+        BeginTransition(currentLevelPath, "Reiniciando", true);
+        transition.remaining = 0.0f;
+    }
+    else if (action == kBackToCheckpoint)
+    {
+        if (!ContinueGame())
+        {
+            gameOver = false;
+            BeginTransition(currentLevelPath, "Reiniciando", true);
+            transition.remaining = 0.0f;
+        }
+    }
+    else if (action == kBackToTitle)
+    {
+        GoToTitle();
+    }
+    else if (action == kQuitGame)
+    {
+        quitRequested = true;
+    }
+}
+
+void GameSession::ShowScreenForTest(const std::string &name)
+{
+    if (name == "titulo")
+    {
+        GoToTitle();
+    }
+    else if (name == "creditos")
+    {
+        screen = Screen::Credits;
+        creditsElapsed = 2.0f;
+    }
+    else if (name == "pausa")
+    {
+        screen = Screen::Playing;
+        paused = true;
+        pauseMenu = Screens::Menu{{kResume, kRestartLevel, kBackToTitle, kQuitGame}, 0};
+    }
+    else if (name == "fin")
+    {
+        screen = Screen::Playing;
+        gameOver = true;
+        gameOverMenu = Screens::Menu{
+            {Progress::Exists(projectRoot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame}, 0};
+    }
 }
 
 void GameSession::Benchmark(float seconds, const std::string &screenshot)
@@ -392,7 +817,7 @@ void GameSession::Benchmark(float seconds, const std::string &screenshot)
     const double start = GetTime();
     double measuredFrom = 0.0;
     long frames = 0;
-    while (!gfx.ShouldClose())
+    while (!gfx.ShouldClose() && !quitRequested)
     {
         const double now = GetTime() - start;
         if (now >= warmup + seconds)
@@ -403,7 +828,7 @@ void GameSession::Benchmark(float seconds, const std::string &screenshot)
         {
             measuredFrom = now;
         }
-        Update(gfx.GetDeltaTime());
+        Frame(gfx.GetDeltaTime());
         if (measuredFrom > 0.0)
         {
             ++frames;
@@ -422,7 +847,7 @@ void GameSession::Benchmark(float seconds, const std::string &screenshot)
     if (!screenshot.empty() && !gfx.ShouldClose())
     {
         pendingScreenshot = screenshot;
-        Update(gfx.GetDeltaTime());
+        Frame(gfx.GetDeltaTime());
         std::cout << "CAPTURA " << screenshot << std::endl;
     }
 }
@@ -479,8 +904,20 @@ void GameSession::Update(float deltaTime)
     }
     if (IsKeyPressed(KEY_F11))
     {
-        ToggleFullscreen();
+        // Sin bordes, como la pantalla completa de game.json: ocupa el monitor
+        // a su resolucion sin cambiar el modo de video.
+        ToggleBorderlessWindowed();
     }
+    // Esc pausa y despausa. Con la pantalla de paso o la de fin de partida no:
+    // ahi ya hay algo al frente.
+    if (IsKeyPressed(KEY_ESCAPE) && !transition.active && !gameOver)
+    {
+        paused = !paused;
+        pauseMenu = Screens::Menu{{kResume, kRestartLevel, kBackToTitle, kQuitGame}, 0};
+    }
+    // Congelado: pasando de nivel, en pausa o derrotado. Nadie se mueve, nadie
+    // pega, los eventos no corren; la escena se sigue dibujando quieta.
+    const bool frozen = transition.active || paused || gameOver;
 
     // --- Camara: tamano de la ventana -------------------------------------
     // Antes de apuntar: el mouse tiene que leerse con el mismo encuadre que se
@@ -512,7 +949,7 @@ void GameSession::Update(float deltaTime)
     abilitiesUsedThisFrame.clear();
     const bool playerAlive = player && !player->destroyed;
     const bool interactPressed = input.IsActionPressed("interact");
-    if (!transition.active && shopNpc)
+    if (!frozen && shopNpc)
     {
         if (interactPressed || !playerAlive)
         {
@@ -533,7 +970,7 @@ void GameSession::Update(float deltaTime)
             }
         }
     }
-    else if (!transition.active)
+    else if (!frozen)
     {
         if (playerAlive)
         {
@@ -613,12 +1050,24 @@ void GameSession::Update(float deltaTime)
         // Perder vuelve a empezar el MISMO nivel, con la misma pantalla de
         // paso: recargarlo desde el disco lo deja exactamente como arranca,
         // y el inventario vuelve a como estaba al entrar.
+        // Perder abre la pantalla de fin de partida (ver el final del cuadro):
+        // volver al ultimo punto de control si hay partida guardada, o
+        // reintentar el nivel como estaba al entrar.
         if (combat.playerDefeated)
         {
-            BeginTransition(currentLevelPath, "Derrotado", true);
+            gameOver = true;
+            gameOverMenu = Screens::Menu{
+                {Progress::Exists(projectRoot) ? kBackToCheckpoint : kRetryLevel, kBackToTitle, kQuitGame}, 0};
+        }
+        else if (playerAlive)
+        {
+            CheckCheckpoints();
         }
     }
-    messageRemaining = std::max(0.0f, messageRemaining - deltaTime);
+    if (!paused && !gameOver)
+    {
+        messageRemaining = std::max(0.0f, messageRemaining - deltaTime);
+    }
 
     // --- Camara: seguir al jugador ----------------------------------------
     // Despues de moverlo y antes de dibujar: la camara mira donde el jugador
@@ -749,7 +1198,8 @@ void GameSession::Update(float deltaTime)
         auto animIt = animInstances.find(entity.id);
         if (animIt != animInstances.end())
         {
-            animIt->second.Update(deltaTime);
+            // En pausa o derrotado, las animaciones tambien quedan quietas.
+            animIt->second.Update(paused || gameOver ? 0.0f : deltaTime);
             sourceRect = animIt->second.GetCurrentFrame();
         }
 
@@ -974,11 +1424,15 @@ void GameSession::Update(float deltaTime)
     // En PANTALLA, no en el mundo: se ubican sobre cada sprite con la camara
     // pero no se agrandan con el zoom. Una barra es lectura, no escenario, y
     // con zoom 3 una barra de mundo seria mas ancha que el personaje.
-    for (const auto &bar : healthBars)
+    // La del jugador, en el color de su vida del HUD (game.json).
+    if (config.hud.showOverheadBars)
     {
-        const Vector2 top = camera.WorldToScreen(bar.topCenter);
-        DrawHealthBar(top.x - 16.0f, top.y - 8.0f, 32.0f, 4.0f, bar.ratio,
-                      bar.isPlayer ? Color{90, 200, 90, 255} : Color{220, 70, 70, 255});
+        for (const auto &bar : healthBars)
+        {
+            const Vector2 top = camera.WorldToScreen(bar.topCenter);
+            DrawHealthBar(top.x - 16.0f, top.y - 8.0f, 32.0f, 4.0f, bar.ratio,
+                          bar.isPlayer ? config.hud.healthFill : Color{220, 70, 70, 255});
+        }
     }
 
     // --- Cierre del frame -----------------------------------------------
@@ -987,26 +1441,33 @@ void GameSession::Update(float deltaTime)
     // Con la pantalla de paso activa los eventos no corren: el nivel ya
     // termino, y un evento mas podria pedir otro cambio encima.
     currentCollisions = collision.Flush();
-    if (!transition.active)
+    if (!frozen)
     {
         events.Update();
     }
     audio.Update();  // raylib necesita esto continuo para musica en streaming
 
     // --- HUD --------------------------------------------------------------
+    // La vida, con el estilo de game.json (ver game/HealthHud). Sin game.json
+    // queda igual que siempre: barra arriba a la izquierda.
+    const HudConfig &hudConfig = config.hud;
+    float coinsTop = 37.0f;
     if (player)
     {
-        gfx.DrawText(defaultFont, "Vida", {10, 10}, 20, hudText);
-        DrawHealthBar(60.0f, 13.0f, 160.0f, 14.0f, player->health / player->maxHealth,
-                      Color{90, 200, 90, 255});
-        const std::string lifeText = std::to_string(static_cast<int>(std::ceil(player->health))) +
-                                     " / " + std::to_string(static_cast<int>(player->maxHealth));
-        gfx.DrawText(defaultFont, lifeText.c_str(), {230, 10}, 20, hudText);
+        const float bottomReserve = hudConfig.showControls ? 24.0f : 0.0f;
+        const Rectangle healthBox = HealthHud::Draw(gfx, defaultFont, hudConfig, hudImages, player->health,
+                                                    player->maxHealth, hudText, bottomReserve);
+        // La fila de monedas va debajo de la vida si la vida esta arriba a la
+        // izquierda, y si no, en su lugar.
+        coinsTop = hudConfig.healthCorner == HudCorner::TopLeft ? healthBox.y + healthBox.height + 7.0f : 10.0f;
     }
-    gfx.DrawText(defaultFont,
-                 "WASD mover | Clic/Espacio atacar | Q habilidad | Shift esquivar | "
-                 "Clic der./K defender | 1-9 armas | E usar",
-                 {10, static_cast<float>(gfx.GetScreenHeight() - 22)}, 14, hudText);
+    if (hudConfig.showControls)
+    {
+        gfx.DrawText(defaultFont,
+                     "WASD mover | Clic/Espacio atacar | Q habilidad | Shift esquivar | "
+                     "Clic der./K defender | 1-9 armas | E usar | Esc pausa",
+                     {10, static_cast<float>(gfx.GetScreenHeight() - 22)}, 14, hudText);
+    }
 
     // Inventario, monedas, esquive, jefe, avisos y mensajes.
     CombatView::Hud hud;
@@ -1018,6 +1479,10 @@ void GameSession::Update(float deltaTime)
     // Se desvanece en su ultimo medio segundo en vez de cortarse de golpe.
     hud.messageAlpha = std::clamp(messageRemaining / 0.5f, 0.0f, 1.0f);
     hud.text = hudText;
+    hud.showCoins = hudConfig.showCoins;
+    hud.showInventory = hudConfig.showInventory;
+    hud.showBossBar = hudConfig.showBossBar;
+    hud.coinsTop = coinsTop;
     // La barra del jefe aparece cuando la pelea empieza: el jugador lo tiene
     // a la vista o ya lo lastimo. Antes se veia desde el primer frame, con el
     // jefe todavia encerrado del otro lado del mapa.
@@ -1061,6 +1526,30 @@ void GameSession::Update(float deltaTime)
         transition.remaining -= deltaTime;
     }
 
+    // --- Pausa y fin de partida -----------------------------------------
+    // Un velo sobre la escena quieta, con su menu. Lo elegido se hace
+    // despues de cerrar el cuadro (ver abajo): puede cargar otro nivel.
+    if (paused)
+    {
+        const int choice = Screens::RunOverlay(gfx, defaultFont, config.screens.pauseTitle,
+                                               config.titleScreen.titleColor, Color{0, 0, 0, 160},
+                                               config.titleScreen, pauseMenu);
+        if (choice >= 0)
+        {
+            pendingMenuAction = pauseMenu.items[static_cast<size_t>(choice)];
+        }
+    }
+    else if (gameOver)
+    {
+        const int choice = Screens::RunOverlay(gfx, defaultFont, config.screens.gameOverTitle,
+                                               config.screens.gameOverColor, Color{20, 0, 0, 185},
+                                               config.titleScreen, gameOverMenu);
+        if (choice >= 0)
+        {
+            pendingMenuAction = gameOverMenu.items[static_cast<size_t>(choice)];
+        }
+    }
+
     // --- Herramientas de administrador (solo Debug) ----------------------
     // Al final, para quedar encima de todo, pantalla de paso incluida.
     if constexpr (DevTools::kEnabled)
@@ -1094,17 +1583,15 @@ void GameSession::Update(float deltaTime)
         }
     }
 
-    // Captura pedida por Benchmark ("--captura"): lo dibujado se lee del
-    // buffer ANTES de presentarlo. Primero se vacia el lote de raylib, que
-    // todavia puede tener sprites sin mandar a la GPU.
-    if (!pendingScreenshot.empty())
-    {
-        rlDrawRenderBatchActive();
-        TakeScreenshot(pendingScreenshot.c_str());
-        pendingScreenshot.clear();
-    }
+    FinishFrame();
 
-    gfx.EndFrame();
+    // --- Lo que eligio el menu de pausa o de fin --------------------------
+    if (!pendingMenuAction.empty())
+    {
+        const std::string action = pendingMenuAction;
+        pendingMenuAction.clear();
+        RunMenuAction(action);
+    }
 
     // --- Carga del nivel siguiente ---------------------------------------
     // Despues de EndFrame y fuera de events.Update(): cambiar de nivel

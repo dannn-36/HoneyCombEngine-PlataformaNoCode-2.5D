@@ -20,6 +20,7 @@ export const ROLE_OPTIONS: readonly { value: string; label: string; hint: string
   { value: 'enemy', label: 'Enemigo', hint: 'Ataca al jugador y recibe daño. Configúralo abajo, en Combate.' },
   { value: 'npc', label: 'NPC con tienda', hint: 'El jugador se acerca, aprieta E y le compra. Lo que vende se elige abajo.' },
   { value: 'item', label: 'Objeto para juntar', hint: 'El jugador lo junta al tocarlo. Elige abajo qué objeto es.' },
+  { value: 'checkpoint', label: 'Punto de control', hint: 'Al pasar cerca, el juego se guarda aquí: «Continuar» y «Volver al punto de control» retoman en este lugar.' },
   { value: 'obstacle', label: 'Obstáculo', hint: 'Un estorbo del mapa. Marca «Choca con su forma» para que no se atraviese.' },
   { value: 'prop', label: 'Decoración', hint: 'Adorna el nivel. No hace nada en el juego hasta que un evento lo use.' },
 ];

@@ -210,30 +210,38 @@ void DrawHud(GraphicsDevice& gfx, const Font& font, const Hud& hud) {
     const float height = static_cast<float>(gfx.GetScreenHeight());
 
     // --- Monedas, esquive y defensa (debajo de la vida) ---
+    // Todo corrido lo mismo que coinsTop: 37 es donde iba siempre.
     if (hud.player && hud.inventory) {
-        DrawCircle(18, 46, 7.0f, Color{240, 196, 64, 255});
-        DrawCircleLines(18, 46, 7.0f, Color{150, 110, 20, 255});
-        gfx.DrawText(font, std::to_string(hud.inventory->coins).c_str(), {32, 37}, 20, Color{240, 196, 64, 255});
-
+        const float dy = hud.coinsTop - 37.0f;
+        const int rowY = static_cast<int>(dy);
         float x = 110.0f;
+        if (hud.showCoins) {
+            DrawCircle(18, 46 + rowY, 7.0f, Color{240, 196, 64, 255});
+            DrawCircleLines(18, 46 + rowY, 7.0f, Color{150, 110, 20, 255});
+            gfx.DrawText(font, std::to_string(hud.inventory->coins).c_str(), {32, 37 + dy}, 20,
+                         Color{240, 196, 64, 255});
+        } else {
+            x = 10.0f;
+        }
+
         if (hud.player->dash.enabled && hud.mobility) {
             const float total = hud.player->dash.cooldown + hud.player->dash.duration;
             const float ready = total > 0.0f ? 1.0f - hud.mobility->dashCooldown / total : 1.0f;
-            gfx.DrawText(font, "Esquive", {x, 38}, 16, hud.text);
-            DrawRectangle(static_cast<int>(x + 62), 42, 60, 8, Color{30, 30, 30, 200});
-            DrawRectangle(static_cast<int>(x + 62), 42, static_cast<int>(60 * std::clamp(ready, 0.0f, 1.0f)), 8,
+            gfx.DrawText(font, "Esquive", {x, 38 + dy}, 16, hud.text);
+            DrawRectangle(static_cast<int>(x + 62), 42 + rowY, 60, 8, Color{30, 30, 30, 200});
+            DrawRectangle(static_cast<int>(x + 62), 42 + rowY, static_cast<int>(60 * std::clamp(ready, 0.0f, 1.0f)), 8,
                           ready >= 1.0f ? Color{120, 200, 255, 255} : Color{90, 120, 150, 255});
             x += 136.0f;
         }
         if (hud.mobility && hud.mobility->defending) {
-            gfx.DrawText(font, "Defendiendo", {x, 38}, 16, Color{160, 200, 255, 255});
+            gfx.DrawText(font, "Defendiendo", {x, 38 + dy}, 16, Color{160, 200, 255, 255});
         }
     }
 
     // --- Jefe: barra grande arriba al centro ---
     // Debajo de la fila de vida y monedas: en una ventana angosta, a la altura
     // de la vida se pisaban.
-    if (hud.boss) {
+    if (hud.boss && hud.showBossBar) {
         constexpr float kTop = 62.0f;
         const float barWidth = std::min(420.0f, width - 40.0f);
         const float x = (width - barWidth) / 2.0f;
@@ -251,7 +259,7 @@ void DrawHud(GraphicsDevice& gfx, const Font& font, const Hud& hud) {
     constexpr float kSlot = 46.0f;
     constexpr float kGap = 6.0f;
     float slotsTop = height - 34.0f - kSlot;
-    if (hud.inventory) {
+    if (hud.inventory && hud.showInventory) {
         const int slots = hud.inventory->Slots();
         const float total = slots * kSlot + (slots - 1) * kGap;
         float x = (width - total) / 2.0f;

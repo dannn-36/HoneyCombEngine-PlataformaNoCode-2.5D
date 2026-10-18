@@ -166,10 +166,14 @@
       }
     </div>
 
-    <!-- Guarda y lanza el motor con el nivel abierto, con el motor elegido
-         (selector de al lado). Ver project/engine.controller.ts. -->
+    <!-- Guarda y lanza el motor con el nivel abierto, con el motor y el
+         arranque elegidos en los selectores de al lado. Ver
+         project/engine.controller.ts. -->
     <button class="run" type="button" (click)="proj.run()" [disabled]="engine.building() !== null"
-            [title]="engine.building() ? 'Compilando el motor…' : 'Guardar y ejecutar el nivel con el motor ' + engine.label(engine.mode()) + ' (F5)'">
+            [title]="engine.building() ? 'Compilando el motor…' :
+              (engine.start() === 'title' ? 'Guardar y ejecutar el juego desde la portada' : 'Guardar y ejecutar el nivel') +
+              ' con el motor ' + engine.label(engine.mode()) + ' (F5). Shift+F5: ' +
+              (engine.start() === 'title' ? 'directo al nivel' : 'desde la portada') + '.'">
       <svg hcIcon="play"></svg>
       @if (engine.building()) {
         <span>Compilando {{ engine.progress() }}</span>
@@ -194,6 +198,18 @@
             @if (engine.isMissing(mode.id)) {
               <span class="runmode__missing" aria-label="sin compilar"></span>
             }
+          </button>
+        }
+      </div>
+
+      <!-- Donde arranca el juego: el nivel que se edita, para probar, o la
+           portada, como el juego terminado. Se recuerda entre sesiones. -->
+      <div class="seg runstart" role="radiogroup" aria-label="Dónde arranca el juego al ejecutar">
+        @for (start of engine.starts; track start.id) {
+          <button class="tool" type="button" role="radio" [class.is-active]="engine.start() === start.id"
+                  [attr.aria-checked]="engine.start() === start.id" [title]="start.hint"
+                  [attr.aria-label]="start.label" (click)="engine.setStart(start.id)">
+            <svg [hcIcon]="start.id === 'title' ? 'monitor-play' : 'map'"></svg><span>{{ start.label }}</span>
           </button>
         }
       </div>
@@ -426,6 +442,11 @@
   <!-- Convertidor de imagenes: dialogs/converter-dialog.html -->
   @defer (when converter.isOpen()) {
     <app-converter-dialog />
+  }
+
+  <!-- Configuración del juego (game.json): dialogs/game-config-dialog.html -->
+  @defer (when game.draft()) {
+    <app-game-config-dialog />
   }
 
   <!-- Pedir un nombre (Guardar como, Nueva carpeta). Va despues de los otros
@@ -2090,6 +2111,30 @@
                     @case ('boolean') {
                       <input type="checkbox" [checked]="step.params[row.key] === true"
                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, checked($event))" />
+                    }
+                    <!-- Las variables de la partida, declaradas en game.json. La
+                         ultima opcion crea una nueva ahi mismo. -->
+                    @case ('variable_ref') {
+                      <select class="select-lone"
+                              (change)="chooseVariableParam(stepKind, eventIndex, stepIndex, row.key, $event, ev.paramValue(step, row.key))">
+                        <option value="" disabled [selected]="ev.paramValue(step, row.key) === ''">— variable —</option>
+                        @for (name of gameConfig.variableNames(); track name) {
+                          <option [value]="name" [selected]="ev.paramValue(step, row.key) === name">{{ name }}</option>
+                        }
+                        @if (ev.paramValue(step, row.key) && !gameConfig.variableNames().includes(ev.paramValue(step, row.key))) {
+                          <option [value]="ev.paramValue(step, row.key)" selected>{{ ev.paramValue(step, row.key) }} (sin declarar)</option>
+                        }
+                        <option [value]="newVariableOption">+ Nueva variable…</option>
+                      </select>
+                    }
+                    <!-- Una de las opciones que declara el catalogo (la comparacion de una variable). -->
+                    @case ('choice') {
+                      <select class="select-lone"
+                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))">
+                        @for (option of row.def.options ?? []; track option.value) {
+                          <option [value]="option.value" [selected]="ev.paramValue(step, row.key) === option.value">{{ option.label }}</option>
+                        }
+                      </select>
                     }
                     @default {
                       <input class="select-lone" [type]="row.def.type === 'number' ? 'number' : 'text'"

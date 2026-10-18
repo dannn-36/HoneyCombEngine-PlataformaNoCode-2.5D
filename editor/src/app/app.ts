@@ -9,7 +9,8 @@
 // @Input/@Output para pasar el mismo estado de un lado a otro.
 //
 // La excepcion son los DIALOGOS GRANDES (dialogs/): objetos y armas,
-// personajes, convertidor, puzzle, grilla, tunel y pasar de nivel. Son
+// personajes, convertidor, puzzle, grilla, tunel, pasar de nivel y la
+// configuracion del juego. Son
 // componentes aparte por PESO, no por estado: se cargan con @defer la primera
 // vez que se abren, y uno que no se usa en la sesion no se carga nunca. El
 // estado sigue siendo de App y de sus controladores; el dialogo solo tiene el
@@ -47,7 +48,7 @@
 //   selection/  palette/  inspector/      que esta elegido y como se edita
 //
 // Alrededor: project/ (el nivel como documento y el explorador de la carpeta
-// del editor), characters/, textures/ y combat/ (las bibliotecas del proyecto
+// del editor), game/ (la configuracion del juego: game.json), characters/, textures/ y combat/ (las bibliotecas del proyecto
 // y sus ventanas; en textures/ tambien el convertidor de imagenes y las
 // miniaturas bajo demanda), events/ (el panel Eventos y el dialogo de pasar de
 // nivel), dialogs/ (el markup de los dialogos grandes), ui/ (paneles y el
@@ -99,6 +100,9 @@ import { ItemEditorDialog } from './dialogs/item-editor-dialog';
 import { TransitionDialog } from './dialogs/transition-dialog';
 import { ConverterDialog } from './dialogs/converter-dialog';
 import { PuzzleDialog } from './dialogs/puzzle-dialog';
+import { GameConfigDialog } from './dialogs/game-config-dialog';
+import { GameConfigController } from './game/game-config.controller';
+import { GameConfigService } from './services/game-config.service';
 import { CombatInspectorController } from './combat/combat-inspector.controller';
 import { ItemEditorController } from './combat/item-editor.controller';
 import { PuzzleController } from './combat/puzzle.controller';
@@ -106,7 +110,7 @@ import { ExplorerController } from './project/explorer.controller';
 import { MapController } from './map/map.controller';
 import { FloorController } from './map/floor.controller';
 import { CharactersController } from './characters/characters.controller';
-import { EventsController } from './events/events.controller';
+import { EventsController, StepKind } from './events/events.controller';
 import { TexturesController } from './textures/textures.controller';
 import { TextureThumbDirective } from './textures/texture-thumb.directive';
 import { ImageConverterController } from './textures/image-converter.controller';
@@ -260,6 +264,7 @@ const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
     TransitionDialog,
     ConverterDialog,
     PuzzleDialog,
+    GameConfigDialog,
     SpriteEditor,
   ],
   // Los dialogos llegan a App por este token (ver dialogs/dialog-base.ts).
@@ -297,6 +302,9 @@ export class App {
 
   /** Deshacer y rehacer del nivel. Ver services/level-history.service.ts. */
   readonly history = inject(LevelHistoryService);
+
+  /** La configuracion del juego (game.json): las variables, para los eventos. */
+  readonly gameConfig = inject(GameConfigService);
 
   // --- Estado del shell -----------------------------------------------------
   //
@@ -616,6 +624,19 @@ export class App {
     engine: this.engine,
   });
 
+  /**
+   * Archivo › Configuración del juego…: ventana, portada, pantallas, HUD y
+   * variables de la partida, en game.json. Ver game/game-config.controller.ts.
+   */
+  readonly game: GameConfigController = new GameConfigController({
+    note: (message) => this.note(message),
+    describe: (error) => this.describe(error),
+    hasFileSystem: this.hasFileSystem,
+    levelFiles: () => this.proj.levelFiles(),
+    textureAssets: () => this.tex.textureAssets(),
+    ask: (request) => this.prompt.ask(request),
+  });
+
   /** La pestaña JSON del panel de abajo. Ver debug/json-view.controller.ts. */
   readonly json: JsonViewController = new JsonViewController((message) => this.note(message));
 
@@ -788,6 +809,8 @@ export class App {
               run: () => void this.proj.loadLevel(file),
             })),
           },
+          separator,
+          { kind: 'action', label: 'Configuración del juego…', run: () => void this.game.open() },
           separator,
           { kind: 'action', label: 'Mostrar carpeta del editor', run: () => void this.proj.revealWorkspace() },
           { kind: 'action', label: 'Cambiar carpeta del editor…', run: () => void this.proj.changeWorkspace() },
@@ -1048,11 +1071,31 @@ export class App {
         items: [
           {
             kind: 'action',
-            label: 'Ejecutar nivel (' + this.engine.label(this.engine.mode()) + ')',
+            label:
+              (this.engine.start() === 'title' ? 'Ejecutar desde la portada' : 'Ejecutar el nivel') +
+              ' (' + this.engine.label(this.engine.mode()) + ')',
             shortcut: 'F5',
             disabled: this.engine.building() !== null,
             run: () => void this.proj.run(),
           },
+          {
+            kind: 'action',
+            // El otro arranque, sin cambiar el selector: probar el nivel sin
+            // pasar por la portada, o ver la portada sin dejarla elegida.
+            label: this.engine.otherStart() === 'title' ? 'Ejecutar desde la portada' : 'Ejecutar el nivel directo',
+            shortcut: 'Shift+F5',
+            disabled: this.engine.building() !== null,
+            run: () => void this.proj.run(this.engine.otherStart()),
+          },
+          { kind: 'action', label: 'Configuración del juego…', run: () => void this.game.open() },
+          separator,
+          // Donde arranca con Ejecutar y F5: lo mismo que el selector de la barra.
+          ...this.engine.starts.map((start) => ({
+            kind: 'action' as const,
+            label: start.id === 'title' ? 'Arrancar en la portada: el juego terminado' : 'Arrancar en el nivel: para probar',
+            checked: this.engine.start() === start.id,
+            run: () => this.engine.setStart(start.id),
+          })),
           separator,
           // Con que motor: la version de desarrollo (con F3) o la optimizada.
           ...this.engine.modes.map((mode) => ({
@@ -1189,6 +1232,12 @@ export class App {
       }
       return;
     }
+    if (this.game.draft()) {
+      if (event.key === 'Escape') {
+        this.game.close();
+      }
+      return;
+    }
     if (this.map.roomDraft() || this.map.tunnelDraft() || this.chars.characterEditor() || this.transition.transitionDraft()) {
       if (event.key === 'Escape') {
         this.map.cancelRoomDialog();
@@ -1287,10 +1336,11 @@ export class App {
       this.panels.toggleDock();
       return;
     }
-    // F5: probar el nivel, como en cualquier entorno de desarrollo.
+    // F5: ejecutar, como en cualquier entorno de desarrollo, arrancando donde
+    // diga el selector de la barra (el nivel o la portada). Shift+F5: en el otro.
     if (event.key === 'F5') {
       event.preventDefault();
-      void this.proj.run();
+      void this.proj.run(event.shiftKey ? this.engine.otherStart() : this.engine.start());
       return;
     }
     // De aca para abajo, todo es sobre las entidades del viewport.
@@ -1452,6 +1502,34 @@ export class App {
 
   checked(event: Event): boolean {
     return (event.target as HTMLInputElement).checked;
+  }
+
+  /** El valor de la opcion "+ Nueva variable…" de los desplegables de variables de los eventos. */
+  readonly newVariableOption = '__nueva_variable__';
+
+  /**
+   * Un desplegable de variable de un evento. La ultima opcion crea una variable
+   * nueva en game.json y la deja elegida; si se cancela, el desplegable vuelve
+   * a la que tenia.
+   */
+  async chooseVariableParam(
+    kind: StepKind,
+    eventIndex: number,
+    stepIndex: number,
+    key: string,
+    event: Event,
+    current: string,
+  ): Promise<void> {
+    const select = event.target as HTMLSelectElement;
+    if (select.value !== this.newVariableOption) {
+      this.ev.updateStepParam(kind, eventIndex, stepIndex, key, select.value);
+      return;
+    }
+    select.value = current;
+    const name = await this.game.createVariable();
+    if (name) {
+      this.ev.updateStepParam(kind, eventIndex, stepIndex, key, name);
+    }
   }
 
   /** Vuelve un <select> de "+ Agregar…" a su opcion vacia despues de usarlo. */

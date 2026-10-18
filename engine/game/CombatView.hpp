@@ -40,6 +40,12 @@ struct Hud {
     std::string message;
     float messageAlpha = 0.0f;  // 0 a 1
     Color text = LIGHTGRAY;     // texto suelto sobre la escena: claro u oscuro segun el fondo
+    // Lo que el juego deja ver (HUD de game.json) y donde va la fila de las
+    // monedas: debajo de la vida si la vida esta arriba a la izquierda.
+    bool showCoins = true;
+    bool showInventory = true;
+    bool showBossBar = true;
+    float coinsTop = 37.0f;
 };
 
 void DrawHud(GraphicsDevice& gfx, const Font& font, const Hud& hud);

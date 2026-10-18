@@ -31,10 +31,13 @@
 //       engine.exe <nivel> --bench <segundos>   mide los FPS sin tope y sale
 //       ... --sin-recorte                       dibuja todo, aunque no se vea
 //       ... --captura <archivo.png>             guarda el ultimo cuadro (junto al .exe)
+//       engine.exe <nivel> --portada            arranca en la portada (game.json)
+//       engine.exe <nivel> --continuar          retoma la partida guardada
+//       ... --pantalla titulo|creditos|pausa|fin   abre esa pantalla (capturas de prueba)
 // Teclas: flechas o WASD = mover | clic izquierdo, Espacio o J = atacar hacia
 //         el mouse | Q = habilidad | Shift = esquivar | clic derecho o K =
 //         defender | 1-9 o rueda = elegir arma | E = cambiar arma / tienda |
-//         F11 = pantalla completa
+//         F11 = pantalla completa | Esc = pausa
 //         Solo en Debug: F3 = herramientas de administrador (F1 grilla, F2
 //         hitboxes y las demas: ver game/DevTools.hpp)
 // =============================================================================
@@ -92,9 +95,15 @@ int main(int argc, char *argv[])
     // "--bench <segundos>" despues del nivel: medir en vez de jugar (ver
     // GameSession::Benchmark). "--sin-recorte" dibuja todo el nivel, aunque
     // no se vea: es para medir cuanto ahorra el recorte por camara.
+    // "--portada": arrancar en la portada, como un juego terminado (Ejecutar
+    // desde la portada, en el editor). "--continuar": retomar la partida
+    // guardada. Sin ninguno, directo al nivel, que es lo que hace F5.
+    // "--pantalla <nombre>" abre una pantalla para capturas de prueba.
     float benchSeconds = 0.0f;
     bool culling = true;
     std::string screenshot;
+    std::string testScreen;
+    GameSession::StartMode start = GameSession::StartMode::Level;
     for (int i = 2; i < argc; ++i)
     {
         const std::string option = argv[i];
@@ -110,12 +119,31 @@ int main(int argc, char *argv[])
         {
             screenshot = argv[i + 1];
         }
+        else if (option == "--portada")
+        {
+            start = GameSession::StartMode::Title;
+        }
+        else if (option == "--continuar")
+        {
+            start = GameSession::StartMode::Continue;
+        }
+        else if (option == "--pantalla" && i + 1 < argc)
+        {
+            testScreen = argv[i + 1];
+        }
     }
 
     try
     {
-        GameSession session(levelPath);
+        // La configuracion del juego, de la raiz del proyecto (<nivel>/../..),
+        // antes de abrir la ventana: de ahi salen su tamaño y su titulo.
+        const GameConfig config = LoadGameConfig(levelPath.parent_path().parent_path());
+        GameSession session(levelPath, config, start);
         session.SetCulling(culling);
+        if (!testScreen.empty())
+        {
+            session.ShowScreenForTest(testScreen);
+        }
         if (benchSeconds > 0.0f)
         {
             session.Benchmark(benchSeconds, screenshot);

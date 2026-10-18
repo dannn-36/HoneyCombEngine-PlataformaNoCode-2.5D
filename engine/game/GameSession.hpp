@@ -13,7 +13,10 @@
 #include "game/Combat.hpp"
 #include "game/DevTools.hpp"
 #include "game/EventBindings.hpp"
+#include "game/GameConfig.hpp"
+#include "game/HealthHud.hpp"
 #include "game/Inventory.hpp"
+#include "game/Screens.hpp"
 #include "game/Loot.hpp"
 #include "game/Mobility.hpp"
 #include "loader/AssetResolver.hpp"
@@ -58,13 +61,23 @@ enum class LevelStart
 class GameSession
 {
 public:
-    explicit GameSession(const std::filesystem::path &levelPath);
+    // Por donde arranca:
+    //   Level     directo en el nivel que se abrio (Ejecutar del editor, F5)
+    //   Title     en la portada (Ejecutar desde la portada, o el juego exportado)
+    //   Continue  retomando la partida guardada, o en el nivel si no hay
+    enum class StartMode { Level, Title, Continue };
+
+    GameSession(const std::filesystem::path &levelPath, const GameConfig &gameConfig, StartMode start);
 
     GameSession(const GameSession &) = delete;
     GameSession &operator=(const GameSession &) = delete;
 
-    // El bucle principal, hasta que se cierre la ventana.
+    // El bucle principal, hasta que se cierre la ventana o se elija Salir.
     void Run();
+
+    // Para capturas y pruebas ("--pantalla"): abre directo "titulo",
+    // "creditos", "pausa" o "fin".
+    void ShowScreenForTest(const std::string &name);
 
     // Medicion ("engine <nivel> --bench <segundos>"): corre el nivel sin tope
     // de FPS durante ese tiempo, imprime cuantos cuadros por segundo dio y
@@ -108,6 +121,32 @@ private:
     // que lo encabeza en GameSession.cpp.
     void Update(float deltaTime);
 
+    // --- La partida: pantallas y progreso (ver game/Screens y game/Progress) --
+    // Un cuadro de la pantalla que este al frente: portada, creditos o juego.
+    void Frame(float deltaTime);
+    void UpdateTitle();
+    void UpdateCredits(float deltaTime);
+    // Cierra el cuadro: la captura pedida por Benchmark, si hay, y EndFrame.
+    void FinishFrame();
+    void GoToTitle();
+    void NewGame();
+    // false si no hay partida guardada o no se pudo cargar su nivel.
+    bool ContinueGame();
+    void SaveGame();
+    // Si el jugador esta parado en un punto de control nuevo, guarda.
+    void CheckCheckpoints();
+    // El punto de control al alcance del jugador, o "" si no hay ninguno.
+    std::string CheckpointInReach() const;
+    // Lo que el menu de pausa o de fin de partida pidio, para hacerlo despues
+    // de terminar el cuadro (cargar un nivel en medio del dibujo no conviene).
+    void RunMenuAction(const std::string &action);
+    // Las armas de todos los niveles del proyecto: para restaurar al continuar
+    // una que se trajo de otro nivel y este no tiene en su catalogo.
+    ItemCatalog ProjectItems();
+    std::filesystem::path LevelsDir() const;
+    // Una textura de game.json (ruta relativa a assets/), o nullptr si no hay.
+    const Texture2D *StyleTexture(const std::string &relativePath);
+
     // Pasar de nivel no es instantaneo: primero se muestra la pantalla con el
     // mensaje ("¡Nivel superado!"), con el juego congelado, y recien al
     // terminar se carga el nivel siguiente. La carga pasa FUERA de
@@ -132,6 +171,13 @@ private:
         float ratio;
         bool isPlayer;
     };
+
+    // --- La configuracion del juego (game.json) ------------------------------
+    // Antes que la ventana: de aca salen su tamaño y su titulo. El titulo se
+    // guarda en un miembro porque raylib se queda con el puntero.
+    GameConfig config;
+    std::filesystem::path projectRoot;
+    std::string windowTitle;
 
     // --- Capa 1 + Capa 3: ventana, recursos y carga del nivel ---------------
     GraphicsDevice gfx;
@@ -228,4 +274,32 @@ private:
     std::vector<FloorSprite> floorDrawOrder;
 
     std::vector<HealthBarMark> healthBars;
+
+    // --- La partida: pantallas, progreso y estilo ----------------------------
+    enum class Screen { Title, Credits, Playing };
+    Screen screen = Screen::Playing;
+    bool paused = false;
+    bool gameOver = false;
+    bool quitRequested = false;
+    Screens::Menu titleMenu;
+    Screens::Menu pauseMenu;
+    Screens::Menu gameOverMenu;
+    float creditsElapsed = 0.0f;
+    // Lo que eligio un menu de pausa o de fin, para hacerlo al terminar el cuadro.
+    std::string pendingMenuAction;
+    // El nivel con que se abrio el motor: el de "Nueva partida" si game.json no
+    // dice otro.
+    std::filesystem::path initialLevelPath;
+    // Marcas y variables que duran la partida (las del nivel son "flags").
+    std::unordered_set<std::string> gameFlags;
+    std::unordered_map<std::string, float> variables;
+    // El ultimo punto de control que guardo: no se vuelve a guardar en el mismo
+    // mientras el jugador siga parado ahi.
+    std::string lastCheckpointId;
+    // Imagenes del estilo de game.json, ya cargadas.
+    const Texture2D *titleBackground = nullptr;
+    HealthHud::Images hudImages;
+    // Armas de todo el proyecto, armado la primera vez que hace falta.
+    bool projectItemsLoaded = false;
+    ItemCatalog projectItems;
 };

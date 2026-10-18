@@ -113,8 +113,12 @@ export interface HoneycombProjectApi {
    * Lanza el runtime con el nivel de esa ruta absoluta, con el motor del modo
    * elegido. El ejecutable lo localiza el proceso principal. "missing" dice que
    * ese motor no esta compilado, y que se puede compilar con buildEngine.
+   * "start" elige donde arranca: en el nivel, o en la portada de game.json.
    */
-  run(levelPath: string, mode: EngineMode): Promise<EngineRunResult>;
+  run(levelPath: string, mode: EngineMode, start: EngineStart): Promise<EngineRunResult>;
+
+  /** Borra la partida guardada del juego (saves/partida.json). Sin partida no hace nada. */
+  clearSave(): Promise<void>;
 
   /** Que motores estan compilados (ver ipc/engine-modes.js). */
   engineStatus(): Promise<Record<EngineMode, boolean>>;
@@ -129,6 +133,12 @@ export interface HoneycombProjectApi {
  * con las herramientas de F3) y "release" la optimizada, la que se juega.
  */
 export type EngineMode = 'debug' | 'release';
+
+/**
+ * Donde arranca el juego: "level" directo en el nivel (probar lo que se esta
+ * editando) o "title" en la portada, como el juego terminado.
+ */
+export type EngineStart = 'level' | 'title';
 
 export interface EngineRunResult {
   ok: boolean;

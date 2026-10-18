@@ -1,0 +1,626 @@
+<!-- Configuración del juego: lo que es del JUEGO y no de un nivel, guardado en
+     game.json. A la izquierda el formulario de la pestaña, a la derecha la
+     vista previa (portada, pantallas o HUD) a la proporción de la ventana del
+     juego. Ver game/game-config.controller.ts. -->
+
+<!-- Una imagen de Recursos: miniatura, nombre, Elegir y Quitar, y el selector
+     debajo cuando está desplegado. -->
+<ng-template #imageField let-slot let-label="label">
+  <div class="field">
+    <span>{{ label }}</span>
+    <div class="appearance">
+      <span class="appearance__thumb" [appTextureThumb]="game.imagePath(slot)">
+        @if (game.imageUrl(slot); as url) {
+          <img [src]="url" alt="" />
+        }
+      </span>
+      <span class="appearance__name" [title]="game.imagePath(slot)">{{ game.imageName(slot) || 'ninguna' }}</span>
+      <button class="btn btn--small" type="button" [class.is-active]="game.imagePicker() === slot"
+              (click)="game.toggleImagePicker(slot)">Elegir</button>
+      @if (game.imagePath(slot)) {
+        <button class="ibtn" type="button" title="Quitar la imagen" aria-label="Quitar la imagen"
+                (click)="game.setImage(slot, '')"><svg hcIcon="x"></svg></button>
+      }
+    </div>
+  </div>
+  @if (game.imagePath(slot) && hasFileSystem && !tex.textures().includes(game.imageName(slot))) {
+    <p class="hint hint--warn hint--field">
+      <svg hcIcon="triangle-alert"></svg>No se encontró «{{ game.imageName(slot) }}» en assets/textures/.
+    </p>
+  }
+  @if (game.imagePicker() === slot) {
+    <div class="texpicker appearance__picker">
+      @for (texture of tex.textures(); track texture) {
+        <button class="texpicker__item" type="button" [title]="texture" [appTextureThumb]="texture"
+                [class.is-active]="game.imagePath(slot) === 'textures/' + texture"
+                (click)="game.setImage(slot, texture)">
+          @if (tex.textureAssets()[texture]; as asset) {
+            <img [src]="asset.dataUrl" [alt]="texture" />
+          }
+        </button>
+      } @empty {
+        <p class="hint">No hay imágenes en assets/textures/. Agrégalas con Archivo › Importar imágenes…</p>
+      }
+    </div>
+  }
+</ng-template>
+
+<!-- Un color: el cuadro del sistema y su valor en hexadecimal. -->
+<ng-template #colorField let-label="label" let-value="value" let-set="set">
+  <label class="field">
+    <span>{{ label }}</span>
+    <span class="gameconf__color">
+      <input type="color" [value]="value" (input)="set(str($event))" [attr.aria-label]="label" />
+      <code>{{ value }}</code>
+    </span>
+  </label>
+</ng-template>
+
+@if (game.draft(); as d) {
+  <div class="modal-backdrop" (click)="game.close()">
+    <section class="modal modal--xl gameconf" role="dialog" aria-modal="true" aria-labelledby="gameconf-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <h2 id="gameconf-title">Configuración del juego</h2>
+        <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="game.close()"><svg hcIcon="x"></svg></button>
+      </div>
+
+      <div class="gameconf__tabs" role="tablist" aria-label="Partes de la configuración">
+        @for (tab of game.tabs; track tab.id) {
+          <button class="gameconf__tab" type="button" role="tab" [class.is-active]="game.tab() === tab.id"
+                  [attr.aria-selected]="game.tab() === tab.id" (click)="game.tab.set(tab.id)">
+            <svg [hcIcon]="tab.icon"></svg>{{ tab.label }}
+          </button>
+        }
+      </div>
+
+      <div class="gameconf__body" [class.gameconf__body--single]="game.tab() === 'general' || game.tab() === 'progreso'">
+        <div class="gameconf__form">
+          @switch (game.tab()) {
+            <!-- ============================== General ============================== -->
+            @case ('general') {
+              <label class="field">
+                <span>Nombre del juego</span>
+                <input class="input" [value]="d.name" placeholder="HoneyComb Engine - Runtime"
+                       (input)="game.patch({ name: str($event) })" />
+              </label>
+              <p class="hint hint--field">El título de la ventana, y el de la portada si no le pones otro.</p>
+
+              <ng-container *ngTemplateOutlet="imageField; context: { $implicit: 'icon', label: 'Ícono de la ventana' }" />
+              <p class="hint hint--field">Una imagen PNG cuadrada se ve mejor (32 × 32 o 64 × 64).</p>
+
+              <div class="subhead">Ventana</div>
+              <label class="field">
+                <span>Resolución</span>
+                <select class="input" (change)="game.setResolution(str($event))">
+                  @for (preset of game.resolutionPresets; track preset.label) {
+                    <option [value]="preset.width + 'x' + preset.height"
+                            [selected]="game.resolutionValue(d.window) === preset.width + 'x' + preset.height">{{ preset.label }}</option>
+                  }
+                  <option value="custom" [selected]="game.resolutionValue(d.window) === 'custom'">Personalizada</option>
+                </select>
+              </label>
+              <div class="field-row">
+                <label class="field">
+                  <span>Ancho</span>
+                  <input class="input" type="number" step="1" [min]="game.windowLimits.minWidth" [max]="game.windowLimits.maxWidth"
+                         [value]="d.window.width" (change)="game.setWidth(int($event))" />
+                </label>
+                <label class="field">
+                  <span>Alto</span>
+                  <input class="input" type="number" step="1" [min]="game.windowLimits.minHeight" [max]="game.windowLimits.maxHeight"
+                         [value]="d.window.height" (change)="game.setHeight(int($event))" />
+                </label>
+              </div>
+              <label class="check">
+                <input type="checkbox" [checked]="d.window.fullscreen" (change)="game.patchWindow({ fullscreen: checked($event) })" />
+                <span>Pantalla completa</span>
+              </label>
+              <p class="hint hint--field">
+                Ocupa todo el monitor, sin bordes. Mientras se juega, F11 la prende y la apaga. La portada, los menús y el
+                HUD se acomodan a cualquier tamaño.
+              </p>
+
+              <div class="subhead">Partida</div>
+              <label class="field">
+                <span>Nivel inicial</span>
+                <select class="input" (change)="game.patch({ startLevel: str($event) })">
+                  <option value="" [selected]="d.startLevel === ''">— el que se ejecuta —</option>
+                  @for (file of game.levelFiles(); track file) {
+                    <option [value]="file" [selected]="d.startLevel === file">{{ file }}</option>
+                  }
+                  @if (d.startLevel && !game.levelFiles().includes(d.startLevel)) {
+                    <option [value]="d.startLevel" selected>{{ d.startLevel }} (no está en levels/)</option>
+                  }
+                </select>
+              </label>
+              <p class="hint hint--field">
+                Donde empieza «Nueva partida» en la portada. Para verla al ejecutar, elige <b>Portada</b> junto al
+                botón Ejecutar (o usa Shift+F5 para el arranque que no está elegido).
+              </p>
+            }
+
+            <!-- ============================== Portada ============================== -->
+            @case ('portada') {
+              <div class="fieldblock">
+                <span class="fieldblock__label">Estilo</span>
+                <div class="seg">
+                  @for (style of game.titleStyles; track style.id) {
+                    <button class="tool" type="button" [class.is-active]="d.titleScreen.style === style.id"
+                            [title]="style.hint" (click)="game.patchTitle({ style: style.id })">{{ style.label }}</button>
+                  }
+                </div>
+                @for (style of game.titleStyles; track style.id) {
+                  @if (d.titleScreen.style === style.id) {
+                    <p class="hint">{{ style.hint }}</p>
+                  }
+                }
+              </div>
+
+              <div class="subhead">Textos</div>
+              <label class="field">
+                <span>Título</span>
+                <input class="input" [value]="d.titleScreen.title" [placeholder]="d.name || 'el nombre del juego'"
+                       (input)="game.patchTitle({ title: str($event) })" />
+              </label>
+              <label class="field">
+                <span>Subtítulo</span>
+                <input class="input" [value]="d.titleScreen.subtitle" placeholder="opcional"
+                       (input)="game.patchTitle({ subtitle: str($event) })" />
+              </label>
+              <div class="field-row">
+                <ng-container *ngTemplateOutlet="colorField; context: { label: 'Color del título', value: game.hex(d.titleScreen.titleColor), set: setters.titleColor }" />
+                <label class="field">
+                  <span>Tamaño</span>
+                  <input class="input" type="number" min="10" max="200" step="1" [value]="d.titleScreen.titleSize"
+                         (change)="game.patchTitle({ titleSize: game.clamp(num($event), 10, 200, d.titleScreen.titleSize) })" />
+                </label>
+              </div>
+              <div class="field-row">
+                <ng-container *ngTemplateOutlet="colorField; context: { label: 'Color del subtítulo', value: game.hex(d.titleScreen.subtitleColor), set: setters.subtitleColor }" />
+                <label class="field">
+                  <span>Tamaño</span>
+                  <input class="input" type="number" min="8" max="120" step="1" [value]="d.titleScreen.subtitleSize"
+                         (change)="game.patchTitle({ subtitleSize: game.clamp(num($event), 8, 120, d.titleScreen.subtitleSize) })" />
+                </label>
+              </div>
+
+              <div class="subhead">Fondo</div>
+              <ng-container *ngTemplateOutlet="colorField; context: { label: 'Color', value: game.hex(d.titleScreen.backgroundColor), set: setters.backgroundColor }" />
+              <ng-container *ngTemplateOutlet="imageField; context: { $implicit: 'titleBackground', label: 'Imagen' }" />
+              @if (d.titleScreen.backgroundImage) {
+                <label class="field">
+                  <span>Cómo llena</span>
+                  <select class="input" (change)="game.patchTitle({ backgroundMode: $any(str($event)) })">
+                    @for (mode of game.backgroundModes; track mode.id) {
+                      <option [value]="mode.id" [selected]="d.titleScreen.backgroundMode === mode.id">{{ mode.label }}</option>
+                    }
+                  </select>
+                </label>
+              }
+
+              <div class="subhead">Menú</div>
+              <div class="field-row">
+                <ng-container *ngTemplateOutlet="colorField; context: { label: 'Opciones', value: game.hex(d.titleScreen.buttonColor), set: setters.buttonColor }" />
+                <ng-container *ngTemplateOutlet="colorField; context: { label: 'Opción elegida', value: game.hex(d.titleScreen.buttonHighlight), set: setters.buttonHighlight }" />
+              </div>
+              <p class="hint hint--field">Los mismos colores se usan en los menús de pausa y de derrota, y en los créditos.</p>
+
+              <div class="subhead">Música</div>
+              <label class="field">
+                <span>Música de la portada</span>
+                <select class="input" (change)="game.patchTitle({ music: str($event) })">
+                  <option value="" [selected]="d.titleScreen.music === ''">— sin música —</option>
+                  @for (sound of game.sounds(); track sound) {
+                    <option [value]="sound" [selected]="d.titleScreen.music === sound">{{ sound }}</option>
+                  }
+                  @if (d.titleScreen.music && !game.sounds().includes(d.titleScreen.music)) {
+                    <option [value]="d.titleScreen.music" selected>{{ d.titleScreen.music }} (no está en assets/)</option>
+                  }
+                </select>
+              </label>
+              <p class="hint hint--field">OGG, MP3 o WAV de cualquier carpeta de assets/. Suena en bucle mientras está la portada.</p>
+            }
+
+            <!-- ========================= Pausa y créditos ========================= -->
+            @case ('pantallas') {
+              <div class="subhead">Pausa</div>
+              <label class="field">
+                <span>Título</span>
+                <input class="input" [value]="d.screens.pauseTitle" placeholder="Pausa"
+                       (change)="game.patchScreens({ pauseTitle: str($event) || 'Pausa' })" (focus)="game.screenPreview.set('pause')" />
+              </label>
+              <p class="hint hint--field">Esc pausa el juego. Su color es el del título de la portada.</p>
+
+              <div class="subhead">Derrota</div>
+              <label class="field">
+                <span>Título</span>
+                <input class="input" [value]="d.screens.gameOverTitle" placeholder="Derrotado"
+                       (change)="game.patchScreens({ gameOverTitle: str($event) || 'Derrotado' })" (focus)="game.screenPreview.set('gameover')" />
+              </label>
+              <ng-container *ngTemplateOutlet="colorField; context: { label: 'Color', value: game.hex(d.screens.gameOverColor), set: setters.gameOverColor }" />
+              <p class="hint hint--field">
+                Con un punto de control alcanzado ofrece «Volver al punto de control»; si no, «Reintentar el nivel».
+              </p>
+
+              <div class="subhead">Créditos</div>
+              <textarea class="input gameconf__credits" rows="8" spellcheck="false"
+                        placeholder="# Programación&#10;Tu nombre&#10;&#10;# Arte&#10;..."
+                        [value]="game.creditsText()" (input)="game.setCredits(str($event))"
+                        (focus)="game.screenPreview.set('credits')"></textarea>
+              <p class="hint hint--field">
+                Un renglón por línea; los que empiezan con «# » son títulos de sección. Con créditos, la portada suma la
+                opción «Créditos».
+              </p>
+            }
+
+            <!-- ================================ HUD ================================ -->
+            @case ('hud') {
+              <div class="fieldblock">
+                <span class="fieldblock__label">Vida del jugador</span>
+                <div class="seg">
+                  @for (style of game.healthStyles; track style.id) {
+                    <button class="tool" type="button" [class.is-active]="d.hud.healthStyle === style.id"
+                            [title]="style.hint" (click)="game.patchHud({ healthStyle: style.id })">{{ style.label }}</button>
+                  }
+                </div>
+                @for (style of game.healthStyles; track style.id) {
+                  @if (d.hud.healthStyle === style.id) {
+                    <p class="hint">{{ style.hint }}</p>
+                  }
+                }
+              </div>
+
+              <div class="field-row">
+                <label class="field">
+                  <span>Posición</span>
+                  <select class="input" (change)="game.patchHud({ healthPosition: $any(str($event)) })">
+                    @for (corner of game.hudCorners; track corner.id) {
+                      <option [value]="corner.id" [selected]="d.hud.healthPosition === corner.id">{{ corner.label }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Tamaño ({{ d.hud.healthScale }}×)</span>
+                  <input type="range" min="0.5" max="3" step="0.1" [value]="d.hud.healthScale"
+                         (input)="game.patchHud({ healthScale: game.clamp(num($event), 0.5, 3, 1) })" />
+                </label>
+              </div>
+
+              <div class="field-row">
+                <ng-container *ngTemplateOutlet="colorField; context: { label: 'Llena', value: game.hex(d.hud.healthFill), set: setters.healthFill }" />
+                <ng-container *ngTemplateOutlet="colorField; context: { label: 'Vacía', value: game.hex(d.hud.healthEmpty), set: setters.healthEmpty }" />
+              </div>
+              @if (d.hud.healthStyle !== 'number' && d.hud.healthStyle !== 'hearts') {
+                <div class="field-row gameconf__border">
+                  <label class="check">
+                    <input type="checkbox" [checked]="d.hud.healthBorder !== null" (change)="game.setHealthBorder(checked($event))" />
+                    <span>Borde</span>
+                  </label>
+                  @if (d.hud.healthBorder) {
+                    <ng-container *ngTemplateOutlet="colorField; context: { label: 'Color del borde', value: game.hex(d.hud.healthBorder), set: setters.healthBorder }" />
+                  }
+                </div>
+              }
+
+              <div class="field-row">
+                <label class="check">
+                  <input type="checkbox" [checked]="d.hud.showHealthLabel" (change)="game.patchHud({ showHealthLabel: checked($event) })" />
+                  <span>La palabra «Vida»</span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" [checked]="d.hud.showHealthNumber" (change)="game.patchHud({ showHealthNumber: checked($event) })" />
+                  <span>El número (70 / 100)</span>
+                </label>
+              </div>
+
+              @switch (d.hud.healthStyle) {
+                @case ('hearts') {
+                  <label class="field">
+                    <span>Vida por corazón</span>
+                    <input class="input" type="number" min="1" step="1" [value]="d.hud.healthPerHeart"
+                           (change)="game.patchHud({ healthPerHeart: game.clamp(num($event), 1, 100000, d.hud.healthPerHeart) })" />
+                  </label>
+                  <p class="hint hint--field">Con 100 de vida y 20 por corazón se ven 5 corazones (hasta 20).</p>
+                  <div class="subhead">Imágenes propias (opcional)</div>
+                  <ng-container *ngTemplateOutlet="imageField; context: { $implicit: 'heartFull', label: 'Corazón lleno' }" />
+                  <ng-container *ngTemplateOutlet="imageField; context: { $implicit: 'heartEmpty', label: 'Corazón vacío' }" />
+                  <p class="hint hint--field">Sin imagen vacía se usa la llena oscurecida; sin ninguna, el corazón dibujado en los colores de arriba.</p>
+                }
+                @case ('segments') {
+                  <label class="field">
+                    <span>Segmentos</span>
+                    <input class="input" type="number" min="2" max="40" step="1" [value]="d.hud.segments"
+                           (change)="game.patchHud({ segments: game.clamp(int($event), 2, 40, d.hud.segments) })" />
+                  </label>
+                }
+                @case ('bar') {
+                  <div class="subhead">Imágenes propias (opcional)</div>
+                  <ng-container *ngTemplateOutlet="imageField; context: { $implicit: 'barFill', label: 'Relleno' }" />
+                  <ng-container *ngTemplateOutlet="imageField; context: { $implicit: 'barFrame', label: 'Marco' }" />
+                  <p class="hint hint--field">El relleno se recorta según la vida que queda; el marco se estira encima de la barra.</p>
+                }
+              }
+
+              <div class="subhead">Qué más se ve</div>
+              <div class="checklist gameconf__checks">
+                <label class="check">
+                  <input type="checkbox" [checked]="d.hud.showCoins" (change)="game.patchHud({ showCoins: checked($event) })" />
+                  <span>Monedas</span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" [checked]="d.hud.showInventory" (change)="game.patchHud({ showInventory: checked($event) })" />
+                  <span>Inventario de armas</span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" [checked]="d.hud.showBossBar" (change)="game.patchHud({ showBossBar: checked($event) })" />
+                  <span>Barra del jefe</span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" [checked]="d.hud.showOverheadBars" (change)="game.patchHud({ showOverheadBars: checked($event) })" />
+                  <span>Barras sobre las cabezas</span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" [checked]="d.hud.showControls" (change)="game.patchHud({ showControls: checked($event) })" />
+                  <span>Ayuda de teclas abajo</span>
+                </label>
+              </div>
+            }
+
+            <!-- ============================== Progreso ============================== -->
+            @case ('progreso') {
+              <div class="subhead">Puntos de control</div>
+              <p class="hint">
+                Coloca cualquier entidad (una bandera, un altar…) y en <b>Qué es</b> elige <b>Punto de control</b>: cuando
+                el jugador pasa cerca, el juego se guarda ahí. La acción de evento <b>Guardar partida</b> hace lo mismo
+                desde un evento. Se guarda una sola partida: «Continuar» en la portada y «Volver al punto de control» al
+                perder la retoman en ese lugar, con su vida, sus armas, sus monedas, las marcas y las variables.
+              </p>
+
+              <div class="subhead">Variables de la partida</div>
+              <p class="hint hint--field">
+                Números que duran toda la partida, aunque se cambie de nivel: llaves, puntos, misiones cumplidas. Se
+                cambian con las acciones <b>Fijar variable</b> y <b>Sumar a variable</b>, y se consultan con la condición
+                <b>Si la variable…</b>. Aquí va su valor al empezar una partida nueva.
+              </p>
+              <div class="gameconf__vars">
+                @for (variable of game.variableEntries(); track variable.name) {
+                  <div class="gameconf__var">
+                    <code class="gameconf__varname">{{ variable.name }}</code>
+                    <input class="input" type="number" step="any" [value]="variable.value" aria-label="Valor inicial"
+                           (change)="game.setVariableValue(variable.name, num($event))" />
+                    <button class="ibtn ibtn--danger" type="button" title="Quitar la variable" aria-label="Quitar la variable"
+                            (click)="game.removeVariable(variable.name)"><svg hcIcon="trash-2"></svg></button>
+                  </div>
+                } @empty {
+                  <p class="hint">Todavía no hay variables.</p>
+                }
+                <div class="gameconf__var gameconf__var--add">
+                  <input class="input" placeholder="nombre, por ejemplo llaves" [value]="game.newVariable()"
+                         (input)="game.newVariable.set(str($event))" (keydown.enter)="game.addVariable()" />
+                  <button class="btn btn--small" type="button" [disabled]="!game.newVariable().trim() || !!game.newVariableError()"
+                          (click)="game.addVariable()"><svg hcIcon="plus"></svg>Agregar</button>
+                </div>
+                @if (game.newVariableError(); as error) {
+                  <p class="hint hint--warn">{{ error }}</p>
+                }
+              </div>
+              <p class="hint">Quitar una variable no cambia los eventos que la usan: para el juego, una variable sin declarar vale 0.</p>
+
+              <div class="subhead">Marcas</div>
+              <p class="hint">
+                Las marcas de los puzzles (<b>Activar marca</b>) se borran al pasar de nivel. Marca la casilla
+                <b>persist</b> de la acción para que duren toda la partida y se guarden con ella.
+              </p>
+
+              <div class="subhead">Partida guardada</div>
+              @if (game.saveInfo(); as save) {
+                <p class="hint">Hay una partida guardada{{ save.level ? ' en ' + save.level : '' }} (saves/partida.json).</p>
+                <button class="btn btn--small btn--danger" type="button" (click)="game.clearSave()">
+                  <svg hcIcon="trash-2"></svg>Borrar la partida guardada
+                </button>
+              } @else {
+                <p class="hint">No hay partida guardada. Se crea al tocar un punto de control jugando.</p>
+              }
+            }
+          }
+        </div>
+
+        <!-- ============================ Vista previa ============================ -->
+        @if (game.tab() === 'portada' || game.tab() === 'pantallas' || game.tab() === 'hud') {
+          <aside class="gameconf__side">
+            <div class="gameconf__previewhead">
+              <span>Vista previa · {{ d.window.width }} × {{ d.window.height }}</span>
+              @if (game.tab() === 'pantallas') {
+                <div class="seg">
+                  <button class="tool" type="button" [class.is-active]="game.screenPreview() === 'pause'" (click)="game.screenPreview.set('pause')">Pausa</button>
+                  <button class="tool" type="button" [class.is-active]="game.screenPreview() === 'gameover'" (click)="game.screenPreview.set('gameover')">Derrota</button>
+                  <button class="tool" type="button" [class.is-active]="game.screenPreview() === 'credits'" (click)="game.screenPreview.set('credits')">Créditos</button>
+                </div>
+              }
+            </div>
+
+            @if (game.tab() === 'hud') {
+              <!-- El HUD sobre una escena de mentira. -->
+              <div class="gpreview gpreview--scene" [style.aspect-ratio]="game.aspect(d.window)">
+                @if (d.hud.showOverheadBars) {
+                  <div class="gpreview__actor" [style.width]="game.gp(28)" [style.height]="game.gp(40)">
+                    <span class="gpreview__overhead" [style.width]="game.gp(36)" [style.height]="game.gp(5)"
+                          [style.top]="game.gp(-12)" [style.background]="game.css(d.hud.healthEmpty, 0.8)">
+                      <i [style.width.%]="game.previewRatio() * 100" [style.background]="game.css(d.hud.healthFill)"></i>
+                    </span>
+                  </div>
+                }
+
+                <div class="gpreview__health" [style]="game.healthCornerStyle(d.hud)"
+                     [style.font-size]="game.gp(20 * d.hud.healthScale)">
+                  @if (d.hud.showHealthLabel) {
+                    <span class="gpreview__label" [style.width]="game.gp(50 * d.hud.healthScale)">Vida</span>
+                  }
+                  @switch (d.hud.healthStyle) {
+                    @case ('hearts') {
+                      <span class="gpreview__hearts" [style.gap]="game.gp(4 * d.hud.healthScale)">
+                        @for (fill of game.previewHearts(); track $index) {
+                          <span class="gpreview__heart" [style.width]="game.gp(22 * d.hud.healthScale)" [style.height]="game.gp(22 * d.hud.healthScale)">
+                            @if (game.imageUrl('heartEmpty') || game.imageUrl('heartFull'); as image) {
+                              <img [class.is-dim]="!game.imageUrl('heartEmpty')" [src]="image" alt="" />
+                            } @else {
+                              <svg viewBox="0 0 24 24"><path [attr.fill]="game.css(d.hud.healthEmpty)" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 4.5 6.8 4.5c2.1 0 3.6 1.2 5.2 3 1.6-1.8 3.1-3 5.2-3 3.8 0 5.9 4 4.4 7.3C19.5 16.4 12 21 12 21z" /></svg>
+                            }
+                            @if (fill > 0) {
+                              <span class="gpreview__heartfill" [style.clip-path]="game.heartClip(fill)">
+                                @if (game.imageUrl('heartFull'); as full) {
+                                  <img [src]="full" alt="" />
+                                } @else {
+                                  <svg viewBox="0 0 24 24"><path [attr.fill]="game.css(d.hud.healthFill)" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 4.5 6.8 4.5c2.1 0 3.6 1.2 5.2 3 1.6-1.8 3.1-3 5.2-3 3.8 0 5.9 4 4.4 7.3C19.5 16.4 12 21 12 21z" /></svg>
+                                }
+                              </span>
+                            }
+                          </span>
+                        }
+                      </span>
+                    }
+                    @case ('segments') {
+                      <span class="gpreview__segments" [style.width]="game.gp(160 * d.hud.healthScale)"
+                            [style.height]="game.gp(14 * d.hud.healthScale)" [style.gap]="game.gp(2 * d.hud.healthScale)">
+                        @for (lit of game.previewSegments(); track $index) {
+                          <i [style.background]="lit ? game.css(d.hud.healthFill) : game.css(d.hud.healthEmpty, 0.8)"
+                             [style.outline]="d.hud.healthBorder ? '1px solid ' + game.css(d.hud.healthBorder) : 'none'"></i>
+                        }
+                      </span>
+                    }
+                    @case ('number') {}
+                    @default {
+                      <span class="gpreview__bar" [style.width]="game.gp(160 * d.hud.healthScale)"
+                            [style.height]="game.gp(14 * d.hud.healthScale)" [style.background]="game.css(d.hud.healthEmpty, 0.8)"
+                            [style.outline]="d.hud.healthBorder && !game.imageUrl('barFrame') ? '1px solid ' + game.css(d.hud.healthBorder) : 'none'">
+                        @if (game.imageCss('barFill'); as fill) {
+                          <i [style.width.%]="game.previewRatio() * 100" [style.background-image]="fill"
+                             [style.background-size]="game.gp(160 * d.hud.healthScale) + ' 100%'"></i>
+                        } @else {
+                          <i [style.width.%]="game.previewRatio() * 100" [style.background]="game.css(d.hud.healthFill)"></i>
+                        }
+                        @if (game.imageUrl('barFrame'); as frame) {
+                          <img class="gpreview__frame" [src]="frame" alt="" />
+                        }
+                      </span>
+                    }
+                  }
+                  @if (d.hud.showHealthNumber) {
+                    <span class="gpreview__number" [style.margin-left]="d.hud.healthStyle === 'number' ? '0' : game.gp(10 * d.hud.healthScale)"
+                          [style.color]="d.hud.healthStyle === 'number' ? game.css(d.hud.healthFill) : null">{{ game.previewNumber() }}</span>
+                  }
+                </div>
+
+                @if (d.hud.showCoins) {
+                  <div class="gpreview__coins" [style.left]="game.gp(10)" [style.top]="game.gp(game.previewCoinsTop())"
+                       [style.font-size]="game.gp(20)">
+                    <i [style.width]="game.gp(16)" [style.height]="game.gp(16)"></i>7
+                  </div>
+                }
+                @if (d.hud.showBossBar) {
+                  <div class="gpreview__boss" [style.top]="game.gp(62)" [style.font-size]="game.gp(18)">
+                    <span>jefe</span>
+                    <i [style.width]="game.gp(game.bossBarWidth(d.window.width))" [style.height]="game.gp(12)"></i>
+                  </div>
+                }
+                @if (d.hud.showInventory) {
+                  <div class="gpreview__slots" [style.bottom]="game.gp(34)" [style.gap]="game.gp(6)">
+                    @for (slot of [1, 2, 3]; track slot) {
+                      <i [style.width]="game.gp(46)" [style.height]="game.gp(46)" [class.is-active]="slot === 1"
+                         [style.font-size]="game.gp(12)">{{ slot }}</i>
+                    }
+                  </div>
+                }
+                @if (d.hud.showControls) {
+                  <div class="gpreview__controls" [style.left]="game.gp(10)" [style.bottom]="game.gp(8)" [style.font-size]="game.gp(14)">
+                    WASD mover | Clic/Espacio atacar | Q habilidad | Shift esquivar | Clic der./K defender | 1-9 armas | E usar | Esc pausa
+                  </div>
+                }
+              </div>
+              <label class="field gameconf__previewhealth">
+                <span>Vida en la vista previa: {{ game.previewHealth() }}</span>
+                <input type="range" min="0" max="100" step="1" [value]="game.previewHealth()"
+                       (input)="game.previewHealth.set(int($event))" />
+              </label>
+            } @else {
+              <!-- La portada, y detrás de la pausa y la derrota, como en el juego. -->
+              <div class="gpreview" [style.aspect-ratio]="game.aspect(d.window)"
+                   [style.background-color]="game.css(d.titleScreen.backgroundColor)"
+                   [style.background-image]="game.imageCss('titleBackground')"
+                   [style.background-size]="game.backgroundSize(d.titleScreen.backgroundMode)"
+                   [style.background-repeat]="d.titleScreen.backgroundMode === 'tile' ? 'repeat' : 'no-repeat'"
+                   [style.background-position]="d.titleScreen.backgroundMode === 'cover' ? 'center' : '0 0'">
+                @if (game.tab() === 'portada') {
+                  @if (game.titleLayout(); as layout) {
+                    @if (layout.panel > 0) {
+                      <div class="gpreview__panel" [style.width]="game.gp(layout.panel)"></div>
+                    }
+                    <div class="gpreview__text" [class.is-centered]="layout.centered"
+                         [style.left]="game.gp(layout.x)" [style.top]="game.gp(layout.titleY)"
+                         [style.font-size]="game.gp(d.titleScreen.titleSize)" [style.color]="game.css(d.titleScreen.titleColor)">{{ game.displayTitle() }}</div>
+                    @if (d.titleScreen.subtitle) {
+                      <div class="gpreview__text" [class.is-centered]="layout.centered"
+                           [style.left]="game.gp(layout.x)" [style.top]="game.gp(layout.subtitleY)"
+                           [style.font-size]="game.gp(d.titleScreen.subtitleSize)" [style.color]="game.css(d.titleScreen.subtitleColor)">{{ d.titleScreen.subtitle }}</div>
+                    }
+                    <div class="gpreview__menu" [class.is-row]="layout.menu.row" [class.is-centered]="layout.menu.centered"
+                         [style.left]="game.gp(layout.menu.x)" [style.top]="game.gp(layout.menu.y)"
+                         [style.font-size]="game.gp(layout.menu.size)"
+                         [style.gap]="layout.menu.row ? game.gp(layout.menu.spacing) : game.gp(layout.menu.spacing - layout.menu.size)">
+                      <!-- Con partida guardada el motor deja elegida «Continuar», la segunda. -->
+                      @for (item of game.titleMenu(); track item; let i = $index) {
+                        <span [class.is-active]="i === 1"
+                              [style.color]="i === 1 ? game.css(d.titleScreen.buttonHighlight) : game.css(d.titleScreen.buttonColor)"
+                              [style.border-color]="game.css(d.titleScreen.buttonHighlight)">{{ item }}</span>
+                      }
+                    </div>
+                  }
+                } @else if (game.screenPreview() === 'credits') {
+                  <div class="gpreview__veil" style="background: rgba(0, 0, 0, 0.63)"></div>
+                  <div class="gpreview__credits" [style.top]="game.gp(40)" [style.bottom]="game.gp(46)">
+                    @for (line of game.creditLines(); track $index) {
+                      @if (line.heading) {
+                        <div [style.font-size]="game.gp(30)" [style.height]="game.gp(46)"
+                             [style.color]="game.css(d.titleScreen.buttonHighlight)">{{ line.text }}</div>
+                      } @else {
+                        <div [style.font-size]="game.gp(20)" [style.height]="game.gp(30)"
+                             [style.color]="game.css(d.titleScreen.buttonColor)">{{ line.text }}</div>
+                      }
+                    } @empty {
+                      <div [style.font-size]="game.gp(20)" [style.color]="game.css(d.titleScreen.buttonColor)">Sin créditos todavía</div>
+                    }
+                  </div>
+                  <div class="gpreview__text is-centered" [style.left]="'50%'" [style.top]="game.gp(d.window.height - 30)"
+                       [style.font-size]="game.gp(16)" [style.color]="game.css(d.titleScreen.subtitleColor)">Enter o Esc: volver</div>
+                } @else if (game.overlayPreview(); as overlay) {
+                  <div class="gpreview__veil" [style.background]="overlay.veil"></div>
+                  <div class="gpreview__text is-centered" [style.left]="'50%'" [style.top]="game.gp(overlay.titleY)"
+                       [style.font-size]="game.gp(52)" [style.color]="game.css(overlay.color)">{{ overlay.title }}</div>
+                  <div class="gpreview__menu is-centered" [style.left]="'50%'" [style.top]="game.gp(overlay.menuY)"
+                       [style.font-size]="game.gp(26)" [style.gap]="game.gp(16)">
+                    @for (item of overlay.menu; track item; let first = $first) {
+                      <span [class.is-active]="first"
+                            [style.color]="first ? game.css(d.titleScreen.buttonHighlight) : game.css(d.titleScreen.buttonColor)">{{ item }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+            <p class="hint">Aproximada: el juego usa su propia letra. Las posiciones y los colores son los del motor.</p>
+          </aside>
+        }
+      </div>
+
+      <div class="modal__actions">
+        @if (!hasFileSystem) {
+          <p class="hint hint--warn gameconf__nofs">Sin acceso a disco: abre el editor con «npm run electron» para guardar.</p>
+        }
+        <button class="btn" type="button" (click)="game.close()">Cancelar</button>
+        <button class="btn btn--primary" type="button" [disabled]="game.saving() || !hasFileSystem" (click)="game.save()">
+          Guardar
+        </button>
+      </div>
+    </section>
+  </div>
+}

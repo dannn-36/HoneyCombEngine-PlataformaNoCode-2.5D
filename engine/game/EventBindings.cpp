@@ -44,6 +44,35 @@ std::string StringParam(const nlohmann::json &params, const char *key)
     return params.contains(key) && params.at(key).is_string() ? params.at(key).get<std::string>() : std::string();
 }
 
+// Un parametro de si/no. Acepta true/false o el texto "true", que es como
+// guardaban los campos las versiones anteriores del editor.
+bool BoolParam(const nlohmann::json &params, const char *key)
+{
+    if (!params.contains(key))
+    {
+        return false;
+    }
+    const auto &value = params.at(key);
+    return value.is_boolean() ? value.get<bool>() : value.is_string() && value.get<std::string>() == "true";
+}
+
+// La comparacion de "Si la variable…": el texto del catalogo ("<", ">=",
+// "=="...). Una que no se conoce se toma como ">=", la de por defecto.
+bool Compare(float left, const std::string &op, float right)
+{
+    if (op == "==")
+        return left == right;
+    if (op == "!=")
+        return left != right;
+    if (op == ">")
+        return left > right;
+    if (op == "<")
+        return left < right;
+    if (op == "<=")
+        return left <= right;
+    return left >= right;
+}
+
 }  // namespace
 
 void RegisterAll(EventSystem &events, Context &ctx)
@@ -61,6 +90,8 @@ void RegisterAll(EventSystem &events, Context &ctx)
     LevelEntity *&player = *ctx.player;
     auto &entityById = *ctx.entityById;
     auto &flags = *ctx.flags;
+    auto &gameFlags = *ctx.gameFlags;
+    auto &variables = *ctx.variables;
     auto &currentCollisions = *ctx.collisions;
     Inventory &inventory = *ctx.inventory;
     Loot::State &loot = *ctx.loot;
@@ -118,21 +149,61 @@ void RegisterAll(EventSystem &events, Context &ctx)
         }
         return anyEnemy; });
 
-    // Condicion "flag_is_set": una accion set_flag ya activo esa marca.
-    events.RegisterCondition("flag_is_set", [&flags](const nlohmann::json &params) -> bool
-                             { return flags.count(params.value("flag", std::string(""))) > 0; });
+    // Condicion "flag_is_set": una accion set_flag ya activo esa marca, en
+    // este nivel o en la partida.
+    events.RegisterCondition("flag_is_set", [&flags, &gameFlags](const nlohmann::json &params) -> bool
+                             {
+        const std::string flag = StringParam(params, "flag");
+        return flags.count(flag) > 0 || gameFlags.count(flag) > 0; });
 
     // Condicion "flag_is_not_set": la contraria. Una sala ya resuelta no vuelve
     // a cerrar sus puertas al entrar.
-    events.RegisterCondition("flag_is_not_set", [&flags](const nlohmann::json &params) -> bool
-                             { return flags.count(StringParam(params, "flag")) == 0; });
+    events.RegisterCondition("flag_is_not_set", [&flags, &gameFlags](const nlohmann::json &params) -> bool
+                             {
+        const std::string flag = StringParam(params, "flag");
+        return flags.count(flag) == 0 && gameFlags.count(flag) == 0; });
 
     // Accion "set_flag": activa una marca con nombre (la llave de un puzzle).
-    events.RegisterAction("set_flag", [&flags](const nlohmann::json &params)
+    // Con "persist" dura toda la partida; sin el, como siempre, solo el nivel.
+    events.RegisterAction("set_flag", [&flags, &gameFlags](const nlohmann::json &params)
                           {
         std::string flag = params.value("flag", std::string(""));
         if (!flag.empty()) {
-            flags.insert(flag);
+            (BoolParam(params, "persist") ? gameFlags : flags).insert(flag);
+        } });
+
+    // --- Variables de la partida y guardado -------------------------------------
+
+    // Accion "set_variable": la variable pasa a valer ese numero.
+    events.RegisterAction("set_variable", [&variables](const nlohmann::json &params)
+                          {
+        const std::string name = StringParam(params, "variable");
+        if (!name.empty()) {
+            variables[name] = NumberParam(params, "value", 0.0f);
+        } });
+
+    // Accion "add_variable": le suma (o resta, con negativo) a la variable.
+    // Una que no existia arranca en 0.
+    events.RegisterAction("add_variable", [&variables](const nlohmann::json &params)
+                          {
+        const std::string name = StringParam(params, "variable");
+        if (!name.empty()) {
+            variables[name] += NumberParam(params, "amount", 1.0f);
+        } });
+
+    // Condicion "variable_compare": compara la variable con un numero. Una
+    // variable que nunca se fijo vale 0.
+    events.RegisterCondition("variable_compare", [&variables](const nlohmann::json &params) -> bool
+                             {
+        const auto it = variables.find(StringParam(params, "variable"));
+        const float current = it == variables.end() ? 0.0f : it->second;
+        return Compare(current, StringParam(params, "comparison"), NumberParam(params, "value", 0.0f)); });
+
+    // Accion "save_game": guarda la partida donde esta el jugador, como un punto de control.
+    events.RegisterAction("save_game", [&ctx](const nlohmann::json &)
+                          {
+        if (ctx.saveGame) {
+            ctx.saveGame();
         } });
 
     // Accion "destroy_entity": borrado suave. No se saca del vector porque eso
