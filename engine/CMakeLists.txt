@@ -23,7 +23,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(raylib)
 
-add_executable(engine main.cpp core/GraphicsDevice.cpp core/ResourceManager.cpp
+# Todo el motor menos el punto de entrada. Esta en una lista aparte para que
+# las pruebas (tests/, con HONEYCOMB_BUILD_TESTS) compilen exactamente los
+# mismos archivos que el ejecutable, sin el main() que abre el juego.
+set(HONEYCOMB_ENGINE_SOURCES core/GraphicsDevice.cpp core/ResourceManager.cpp
     systems/iso_grid/IsoGridSystem.cpp systems/z_sort/ZSortSystem.cpp
     systems/collision/CollisionSystem.cpp systems/event_system/EventSystem.cpp
     systems/animation/AnimationSystem.cpp systems/audio/AudioSystem.cpp
@@ -32,6 +35,8 @@ add_executable(engine main.cpp core/GraphicsDevice.cpp core/ResourceManager.cpp
     game/Inventory.cpp game/Mobility.cpp game/Loot.cpp game/Zones.cpp game/CombatView.cpp
     systems/camera/CameraSystem.cpp game/EventBindings.cpp game/GameSession.cpp
     game/DevTools.cpp game/GameConfig.cpp game/Progress.cpp game/Screens.cpp game/HealthHud.cpp)
+
+add_executable(engine main.cpp ${HONEYCOMB_ENGINE_SOURCES})
 target_link_libraries(engine PRIVATE raylib SDL2::SDL2 nlohmann_json::nlohmann_json)
 target_include_directories(engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -79,3 +84,25 @@ foreach(_data assets levels)
             "${CMAKE_CURRENT_SOURCE_DIR}/../${_data}" "$<TARGET_FILE_DIR:engine>/${_data}"
     )
 endforeach()
+
+# --- Pruebas automaticas -------------------------------------------------------
+# Apagadas por defecto: las compilaciones que arma el editor (engine/build y
+# engine/build-release, ver editor/ipc/engine-modes.js) no las piden y quedan
+# igual que siempre. Se prenden en una carpeta aparte, engine/build-tests; los
+# comandos estan en tests/CMakeLists.txt.
+option(HONEYCOMB_BUILD_TESTS "Compilar las pruebas del motor (doctest + CTest)" OFF)
+if(HONEYCOMB_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# --- Rendimiento -----------------------------------------------------------------
+# Tambien apagado por defecto: la sonda engine_perf (mide cada cuadro, la carga y
+# la memoria, ver perf/SondaRendimiento.cpp) y el chequeo del presupuesto con
+# "ctest -L perf". Va en su propia carpeta, engine/build-perf, en Release; los
+# comandos estan en perf/CMakeLists.txt.
+option(HONEYCOMB_BUILD_PERF "Compilar la sonda de rendimiento (engine_perf) y su chequeo de presupuesto" OFF)
+if(HONEYCOMB_BUILD_PERF)
+    enable_testing()
+    add_subdirectory(perf)
+endif()

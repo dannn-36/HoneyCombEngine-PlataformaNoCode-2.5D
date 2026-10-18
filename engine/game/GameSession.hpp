@@ -92,6 +92,11 @@ public:
     void SetCulling(bool enabled) { culling = enabled; }
 
 private:
+    // La sonda de rendimiento (engine/perf, solo con HONEYCOMB_BUILD_PERF)
+    // maneja el mismo bucle que Run() para medir cada cuadro, la carga y la
+    // memoria. Es la unica puerta: no cambia nada de lo que hace la partida.
+    friend class SondaRendimiento;
+
     void BindInput();
     void RegisterEvents();
 

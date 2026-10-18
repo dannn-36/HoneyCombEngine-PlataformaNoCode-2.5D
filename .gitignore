@@ -3,6 +3,9 @@ engine/build/
 engine/build-mingw/
 engine/build-release/
 engine/build-msvc/
+engine/build-tests/
+engine/build-coverage/
+engine/build-perf/
 engine/out/
 *.obj
 *.o
