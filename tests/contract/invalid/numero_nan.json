@@ -1,0 +1,7 @@
+{
+  "name": "nan",
+  "grid": { "width": 4, "height": 4, "tileWidth": 64, "tileHeight": 32 },
+  "camera": { "zoom": NaN },
+  "entities": [],
+  "events": []
+}

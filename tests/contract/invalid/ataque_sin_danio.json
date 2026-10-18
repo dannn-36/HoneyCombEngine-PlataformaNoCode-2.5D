@@ -1,0 +1,60 @@
+{
+  "name": "caso_de_prueba",
+  "grid": {
+    "width": 6,
+    "height": 6,
+    "tileWidth": 64,
+    "tileHeight": 32
+  },
+  "visuals": {
+    "floor": {
+      "texture": "textures/floor.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      }
+    }
+  },
+  "entities": [
+    {
+      "id": "player_1",
+      "type": "player",
+      "position": {
+        "col": 1,
+        "row": 1
+      },
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      }
+    }
+  ],
+  "events": [],
+  "items": [
+    {
+      "id": "espada",
+      "name": "Espada",
+      "kind": "weapon",
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "weapon": {
+        "category": "melee",
+        "attack": {
+          "pattern": "line",
+          "cooldown": 0.5,
+          "range": 1.5
+        }
+      }
+    }
+  ]
+}

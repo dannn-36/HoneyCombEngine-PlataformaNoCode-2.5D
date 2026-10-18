@@ -1,4 +1,34 @@
-import { SHAPES, shapeCollider, shapeDef } from './iso-shapes';
+import { SHAPES, SHAPE_TEXTURE, shapeCollider, shapeDef, shapeOf, usesShapeSheet } from './iso-shapes';
+
+describe('reconocer una figura de la paleta', () => {
+  it('una entidad que apunta al sheet de figuras con un type conocido es esa figura', () => {
+    expect(shapeOf({ type: 'cube', texture: SHAPE_TEXTURE })?.id).toBe('cube');
+  });
+
+  it('el sheet tambien se reconoce dentro de una subcarpeta', () => {
+    expect(usesShapeSheet('pack/' + SHAPE_TEXTURE)).toBe(true);
+    expect(shapeOf({ type: 'pillar', texture: 'pack/' + SHAPE_TEXTURE })?.id).toBe('pillar');
+  });
+
+  it('una entidad llamada cube con su propio arte no es una figura', () => {
+    expect(shapeOf({ type: 'cube', texture: 'textures/mi_cubo.png' })).toBeUndefined();
+  });
+
+  it('un nombre parecido al del sheet no cuenta', () => {
+    expect(usesShapeSheet(SHAPE_TEXTURE + '.bak')).toBe(false);
+    expect(usesShapeSheet('my' + SHAPE_TEXTURE)).toBe(false);
+  });
+
+  it('un type desconocido sobre el sheet no es ninguna figura', () => {
+    expect(shapeDef('dodecaedro')).toBeUndefined();
+    expect(shapeOf({ type: 'dodecaedro', texture: SHAPE_TEXTURE })).toBeUndefined();
+  });
+
+  it('los ids de la paleta son unicos, porque se guardan como type de la entidad', () => {
+    const ids = SHAPES.map((shape) => shape.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
 
 describe('shapeCollider', () => {
   const tile = { tileWidth: 64, tileHeight: 32 };

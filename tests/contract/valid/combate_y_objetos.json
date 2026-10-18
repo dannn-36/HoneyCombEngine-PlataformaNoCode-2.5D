@@ -1,0 +1,264 @@
+{
+  "name": "combate_y_objetos",
+  "grid": {
+    "width": 12,
+    "height": 12,
+    "tileWidth": 64,
+    "tileHeight": 32
+  },
+  "entities": [
+    {
+      "id": "player_1",
+      "type": "player",
+      "position": {
+        "col": 2,
+        "row": 2
+      },
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 100,
+        "damage": 10,
+        "speed": 3
+      },
+      "inventory": {
+        "slots": 4,
+        "locked": false,
+        "onFull": "auto_replace",
+        "items": [
+          "espada"
+        ],
+        "coins": 10
+      },
+      "mobility": {
+        "dash": {
+          "distance": 4,
+          "duration": 0.18,
+          "cooldown": 0.8,
+          "iframes": 0.25
+        },
+        "defense": {
+          "reduction": 0.6,
+          "speedMultiplier": 0.5
+        }
+      }
+    },
+    {
+      "id": "esqueleto_1",
+      "type": "enemy",
+      "position": {
+        "col": 8,
+        "row": 8
+      },
+      "texture": "textures/player2.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 30,
+        "damage": 10,
+        "speed": 1.5
+      },
+      "preset": "esqueleto",
+      "scale": 1.5,
+      "weapon": "arco",
+      "drops": [
+        {
+          "item": "pocion",
+          "chance": 0.25
+        }
+      ]
+    },
+    {
+      "id": "npc_1",
+      "type": "npc",
+      "position": {
+        "col": 2,
+        "row": 9
+      },
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 10,
+        "damage": 0,
+        "speed": 1
+      },
+      "shop": {
+        "items": [
+          {
+            "item": "pocion",
+            "price": 7
+          }
+        ]
+      }
+    },
+    {
+      "id": "moneda_1",
+      "type": "item",
+      "item": "moneda",
+      "position": {
+        "col": 5,
+        "row": 5
+      },
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "scale": 0.5
+    }
+  ],
+  "events": [],
+  "visuals": {
+    "floor": {
+      "texture": "textures/floor.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      }
+    },
+    "wall": {
+      "texture": "textures/wall.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      }
+    }
+  },
+  "items": [
+    {
+      "id": "moneda",
+      "name": "Moneda",
+      "kind": "coin",
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "scale": 0.5,
+      "value": 5
+    },
+    {
+      "id": "espada",
+      "name": "Espada",
+      "kind": "weapon",
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "weapon": {
+        "category": "melee",
+        "attack": {
+          "pattern": "cone",
+          "damage": 12,
+          "cooldown": 0.5,
+          "range": 1.6,
+          "angle": 100
+        },
+        "ability": {
+          "name": "Giro cargado",
+          "hitsRequired": 3,
+          "activation": "auto",
+          "resetAfter": 3,
+          "attack": {
+            "pattern": "area",
+            "damage": 25,
+            "cooldown": 0.6,
+            "range": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "arco",
+      "name": "Arco",
+      "kind": "weapon",
+      "texture": "textures/shapes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "weapon": {
+        "category": "ranged",
+        "attack": {
+          "pattern": "projectile",
+          "damage": 8,
+          "cooldown": 0.5,
+          "range": 7,
+          "speed": 9,
+          "width": 0.4
+        },
+        "ability": {
+          "name": "Disparo cargado",
+          "hitsRequired": 4,
+          "activation": "manual",
+          "resetAfter": 0,
+          "attack": {
+            "pattern": "explosive",
+            "damage": 25,
+            "cooldown": 1,
+            "range": 6,
+            "speed": 7,
+            "width": 0.5,
+            "radius": 1.6
+          }
+        }
+      }
+    },
+    {
+      "id": "pocion",
+      "name": "Poción",
+      "kind": "healing",
+      "texture": "textures/player2.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "heal": 25
+    }
+  ]
+}

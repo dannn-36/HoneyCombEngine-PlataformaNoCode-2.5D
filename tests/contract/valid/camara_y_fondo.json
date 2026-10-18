@@ -1,0 +1,76 @@
+{
+  "name": "camara_y_fondo",
+  "grid": {
+    "width": 12,
+    "height": 10,
+    "tileWidth": 64,
+    "tileHeight": 32
+  },
+  "entities": [
+    {
+      "id": "player_1",
+      "type": "player",
+      "position": {
+        "col": 5,
+        "row": 5
+      },
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      },
+      "collider": {
+        "width": 16,
+        "height": 16
+      },
+      "stats": {
+        "health": 100,
+        "damage": 10,
+        "speed": 3
+      }
+    }
+  ],
+  "events": [],
+  "visuals": {
+    "floor": {
+      "texture": "textures/floor.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      }
+    },
+    "wall": {
+      "texture": "textures/wall.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      }
+    }
+  },
+  "camera": {
+    "mode": "follow",
+    "zoom": 2,
+    "smoothing": 0.3,
+    "deadzone": {
+      "width": 96,
+      "height": 48
+    },
+    "clampToLevel": false,
+    "cullMargin": 3
+  },
+  "backgroundColor": {
+    "r": 30,
+    "g": 40,
+    "b": 60
+  },
+  "backgroundImage": {
+    "texture": "textures/floor.png",
+    "mode": "tile"
+  }
+}

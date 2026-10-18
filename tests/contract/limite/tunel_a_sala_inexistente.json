@@ -1,0 +1,55 @@
+{
+  "name": "caso_de_prueba",
+  "grid": {
+    "width": 6,
+    "height": 6,
+    "tileWidth": 64,
+    "tileHeight": 32
+  },
+  "visuals": {
+    "floor": {
+      "texture": "textures/floor.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      }
+    }
+  },
+  "entities": [
+    {
+      "id": "player_1",
+      "type": "player",
+      "position": {
+        "col": 1,
+        "row": 1
+      },
+      "texture": "textures/player.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 16
+      }
+    }
+  ],
+  "events": [],
+  "rooms": [
+    {
+      "id": "sala_1",
+      "col": 0,
+      "row": 0,
+      "width": 3,
+      "height": 3
+    }
+  ],
+  "tunnels": [
+    {
+      "id": "tunel_1",
+      "from": "sala_1",
+      "to": "sala_fantasma",
+      "width": 1
+    }
+  ]
+}

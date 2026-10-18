@@ -29,6 +29,24 @@ describe('rgbToHsv', () => {
   it('el negro no tiene saturacion', () => {
     expect(rgbToHsv({ r: 0, g: 0, b: 0 })).toEqual({ h: 0, s: 0, v: 0 });
   });
+
+  it('reconoce el tono de los tres primarios', () => {
+    expect(rgbToHsv({ r: 255, g: 0, b: 0 })).toEqual({ h: 0, s: 1, v: 1 });
+    expect(rgbToHsv({ r: 0, g: 255, b: 0 })).toEqual({ h: 120, s: 1, v: 1 });
+    expect(rgbToHsv({ r: 0, g: 0, b: 255 })).toEqual({ h: 240, s: 1, v: 1 });
+  });
+
+  it('un rojo que tira a violeta da un tono entre 300 y 360, nunca negativo', () => {
+    const { h } = rgbToHsv({ r: 255, g: 0, b: 128 });
+    expect(h).toBeGreaterThan(300);
+    expect(h).toBeLessThan(360);
+  });
+
+  it('ida y vuelta en colores dominados por el verde y por el azul', () => {
+    for (const color of [{ r: 40, g: 200, b: 90 }, { r: 120, g: 30, b: 220 }, { r: 250, g: 10, b: 60 }]) {
+      expect(hsvToRgb(rgbToHsv(color))).toEqual(color);
+    }
+  });
 });
 
 describe('hex', () => {

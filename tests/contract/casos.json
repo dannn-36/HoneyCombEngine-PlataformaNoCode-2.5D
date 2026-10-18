@@ -1,0 +1,478 @@
+{
+  "$comment": "Indice de los casos del contrato JSON de niveles. Lo leen las pruebas del editor (editor/src/app/contract/level-contract.spec.ts) y las del motor. valid/: el schema los acepta y el motor los carga; los de origen \"editor\" los escribe el propio editor (se regeneran borrando el archivo y corriendo las pruebas del editor). invalid/: el schema los rechaza; \"motor\" dice que se espera del motor al cargarlos y \"editor\", del editor al abrirlos. limite/: el schema los ACEPTA aunque tienen un problema; \"motivo\" dice si JSON Schema no puede expresarlo (no_expresable) o si el schema podria rechazarlos y no lo hace (debilidad), y \"semantica\" si los atrapa la validacion semantica de las pruebas del editor. Las texturas usadas existen en assets/textures/ y el load_level de puzzle_y_eventos.json apunta a minimo.json, en la misma carpeta.",
+  "motor": {
+    "carga": "LevelLoader::Load termina sin excepcion y el nivel queda igual a lo que dice el archivo",
+    "rechaza": "LevelLoader::Load lanza una excepcion (std::exception) con un mensaje; el juego no tiene que cerrarse",
+    "tolera": "LevelLoader::Load termina sin excepcion: usa un default, recorta al rango o ignora el dato",
+    "falla_al_evaluar": "LevelLoader::Load termina bien, pero el EventSystem lanza una excepcion al evaluar el evento",
+    "no_cargar": "no cargarlo en pruebas automaticas (ver nota)"
+  },
+  "editor": {
+    "abre": "ProjectService.parseLevel lo abre (completando lo que falta)",
+    "rechaza": "ProjectService.parseLevel falla con un mensaje y el editor no lo abre"
+  },
+  "valid": {
+    "minimo.json": {
+      "descripcion": "solo los campos obligatorios: grilla rectangular sin tiles ni visuals",
+      "origen": "a_mano",
+      "motor": "carga",
+      "editor": "abre",
+      "nota": "el motor arma la grilla de 6x6 entera, con pared en el borde, y no dibuja piso (sin visuals)"
+    },
+    "salas_y_tuneles.json": {
+      "descripcion": "tres salas, un tunel con lados elegidos, otro trazado a mano y un retoque de pared",
+      "origen": "editor",
+      "motor": "carga",
+      "editor": "abre"
+    },
+    "pisos_por_capas.json": {
+      "descripcion": "piso propio de una sala y de un tunel, y casillas pintadas, resuelto en tiles[].floorVariant y visuals.floorVariants",
+      "origen": "editor",
+      "motor": "carga",
+      "editor": "abre"
+    },
+    "camara_y_fondo.json": {
+      "descripcion": "camara follow con todos sus campos, color de fondo e imagen de fondo en mosaico",
+      "origen": "editor",
+      "motor": "carga",
+      "editor": "abre"
+    },
+    "combate_y_objetos.json": {
+      "descripcion": "armas con habilidad, curacion y moneda; jugador con inventario y movilidad; enemigo con arma y botin; NPC con tienda; objeto para juntar",
+      "origen": "editor",
+      "motor": "carga",
+      "editor": "abre"
+    },
+    "puzzle_y_eventos.json": {
+      "descripcion": "zona, puzzle de jefe con puerta que se cierra al entrar, y eventos del panel con condiciones y load_level a minimo.json",
+      "origen": "editor",
+      "motor": "carga",
+      "editor": "abre"
+    }
+  },
+  "invalid": {
+    "json_malformado.json": {
+      "descripcion": "texto JSON cortado a la mitad",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "archivo_vacio.json": {
+      "descripcion": "archivo sin ningun contenido",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "numero_nan.json": {
+      "descripcion": "NaN como numero, que JSON no admite",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "coma_final.json": {
+      "descripcion": "coma de mas al final de una lista",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "raiz_es_lista.json": {
+      "descripcion": "la raiz es una lista y no un objeto",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "falta_grid.json": {
+      "descripcion": "nivel sin el bloque grid",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "falta_nombre.json": {
+      "descripcion": "nivel sin name",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa \"sin_nombre\""
+    },
+    "falta_entities.json": {
+      "descripcion": "nivel sin la lista entities",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor carga un nivel sin entidades"
+    },
+    "falta_events.json": {
+      "descripcion": "nivel sin la lista events",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor carga un nivel sin eventos"
+    },
+    "grid_falta_ancho.json": {
+      "descripcion": "grid sin width",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "grid_falta_tile_width.json": {
+      "descripcion": "grid sin tileWidth",
+      "motor": "tolera",
+      "editor": "rechaza",
+      "nota": "el motor usa 64"
+    },
+    "grid_ancho_texto.json": {
+      "descripcion": "grid.width es un texto",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "grid_alto_nulo.json": {
+      "descripcion": "grid.height es null",
+      "motor": "rechaza",
+      "editor": "rechaza"
+    },
+    "grid_ancho_cero.json": {
+      "descripcion": "grid.width en 0",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "carga una grilla sin casillas"
+    },
+    "grid_alto_negativo.json": {
+      "descripcion": "grid.height negativo",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "carga una grilla sin casillas"
+    },
+    "grid_ancho_decimal.json": {
+      "descripcion": "grid.width con decimales",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "nlohmann trunca a 6"
+    },
+    "entities_no_es_lista.json": {
+      "descripcion": "entities es un texto y no una lista",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "entidad_sin_posicion.json": {
+      "descripcion": "entidad sin position",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "entidad_sin_textura.json": {
+      "descripcion": "entidad sin texture",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "entidad_sin_recorte.json": {
+      "descripcion": "entidad sin sourceRect",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "entidad_sin_id.json": {
+      "descripcion": "entidad sin id",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "queda con id vacio; ningun evento la puede referenciar"
+    },
+    "entidad_columna_texto.json": {
+      "descripcion": "position.col es un texto",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "entidad_columna_decimal.json": {
+      "descripcion": "position.col con decimales",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "nlohmann trunca a 1"
+    },
+    "entidad_frames_cero.json": {
+      "descripcion": "frames en 0",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa 1"
+    },
+    "entidad_escala_negativa.json": {
+      "descripcion": "scale negativa",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa 1"
+    },
+    "entidad_oculta_texto.json": {
+      "descripcion": "hidden es un texto y no un booleano",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "entidad_velocidad_texto.json": {
+      "descripcion": "stats.speed es un texto",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "entidad_colisionador_forma_desconocida.json": {
+      "descripcion": "collider.shape que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa box"
+    },
+    "color_fondo_fuera_de_rango.json": {
+      "descripcion": "backgroundColor.r mayor que 255",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor lo recorta a 255"
+    },
+    "color_fondo_texto.json": {
+      "descripcion": "backgroundColor.r es un texto",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "color_fondo_incompleto.json": {
+      "descripcion": "backgroundColor sin el canal b",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el canal que falta queda en 245"
+    },
+    "imagen_fondo_sin_textura.json": {
+      "descripcion": "backgroundImage sin texture",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "imagen_fondo_modo_desconocido.json": {
+      "descripcion": "backgroundImage.mode que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa cover"
+    },
+    "camara_zoom_fuera_de_rango.json": {
+      "descripcion": "camera.zoom en 100",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor lo recorta a su zoom maximo"
+    },
+    "camara_zoom_nulo.json": {
+      "descripcion": "camera.zoom es null",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "camara_modo_desconocido.json": {
+      "descripcion": "camera.mode que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa fixed"
+    },
+    "piso_sin_recorte.json": {
+      "descripcion": "visuals.floor sin sourceRect",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "tile_columna_negativa.json": {
+      "descripcion": "una casilla de tiles con col negativa",
+      "motor": "rechaza",
+      "editor": "abre",
+      "nota": "LevelLoader: tile fuera de la grilla"
+    },
+    "tile_variante_negativa.json": {
+      "descripcion": "tiles[].floorVariant negativo",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "se dibuja con el piso del nivel"
+    },
+    "sala_ancho_cero.json": {
+      "descripcion": "una sala con width 0",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "como zona se toma de ancho 1"
+    },
+    "tunel_sin_origen.json": {
+      "descripcion": "un tunel sin from",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor no lee tunnels (solo el editor)"
+    },
+    "objeto_tipo_desconocido.json": {
+      "descripcion": "items[].kind que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor lo toma como moneda"
+    },
+    "objeto_sin_recorte_valido.json": {
+      "descripcion": "items[].sourceRect con ancho 0",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa 16"
+    },
+    "ataque_patron_desconocido.json": {
+      "descripcion": "weapon.attack.pattern que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa area"
+    },
+    "ataque_sin_danio.json": {
+      "descripcion": "weapon.attack sin damage",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa su default"
+    },
+    "botin_probabilidad_mayor_a_uno.json": {
+      "descripcion": "drops[].chance en 1.5",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor lo recorta a 1"
+    },
+    "inventario_demasiados_casilleros.json": {
+      "descripcion": "inventory.slots en 20",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor lo recorta a 9"
+    },
+    "tienda_precio_negativo.json": {
+      "descripcion": "shop.items[].price negativo",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor lo lleva a 0"
+    },
+    "evento_sin_disparador.json": {
+      "descripcion": "un evento sin trigger",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "evento_sin_acciones.json": {
+      "descripcion": "un evento sin actions",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el evento no hace nada"
+    },
+    "paso_sin_tipo.json": {
+      "descripcion": "una accion sin type",
+      "motor": "rechaza",
+      "editor": "abre"
+    },
+    "paso_sin_parametros.json": {
+      "descripcion": "una accion sin params",
+      "motor": "tolera",
+      "editor": "abre",
+      "nota": "el motor usa params vacio"
+    },
+    "paso_tipo_numerico.json": {
+      "descripcion": "el type de un trigger es un numero",
+      "motor": "rechaza",
+      "editor": "abre"
+    }
+  },
+  "limite": {
+    "tile_fuera_de_grilla.json": {
+      "descripcion": "una casilla de tiles mas alla del ancho de la grilla",
+      "motor": "rechaza",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "LevelLoader: tile fuera de la grilla. El schema lo acepta y el motor no: es la diferencia mas importante del contrato"
+    },
+    "entidad_fuera_de_grilla.json": {
+      "descripcion": "una entidad en la celda 50,50 de una grilla de 6x6",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "el motor la coloca fuera del mapa"
+    },
+    "ids_duplicados.json": {
+      "descripcion": "dos entidades con el mismo id",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "los eventos solo ven una de las dos"
+    },
+    "tunel_a_sala_inexistente.json": {
+      "descripcion": "un tunel que va a una sala que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "el motor no lee tunnels"
+    },
+    "objeto_inexistente.json": {
+      "descripcion": "una entidad item que apunta a un objeto que no esta en items",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "el objeto no se puede juntar"
+    },
+    "evento_entidad_inexistente.json": {
+      "descripcion": "un evento que referencia una entidad que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "el trigger no dispara nunca"
+    },
+    "evento_zona_inexistente.json": {
+      "descripcion": "un evento que referencia una zona que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "el trigger no dispara nunca"
+    },
+    "evento_tipo_desconocido.json": {
+      "descripcion": "un trigger cuyo type no esta en event_catalog.json",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "debilidad",
+      "semantica": "rechaza",
+      "nota": "un type sin registrar no dispara; el schema no consulta el catalogo"
+    },
+    "parametro_evento_tipo_incorrecto.json": {
+      "descripcion": "on_collision con entityA numerico",
+      "motor": "falla_al_evaluar",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "debilidad",
+      "semantica": "rechaza",
+      "nota": "carga bien, pero params.value(\"entityA\", string) lanza type_error al evaluar el trigger en el primer frame"
+    },
+    "entidad_posicion_negativa.json": {
+      "descripcion": "position.col negativa",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "debilidad",
+      "semantica": "rechaza",
+      "nota": "el schema no pide minimum 0 en position, como si lo hace en tiles"
+    },
+    "recorte_entidad_negativo.json": {
+      "descripcion": "sourceRect de una entidad con ancho negativo",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "debilidad",
+      "semantica": "rechaza",
+      "nota": "raylib la dibuja espejada; el schema pide ancho mayor que 0 en visuals e items pero no en entidades"
+    },
+    "textura_inexistente.json": {
+      "descripcion": "una entidad con una textura que no esta en assets/",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "raylib avisa y la entidad queda sin sprite"
+    },
+    "nivel_destino_inexistente.json": {
+      "descripcion": "load_level hacia un archivo que no existe",
+      "motor": "tolera",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "no_expresable",
+      "semantica": "rechaza",
+      "nota": "el fallo aparece recien al pasar de nivel (GameSession lo atrapa)"
+    },
+    "grid_enorme_sin_tiles.json": {
+      "descripcion": "grilla de 50000x50000 sin tiles",
+      "motor": "no_cargar",
+      "editor": "abre",
+      "schema": "acepta",
+      "motivo": "debilidad",
+      "semantica": "acepta",
+      "nota": "NO cargar en pruebas automaticas: sin tiles el motor arma 2500 millones de casillas (se cuelga o lanza bad_alloc). El schema no pone maximo a la grilla"
+    }
+  }
+}

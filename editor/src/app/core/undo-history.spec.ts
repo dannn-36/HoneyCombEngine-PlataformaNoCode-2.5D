@@ -70,4 +70,26 @@ describe('UndoHistory', () => {
     expect(history.peekRedo()).toBe('b');
     expect(history.peekUndo()).toBeUndefined();
   });
+
+  it('vaciarlo olvida lo de deshacer y lo de rehacer', () => {
+    const history = new UndoHistory<string>();
+    history.record('a', 'x');
+    history.record('b', 'y');
+    history.undo('c');
+    history.clear();
+    expect(history.canUndo).toBe(false);
+    expect(history.canRedo).toBe(false);
+    expect(history.undo('c')).toBeNull();
+    expect(history.redo('c')).toBeNull();
+  });
+
+  it('despues de vaciarlo, la accion de antes no se funde con la primera de despues', () => {
+    const history = new UndoHistory<string>();
+    history.record('a', 'arrastre-1');
+    history.clear();
+    history.record('b', 'arrastre-1');
+    history.record('c', 'arrastre-1');
+    expect(history.undo('d')).toBe('b');
+    expect(history.canUndo).toBe(false);
+  });
 });
