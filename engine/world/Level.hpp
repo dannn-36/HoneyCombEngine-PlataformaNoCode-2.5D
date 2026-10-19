@@ -138,4 +138,6 @@ struct LoadedLevel {
     // portada en game.json. Vacia = el nivel no tiene, y se juega en silencio.
     // No se carga aca: es un stream, y lo maneja GameSession al empezar el nivel.
     std::string music;
+    // "musicVolume" (0 a 100 en el JSON) ya pasado a 0..1. Sin el campo, 1.
+    float musicVolume = 1.0f;
 };

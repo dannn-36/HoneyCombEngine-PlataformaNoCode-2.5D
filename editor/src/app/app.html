@@ -1453,13 +1453,22 @@
                       }
                     </select>
                     @if (levelMusic(); as music) {
-                      <button class="ibtn" type="button" (click)="snd.togglePreview(music)"
+                      <button class="ibtn" type="button" (click)="snd.togglePreview(music, levelMusicVolume())"
                               [title]="snd.playing() === music ? 'Cortar' : 'Escuchar'"
                               [attr.aria-label]="snd.playing() === music ? 'Cortar' : 'Escuchar'">
                         <svg [hcIcon]="snd.playing() === music ? 'square' : 'play'"></svg>
                       </button>
                     }
                   </div>
+                  @if (levelMusic()) {
+                    <!-- "musicVolume": 100 = el volumen del archivo; no se escribe en el JSON. -->
+                    <label class="field">
+                      <span>Volumen ({{ levelMusicVolume() }}%)</span>
+                      <input type="range" min="0" max="100" step="5" [value]="levelMusicVolume()"
+                             aria-label="Volumen de la música del nivel"
+                             (change)="setLevelMusicVolume(num($event))" />
+                    </label>
+                  }
                   @if (levelMusic() && hasFileSystem && !snd.sounds().includes(levelMusic())) {
                     <p class="hint hint--warn hint--field">
                       <svg hcIcon="triangle-alert"></svg>No se encontró «{{ levelMusic() }}» en assets/. Elige otra.
@@ -2141,6 +2150,14 @@
                       <span class="browser__label"><b>{{ sound }}</b>:</span>
                       @if (levelMusic() === sound) {
                         <span class="hint">es la música de este nivel.</span>
+                        <!-- Su volumen ("musicVolume"), el mismo control que en Escena › Música. -->
+                        <label class="browser__label browser__volume">
+                          Volumen
+                          <input type="range" min="0" max="100" step="5" [value]="levelMusicVolume()"
+                                 aria-label="Volumen de la música del nivel"
+                                 (change)="setLevelMusicVolume(num($event))" />
+                          {{ levelMusicVolume() }}%
+                        </label>
                         <button class="btn btn--small" type="button" (click)="setLevelMusic('')">Quitar la música</button>
                       } @else {
                         <button class="btn btn--small" type="button" (click)="setLevelMusic(sound)"
@@ -2159,7 +2176,7 @@
                     @for (sound of snd.sounds(); track sound) {
                       <button class="tile" type="button" [class.is-active]="snd.selected() === sound"
                               [title]="sound + (snd.playing() === sound ? ': clic para cortar' : ': clic para escuchar')"
-                              (click)="snd.selected.set(sound); snd.togglePreview(sound)">
+                              (click)="snd.selected.set(sound); snd.togglePreview(sound, levelMusic() === sound ? levelMusicVolume() : 100)">
                         <span class="tile__art">
                           <svg class="tile__glyph" [hcIcon]="snd.playing() === sound ? 'square' : 'music'"></svg>
                           @if (levelMusic() === sound) {
@@ -2263,7 +2280,7 @@
                         }
                       </select>
                       @if (ev.paramValue(step, row.key); as sound) {
-                        <button class="ibtn" type="button" (click)="$event.preventDefault(); snd.togglePreview(sound)"
+                        <button class="ibtn" type="button" (click)="$event.preventDefault(); snd.togglePreview(sound, step.params['volume'] ?? 100)"
                                 [title]="snd.playing() === sound ? 'Cortar' : 'Escuchar'"
                                 [attr.aria-label]="snd.playing() === sound ? 'Cortar' : 'Escuchar'">
                           <svg [hcIcon]="snd.playing() === sound ? 'square' : 'play'"></svg>
@@ -2280,8 +2297,11 @@
                       </select>
                     }
                     @default {
+                      <!-- Vacio = el valor por defecto del catalogo (el volumen de un
+                           sonido viejo, sin el campo, es 100). -->
                       <input class="select-lone" [type]="row.def.type === 'number' ? 'number' : 'text'"
                              [value]="ev.paramValue(step, row.key)"
+                             [attr.placeholder]="row.def.default ?? null"
                              (change)="ev.updateStepParam(stepKind, eventIndex, stepIndex, row.key, str($event))" />
                     }
                   }

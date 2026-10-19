@@ -79,6 +79,10 @@ LoadedLevel LevelLoader::Load(const std::string& levelPath, EventSystem& eventSy
     if (levelJson.contains("music") && levelJson.at("music").is_string()) {
         level.music = levelJson.at("music").get<std::string>();
     }
+    // Su volumen, 0 a 100 (sin el campo, 100). Fuera de rango se recorta.
+    if (levelJson.contains("musicVolume") && levelJson.at("musicVolume").is_number()) {
+        level.musicVolume = std::clamp(levelJson.at("musicVolume").get<float>(), 0.0f, 100.0f) / 100.0f;
+    }
 
     // --- Camara -------------------------------------------------------------
     // Bloque opcional. Sin el quedan los valores por defecto de CameraSettings,

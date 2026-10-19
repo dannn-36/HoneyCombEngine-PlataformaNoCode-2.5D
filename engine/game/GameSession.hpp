@@ -125,7 +125,9 @@ private:
     // que pida un evento ("Cambiar la musica"). Vacio = silencio. Una pista que
     // ya esta sonando sigue, sin volver a empezar (pasar a un nivel con la
     // misma musica no la corta).
-    void PlayTrack(const std::string &relativePath);
+    // volume va de 0 a 1 ("musicVolume" del nivel o de la portada, o el
+    // "volume" del evento, ya divididos por 100).
+    void PlayTrack(const std::string &relativePath, float volume = 1.0f);
 
     // "Crear entidad": una copia de "templateId" en "cell", con un id nuevo.
     // false si no hay plantilla, no se puede estar ahi o ya se crearon
@@ -159,6 +161,9 @@ private:
     // Cierra el cuadro: la captura pedida por Benchmark, si hay, y EndFrame.
     void FinishFrame();
     void GoToTitle();
+    // Accion "Mostrar creditos (fin del juego)": de la partida a los creditos, y
+    // de ahi a la portada.
+    void ShowEndCredits();
     void NewGame();
     // false si no hay partida guardada o no se pudo cargar su nivel.
     bool ContinueGame();
@@ -345,6 +350,8 @@ private:
     Screens::Menu pauseMenu;
     Screens::Menu gameOverMenu;
     float creditsElapsed = 0.0f;
+    // Los creditos que se ven son los del final del juego (no los del menu).
+    bool endCredits = false;
     // Lo que eligio un menu de pausa o de fin, para hacerlo al terminar el cuadro.
     std::string pendingMenuAction;
     // El nivel con que se abrio el motor: el de "Nueva partida" si game.json no

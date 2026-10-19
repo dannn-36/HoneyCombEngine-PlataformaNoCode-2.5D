@@ -42,6 +42,7 @@ export function defaultGameConfig(): GameConfig {
       buttonColor: { r: 220, g: 220, b: 220 },
       buttonHighlight: { r: 255, g: 214, b: 102 },
       music: '',
+      musicVolume: 100,
     },
     hud: {
       healthStyle: 'bar',
@@ -171,6 +172,7 @@ export function normalizeGameConfig(raw: unknown): GameConfig {
     buttonColor: color(title['buttonColor'], t.buttonColor),
     buttonHighlight: color(title['buttonHighlight'], t.buttonHighlight),
     music: text(title['music'], t.music),
+    musicVolume: Math.round(number(title['musicVolume'], t.musicVolume, 0, 100)),
   };
 
   const h = base.hud;

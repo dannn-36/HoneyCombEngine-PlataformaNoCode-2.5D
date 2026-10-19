@@ -223,6 +223,29 @@ describe('LevelService', () => {
     });
   });
 
+  describe('musica', () => {
+    it('el volumen se guarda en porcentaje, recortado y redondeado; 100 no se escribe', () => {
+      service.setMusic('sounds/tema.ogg');
+      expect('musicVolume' in level()).toBe(false);
+      service.setMusicVolume(42.6);
+      expect(level().musicVolume).toBe(43);
+      service.setMusicVolume(250);
+      expect('musicVolume' in level()).toBe(false);
+      service.setMusicVolume(-5);
+      expect(level().musicVolume).toBe(0);
+    });
+
+    it('cambiar de musica conserva el volumen; quitarla lo quita tambien', () => {
+      service.setMusic('sounds/a.ogg');
+      service.setMusicVolume(60);
+      service.setMusic('sounds/b.ogg');
+      expect(level().musicVolume).toBe(60);
+      service.setMusic(null);
+      expect('music' in level()).toBe(false);
+      expect('musicVolume' in level()).toBe(false);
+    });
+  });
+
   describe('entidades', () => {
     it('agregar, cambiar y borrar una entidad', () => {
       service.addEntity(entity('enemy_1'));

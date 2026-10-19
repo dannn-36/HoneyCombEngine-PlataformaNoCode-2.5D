@@ -1235,6 +1235,16 @@ export class App {
   /** La musica del nivel abierto (ruta relativa a assets/), o '' si no tiene. */
   readonly levelMusic = computed(() => this.levels.level().music ?? '');
 
+  /** Volumen de la musica del nivel, en porcentaje (100 si el nivel no dice otro). */
+  readonly levelMusicVolume = computed(() => this.levels.level().musicVolume ?? 100);
+
+  /** Cambia el volumen de la musica del nivel; si se esta escuchando en el editor, se oye al toque. */
+  setLevelMusicVolume(percent: number): void {
+    this.levels.setMusicVolume(percent);
+    this.snd.setPreviewVolume(this.levels.level().music ?? '', this.levelMusicVolume());
+    this.dirty.set(true);
+  }
+
   /** Elige la musica del nivel ('' = sin musica). La de antes, si sonaba en el editor, se corta. */
   setLevelMusic(path: string): void {
     if ((this.levels.level().music ?? '') === path) {

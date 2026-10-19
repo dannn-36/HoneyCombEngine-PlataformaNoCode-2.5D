@@ -44,7 +44,8 @@
         "backgroundMode": { "type": "string", "enum": ["cover", "stretch", "tile"], "default": "cover" },
         "buttonColor": { "$ref": "#/definitions/color" },
         "buttonHighlight": { "$ref": "#/definitions/color" },
-        "music": { "$ref": "#/definitions/assetPath", "description": "Musica de la portada (OGG, MP3 o WAV)." }
+        "music": { "$ref": "#/definitions/assetPath", "description": "Musica de la portada (OGG, MP3 o WAV)." },
+        "musicVolume": { "type": "number", "minimum": 0, "maximum": 100, "default": 100, "description": "Volumen de la musica de la portada, en porcentaje. Sin el campo, 100." }
       }
     },
     "hud": {

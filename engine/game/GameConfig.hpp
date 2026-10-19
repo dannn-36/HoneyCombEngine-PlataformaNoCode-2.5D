@@ -47,6 +47,7 @@ struct TitleScreenConfig {
     Color buttonColor{220, 220, 220, 255};
     Color buttonHighlight{255, 214, 102, 255};
     std::string music;  // ruta relativa a assets/
+    float musicVolume = 1.0f;  // "musicVolume" 0 a 100 en game.json, ya en 0..1
 };
 
 struct HudConfig {

@@ -12,6 +12,12 @@ export interface SoundsDeps {
   reloadDir: (path: string) => Promise<void>;
 }
 
+/** "Volumen %" (0-100) como lo pide un <audio> (0-1). Lo que no es un numero suena entero. */
+export function previewVolume(percent: unknown): number {
+  const value = Number(percent);
+  return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) / 100 : 1;
+}
+
 /** Nombre de archivo de un sonido, sin la carpeta: "sounds/tema.ogg" -> "tema.ogg". */
 export function soundLabel(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
@@ -100,8 +106,12 @@ export class SoundsController {
     }
   }
 
-  /** Escucha un sonido en el editor; si ya estaba sonando, lo corta. */
-  async togglePreview(path: string): Promise<void> {
+  /**
+   * Escucha un sonido en el editor; si ya estaba sonando, lo corta. volume es
+   * el "Volumen %" con que se usa (100 = el del archivo), para oirlo como en
+   * el juego.
+   */
+  async togglePreview(path: string, volume: unknown = 100): Promise<void> {
     if (this.playing() === path) {
       this.stop();
       return;
@@ -116,6 +126,7 @@ export class SoundsController {
         throw new Error(data.kind === 'binary' && data.reason === 'too-large' ? 'pesa demasiado para escucharlo acá' : 'no es un sonido');
       }
       const audio = new Audio(data.dataUrl);
+      audio.volume = previewVolume(volume);
       this.audio = audio;
       this.playing.set(path);
       audio.addEventListener('ended', () => {
@@ -127,6 +138,13 @@ export class SoundsController {
     } catch (error) {
       this.stop();
       this.deps.note('No se pudo escuchar ' + soundLabel(path) + ': ' + this.deps.describe(error));
+    }
+  }
+
+  /** Si se esta escuchando ese sonido, le cambia el volumen sin cortarlo. */
+  setPreviewVolume(path: string, volume: number): void {
+    if (this.audio && this.playing() === path) {
+      this.audio.volume = previewVolume(volume);
     }
   }
 

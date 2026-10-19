@@ -20,6 +20,14 @@ describe('configuracion del juego', () => {
     expect(config.hud.healthBorder).toBeNull();
   });
 
+  it('el volumen de la musica de la portada va de 0 a 100, entero; sin el campo es 100', () => {
+    expect(normalizeGameConfig({}).titleScreen.musicVolume).toBe(100);
+    expect(normalizeGameConfig({ titleScreen: { musicVolume: 37.4 } }).titleScreen.musicVolume).toBe(37);
+    expect(normalizeGameConfig({ titleScreen: { musicVolume: 900 } }).titleScreen.musicVolume).toBe(100);
+    expect(normalizeGameConfig({ titleScreen: { musicVolume: -1 } }).titleScreen.musicVolume).toBe(0);
+    expect(normalizeGameConfig({ titleScreen: { musicVolume: 'alto' } }).titleScreen.musicVolume).toBe(100);
+  });
+
   it('cada llamada da una copia nueva: editar una no toca la otra', () => {
     const a = defaultGameConfig();
     a.variables['llaves'] = 3;

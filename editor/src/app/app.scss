@@ -1848,6 +1848,18 @@ app-puzzle-dialog {
       font-weight: 600;
     }
   }
+
+  // Volumen de la musica del nivel, en la misma barra: el texto, el control y el %.
+  &__volume {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    overflow: visible;
+
+    input[type='range'] {
+      width: 110px;
+    }
+  }
 }
 
 .tiles {

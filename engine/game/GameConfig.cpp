@@ -52,6 +52,9 @@ void ReadTitle(const json& source, TitleScreenConfig& title) {
     title.buttonColor = ReadColor(source, "buttonColor", title.buttonColor);
     title.buttonHighlight = ReadColor(source, "buttonHighlight", title.buttonHighlight);
     title.music = ReadString(source, "music");
+    if (source.contains("musicVolume") && source.at("musicVolume").is_number()) {
+        title.musicVolume = std::clamp(source.at("musicVolume").get<float>(), 0.0f, 100.0f) / 100.0f;
+    }
 }
 
 void ReadHud(const json& source, HudConfig& hud) {

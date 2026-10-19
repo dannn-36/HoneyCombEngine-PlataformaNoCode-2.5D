@@ -194,9 +194,20 @@ export class LevelService {
     this.level.update((level) => ({ ...level, camera: sanitizeCamera({ ...cameraOf(level), ...changes }) }));
   }
 
-  /** La musica del nivel (ruta relativa a assets/); null la quita. */
+  /** La musica del nivel (ruta relativa a assets/); null la quita, con su volumen. */
   setMusic(path: string | null): void {
-    this.level.update(({ music: _, ...level }) => (path ? { ...level, music: path } : level));
+    this.level.update(({ music: _, musicVolume, ...level }) =>
+      path ? { ...level, music: path, ...(musicVolume !== undefined ? { musicVolume } : {}) } : level,
+    );
+  }
+
+  /**
+   * Volumen de la musica del nivel, en porcentaje (se recorta a 0-100 y se
+   * redondea). 100 es el del archivo y no se escribe: el JSON queda como antes.
+   */
+  setMusicVolume(percent: number): void {
+    const value = Number.isFinite(percent) ? Math.round(Math.min(100, Math.max(0, percent))) : 100;
+    this.level.update(({ musicVolume: _, ...level }) => (value === 100 ? level : { ...level, musicVolume: value }));
   }
 
   /** Quita el bloque "camera": el nivel vuelve a la camara de siempre. */

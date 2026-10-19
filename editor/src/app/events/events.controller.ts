@@ -179,7 +179,9 @@ export class EventsController {
     const def = this.entryFor(CATALOG_KIND[kind], step.type)?.params[key];
     let value: unknown = raw;
     if (def?.type === 'number') {
-      const number = Number(raw);
+      // Un campo borrado vuelve al valor por defecto del catalogo (un volumen
+      // vacio es 100, no 0: no tiene que dejar mudo el sonido).
+      const number = raw === '' && typeof def.default === 'number' ? def.default : Number(raw);
       value = Number.isFinite(number) ? number : 0;
     } else if (def?.type === 'item_ref' && typeof raw === 'string' && raw) {
       this.useCombatParams(raw);

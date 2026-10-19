@@ -448,6 +448,8 @@ TEST_CASE("reproducir un sonido no rompe aunque el archivo falte") {
     Fixture fx;
     CHECK_NOTHROW(fx.Run(Step("play_sound", {{"soundPath", "sounds/hit.wav"}})));
     CHECK_NOTHROW(fx.Run(Step("play_sound", {{"soundPath", "sounds/no_esta.wav"}})));
+    CHECK_NOTHROW(fx.Run(Step("play_sound", {{"soundPath", "sounds/hit.wav"}, {"volume", 25}})));
+    CHECK_NOTHROW(fx.Run(Step("play_sound", {{"soundPath", "sounds/hit.wav"}, {"volume", "fuerte"}})));
 }
 
 TEST_CASE("un parametro de texto escrito como numero no rompe los bloques que usan string param") {
@@ -487,6 +489,8 @@ struct SceneFixture : Fixture {
     float frameTime = 0.0f;
     bool interact = false;
     std::vector<std::string> tracks;
+    std::vector<float> trackVolumes;
+    int creditsShown = 0;
     std::vector<std::pair<std::string, std::string>> dialogs;
     std::vector<std::pair<float, float>> shakes;
     std::vector<std::pair<std::string, Vector2>> spawns;
@@ -495,7 +499,11 @@ struct SceneFixture : Fixture {
         ctx.levelTime = &levelTime;
         ctx.frameTime = &frameTime;
         ctx.interactPressed = &interact;
-        ctx.playMusic = [this](const std::string& path) { tracks.push_back(path); };
+        ctx.playMusic = [this](const std::string& path, float volume) {
+            tracks.push_back(path);
+            trackVolumes.push_back(volume);
+        };
+        ctx.showCredits = [this]() { ++creditsShown; };
         ctx.showDialog = [this](const std::string& speaker, const std::string& text) { dialogs.emplace_back(speaker, text); };
         ctx.shakeCamera = [this](float intensity, float seconds) { shakes.emplace_back(intensity, seconds); };
         ctx.spawnEntity = [this](const std::string& id, Vector2 cell) {
@@ -597,6 +605,27 @@ TEST_CASE("cambiar y detener la musica") {
     CHECK(fx.tracks == std::vector<std::string>{"sounds/tema.ogg", ""});
 }
 
+TEST_CASE("cambiar la musica pasa su volumen de 0-100 a 0-1, recortado; sin volumen es 100") {
+    SceneFixture fx;
+    fx.Run(Step("play_music", {{"music", "a.ogg"}}));
+    fx.Run(Step("play_music", {{"music", "b.ogg"}, {"volume", 40}}));
+    fx.Run(Step("play_music", {{"music", "c.ogg"}, {"volume", "70"}}));
+    fx.Run(Step("play_music", {{"music", "d.ogg"}, {"volume", 180}}));
+    fx.Run(Step("play_music", {{"music", "e.ogg"}, {"volume", -10}}));
+    REQUIRE(fx.trackVolumes.size() == 5);
+    CHECK(fx.trackVolumes[0] == doctest::Approx(1.0f));
+    CHECK(fx.trackVolumes[1] == doctest::Approx(0.4f));
+    CHECK(fx.trackVolumes[2] == doctest::Approx(0.7f));
+    CHECK(fx.trackVolumes[3] == doctest::Approx(1.0f));
+    CHECK(fx.trackVolumes[4] == doctest::Approx(0.0f));
+}
+
+TEST_CASE("mostrar creditos pide el final del juego a GameSession") {
+    SceneFixture fx;
+    fx.Run(Step("show_credits"));
+    CHECK(fx.creditsShown == 1);
+}
+
 TEST_CASE("sacudir la camara usa los valores pedidos, o los de por defecto") {
     SceneFixture fx;
     fx.Run(Step("shake_camera", {{"intensity", 12}, {"seconds", 1}}));
@@ -638,6 +667,7 @@ TEST_CASE("sin GameSession los bloques nuevos no hacen nada ni fallan") {
     CHECK_NOTHROW(fx.Run(Step("play_music", {{"music", "x.ogg"}})));
     CHECK_NOTHROW(fx.Run(Step("shake_camera")));
     CHECK_NOTHROW(fx.Run(Step("spawn_entity", {{"template", "x"}})));
+    CHECK_NOTHROW(fx.Run(Step("show_credits")));
 }
 
 }  // TEST_SUITE

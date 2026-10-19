@@ -549,4 +549,18 @@ TEST_CASE("la musica del nivel se lee tal cual, y sin ella queda vacia") {
     CHECK(fx.Load(level).music.empty());
 }
 
+TEST_CASE("el volumen de la musica va de 0 a 100 en el JSON y llega de 0 a 1") {
+    LoaderFixture fx;
+    json level = MinimalLevel();
+    CHECK(fx.Load(level).musicVolume == doctest::Approx(1.0f));
+    level["musicVolume"] = 40;
+    CHECK(fx.Load(level).musicVolume == doctest::Approx(0.4f));
+    level["musicVolume"] = 250;
+    CHECK(fx.Load(level).musicVolume == doctest::Approx(1.0f));
+    level["musicVolume"] = -3;
+    CHECK(fx.Load(level).musicVolume == doctest::Approx(0.0f));
+    level["musicVolume"] = "bajo";
+    CHECK(fx.Load(level).musicVolume == doctest::Approx(1.0f));
+}
+
 }  // TEST_SUITE

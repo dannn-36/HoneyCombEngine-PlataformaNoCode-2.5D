@@ -38,6 +38,8 @@ export interface TitleScreenConfig {
   buttonHighlight: RgbColor;
   /** "sounds/x.ogg", relativo a assets/; vacio = sin musica. */
   music: string;
+  /** Volumen de esa musica en porcentaje (0-100). */
+  musicVolume: number;
 }
 
 export interface HudConfig {

@@ -181,7 +181,8 @@
       "label": "Reproducir sonido",
       "description": "Reproduce un archivo de audio una vez.",
       "params": {
-        "soundPath": { "type": "sound_ref", "description": "Sonido de assets/" }
+        "soundPath": { "type": "sound_ref", "description": "Sonido de assets/" },
+        "volume": { "type": "number", "description": "Volumen % (0 a 100)", "default": 100 }
       }
     },
     {
@@ -301,10 +302,17 @@
     {
       "type": "play_music",
       "label": "Cambiar la música",
-      "description": "Cambia la música que suena (la del nivel, si tenía) por otra, que se repite. Si ya está sonando, sigue sin volver a empezar.",
+      "description": "Cambia la música que suena (la del nivel, si tenía) por otra, que se repite. Si ya está sonando, sigue sin volver a empezar y solo toma el volumen nuevo.",
       "params": {
-        "music": { "type": "sound_ref", "description": "Música de assets/" }
+        "music": { "type": "sound_ref", "description": "Música de assets/" },
+        "volume": { "type": "number", "description": "Volumen % (0 a 100)", "default": 100 }
       }
+    },
+    {
+      "type": "show_credits",
+      "label": "Mostrar créditos (fin del juego)",
+      "description": "Termina la partida: muestra los créditos de la Configuración del juego y después vuelve a la portada.",
+      "params": {}
     },
     {
       "type": "stop_music",

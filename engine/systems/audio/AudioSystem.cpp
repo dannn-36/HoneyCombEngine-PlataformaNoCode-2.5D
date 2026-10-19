@@ -6,20 +6,35 @@
 
 #include "AudioSystem.hpp"
 
+namespace {
+// Un volumen fuera de rango (un JSON editado a mano) no puede subir el sonido
+// por encima del archivo ni dar negativo.
+float Clamp01(float volume) {
+    return volume < 0.0f ? 0.0f : (volume > 1.0f ? 1.0f : volume);
+}
+}  // namespace
+
 // Los efectos no se recuerdan: se disparan y raylib los mezcla solo. Por eso
 // pueden sonar varios a la vez, a diferencia de la musica.
-void AudioSystem::PlaySoundEffect(const Sound& sound) {
+//
+// El volumen se fija justo antes de cada disparo: el mismo Sound (cacheado por
+// ruta en ResourceManager) puede usarse fuerte en un evento y bajito en otro.
+// Si dos usos con distinto volumen se pisan, el que sigue sonando toma el del
+// ultimo disparo; para efectos cortos no se nota.
+void AudioSystem::PlaySoundEffect(const Sound& sound, float volume) {
+    SetSoundVolume(sound, Clamp01(volume));
     PlaySound(sound);
 }
 
 // Una sola pista a la vez: si ya habia una sonando se corta antes de empezar la
 // nueva. Sin esto las dos sonarian encimadas.
-void AudioSystem::PlayMusic(Music& music, bool loop) {
+void AudioSystem::PlayMusic(Music& music, bool loop, float volume) {
     if (currentMusic_) {
         StopMusicStream(*currentMusic_);
     }
     currentMusic_ = &music;
     loopCurrentMusic_ = loop;
+    ::SetMusicVolume(music, Clamp01(volume));
     PlayMusicStream(music);
 }
 
@@ -58,6 +73,6 @@ void AudioSystem::SetMusicVolume(float volume) {
     if (currentMusic_) {
         // Calificado con :: para llamar a la funcion global de raylib y no
         // recursar sobre este mismo metodo (mismo nombre).
-        ::SetMusicVolume(*currentMusic_, volume);
+        ::SetMusicVolume(*currentMusic_, Clamp01(volume));
     }
 }

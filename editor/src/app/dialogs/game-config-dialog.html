@@ -219,6 +219,13 @@
                   }
                 </select>
               </label>
+              @if (d.titleScreen.music) {
+                <label class="field">
+                  <span>Volumen ({{ d.titleScreen.musicVolume }}%)</span>
+                  <input type="range" min="0" max="100" step="5" [value]="d.titleScreen.musicVolume"
+                         (change)="game.patchTitle({ musicVolume: game.clamp(num($event), 0, 100, 100) })" />
+                </label>
+              }
               <p class="hint hint--field">OGG, MP3 o WAV de cualquier carpeta de assets/. Suena en bucle mientras está la portada.</p>
             }
 

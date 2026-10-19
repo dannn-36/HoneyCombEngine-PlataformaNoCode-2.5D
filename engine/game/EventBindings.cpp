@@ -41,6 +41,13 @@ float NumberParam(const nlohmann::json &params, const char *key, float fallback)
     return fallback;
 }
 
+// El "Volumen %" de un sonido o una musica (0 a 100, sin el campo = 100),
+// como lo espera AudioSystem: de 0 a 1.
+float VolumeParam(const nlohmann::json &params)
+{
+    return std::clamp(NumberParam(params, "volume", 100.0f), 0.0f, 100.0f) / 100.0f;
+}
+
 std::string StringParam(const nlohmann::json &params, const char *key)
 {
     return params.contains(key) && params.at(key).is_string() ? params.at(key).get<std::string>() : std::string();
@@ -244,11 +251,12 @@ void RegisterAll(EventSystem &events, Context &ctx)
         } });
 
     // Accion "play_sound": ResourceManager cachea por ruta, asi que dispararla
-    // varias veces no vuelve a leer el .wav del disco.
+    // varias veces no vuelve a leer el .wav del disco. "volume" (0-100) baja
+    // ese uso del sonido sin tocar el archivo.
     events.RegisterAction("play_sound", [&resources, &assets, &audio](const nlohmann::json &params)
                           {
         const Sound& sound = resources.GetSound(assets.Resolve(StringParam(params, "soundPath")));
-        audio.PlaySoundEffect(sound); });
+        audio.PlaySoundEffect(sound, VolumeParam(params)); });
 
     // Accion "load_level": agenda el paso a otro nivel de la MISMA carpeta
     // levels/ que el actual. "level" es el nombre del archivo; si viene sin
@@ -266,6 +274,15 @@ void RegisterAll(EventSystem &events, Context &ctx)
         }
         std::string title = StringParam(params, "message");
         beginTransition(target, title.empty() ? "¡Nivel superado!" : title, false); });
+
+    // Accion "show_credits": el final del juego. Corta la partida y muestra los
+    // creditos de game.json; al terminarlos se vuelve a la portada. Lo resuelve
+    // GameSession, que es quien sabe de pantallas.
+    events.RegisterAction("show_credits", [&ctx](const nlohmann::json &)
+                          {
+        if (ctx.showCredits) {
+            ctx.showCredits();
+        } });
 
     // --- Eventos de combate, objetos y puzzles --------------------------------
 
@@ -456,16 +473,17 @@ void RegisterAll(EventSystem &events, Context &ctx)
     events.RegisterAction("wait", [](const nlohmann::json &) {});
 
     // Acciones "play_music" y "stop_music": cambia la musica que suena (la del
-    // nivel, si tenia). Una pista que ya esta sonando no vuelve a empezar.
+    // nivel, si tenia). Una pista que ya esta sonando no vuelve a empezar (solo
+    // toma el volumen nuevo). "volume" (0-100) baja esa musica.
     events.RegisterAction("play_music", [&ctx](const nlohmann::json &params)
                           {
         if (ctx.playMusic) {
-            ctx.playMusic(StringParam(params, "music"));
+            ctx.playMusic(StringParam(params, "music"), VolumeParam(params));
         } });
     events.RegisterAction("stop_music", [&ctx](const nlohmann::json &)
                           {
         if (ctx.playMusic) {
-            ctx.playMusic("");
+            ctx.playMusic("", 1.0f);
         } });
 
     // Accion "shake_camera": la imagen tiembla y se calma (ver CameraSystem::Shake).

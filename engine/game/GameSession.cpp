@@ -198,14 +198,16 @@ void GameSession::RegisterEvents()
     eventContext.levelTime = &levelTime;
     eventContext.frameTime = &lastFrameTime;
     eventContext.interactPressed = &interactForEvents;
-    eventContext.playMusic = [this](const std::string &path)
-    { PlayTrack(path); };
+    eventContext.playMusic = [this](const std::string &path, float volume)
+    { PlayTrack(path, volume); };
     eventContext.showDialog = [this](const std::string &speaker, const std::string &text)
     { dialogs.push_back(DialogLine{speaker, text}); };
     eventContext.shakeCamera = [this](float intensity, float seconds)
     { camera.Shake(intensity, seconds); };
     eventContext.spawnEntity = [this](const std::string &templateId, Vector2 cell)
     { return SpawnEntity(templateId, cell); };
+    eventContext.showCredits = [this]()
+    { ShowEndCredits(); };
     EventBindings::RegisterAll(events, eventContext);
 }
 
@@ -242,7 +244,7 @@ void GameSession::PrepareLevel(LevelStart start)
     }
     // La musica del nivel, o silencio si no tiene. Si es la que ya sonaba (dos
     // niveles con la misma), sigue sin cortarse.
-    PlayTrack(level.music);
+    PlayTrack(level.music, level.musicVolume);
 
     // El piso, de atras hacia adelante y en coordenadas de mundo, de una vez.
     // En isometrico la Y de pantalla de una celda es (col + row) * alto / 2, asi
@@ -426,10 +428,13 @@ void GameSession::ShowMessage(const std::string &text, float seconds)
     messageRemaining = seconds;
 }
 
-void GameSession::PlayTrack(const std::string &relativePath)
+void GameSession::PlayTrack(const std::string &relativePath, float volume)
 {
     if (relativePath == currentTrack)
     {
+        // La misma pista sigue sin volver a empezar; solo toma el volumen nuevo
+        // (el nivel siguiente, o "Cambiar la musica", pueden pedirla mas baja).
+        audio.SetMusicVolume(volume);
         return;
     }
     currentTrack = relativePath;
@@ -444,7 +449,7 @@ void GameSession::PlayTrack(const std::string &relativePath)
     Music &music = const_cast<Music &>(resources.GetMusic(assets.Resolve(relativePath)));
     if (music.frameCount > 0)
     {
-        audio.PlayMusic(music);
+        audio.PlayMusic(music, true, volume);
     }
     else
     {
@@ -755,7 +760,7 @@ void GameSession::GoToTitle()
 
     // La musica de la portada, o silencio: la del nivel que quedo atras no
     // sigue sonando en el menu.
-    PlayTrack(config.titleScreen.music);
+    PlayTrack(config.titleScreen.music, config.titleScreen.musicVolume);
 }
 
 void GameSession::UpdateTitle()
@@ -815,8 +820,33 @@ void GameSession::UpdateCredits(float deltaTime)
     FinishFrame();
     if (back)
     {
-        screen = Screen::Title;
+        if (endCredits)
+        {
+            // Los creditos del final del juego: se vuelve a una portada armada de
+            // nuevo (Continuar, su musica), no a la que habia antes de jugar.
+            endCredits = false;
+            GoToTitle();
+        }
+        else
+        {
+            screen = Screen::Title;
+        }
     }
+}
+
+void GameSession::ShowEndCredits()
+{
+    // Se deja todo lo de la partida quieto: sin pausa, sin dialogos ni paso de
+    // nivel a medias. Lo que siga corriendo de este cuadro ya no importa: el
+    // proximo cuadro es de los creditos.
+    screen = Screen::Credits;
+    creditsElapsed = 0.0f;
+    endCredits = true;
+    paused = false;
+    gameOver = false;
+    dialogs.clear();
+    transition = Transition{};
+    PlayTrack(config.titleScreen.music, config.titleScreen.musicVolume);
 }
 
 void GameSession::NewGame()

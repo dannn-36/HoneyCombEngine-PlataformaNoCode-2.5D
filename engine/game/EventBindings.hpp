@@ -89,12 +89,15 @@ struct Context {
     // "Al hablar con una entidad".
     const bool* interactPressed = nullptr;
     // Lo que piden los eventos y resuelve GameSession: la musica (vacio =
-    // silencio), un dialogo en pantalla, sacudir la camara, y crear una copia
-    // de una entidad en una casilla (false si no se pudo).
-    std::function<void(const std::string& path)> playMusic;
+    // silencio) con su volumen de 0 a 1, un dialogo en pantalla, sacudir la
+    // camara, y crear una copia de una entidad en una casilla (false si no se
+    // pudo).
+    std::function<void(const std::string& path, float volume)> playMusic;
     std::function<void(const std::string& speaker, const std::string& text)> showDialog;
     std::function<void(float intensity, float seconds)> shakeCamera;
     std::function<bool(const std::string& templateId, Vector2 cell)> spawnEntity;
+    // "Mostrar creditos (fin del juego)": deja la partida y pasa a los creditos.
+    std::function<void()> showCredits;
 };
 
 // A cuantas celdas del centro de una entidad tiene que estar el jugador para

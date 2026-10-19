@@ -35,7 +35,7 @@ TEST_CASE("un game json completo se lee entero") {
         {"startLevel", "inicio.json"},
         {"titleScreen", {{"style", "side"}, {"title", "Titulo"}, {"subtitle", "Sub"},
                          {"titleColor", {{"r", 10}, {"g", 20}, {"b", 30}}}, {"titleSize", 80},
-                         {"backgroundMode", "tile"}, {"music", "sounds/tema.ogg"}}},
+                         {"backgroundMode", "tile"}, {"music", "sounds/tema.ogg"}, {"musicVolume", 35}}},
         {"hud", {{"healthStyle", "hearts"}, {"healthPosition", "bottom-right"}, {"healthScale", 2},
                  {"healthPerHeart", 25}, {"segments", 12}, {"showCoins", false}, {"heartFull", "h.png"}}},
         {"screens", {{"pauseTitle", "Alto"}, {"gameOverTitle", "Perdiste"},
@@ -59,6 +59,7 @@ TEST_CASE("un game json completo se lee entero") {
     CHECK(config.titleScreen.titleSize == doctest::Approx(80.0f));
     CHECK(config.titleScreen.backgroundFit == BackgroundFit::Tile);
     CHECK(config.titleScreen.music == "sounds/tema.ogg");
+    CHECK(config.titleScreen.musicVolume == doctest::Approx(0.35f));
     CHECK(config.hud.healthStyle == HealthStyle::Hearts);
     CHECK(config.hud.healthCorner == HudCorner::BottomRight);
     CHECK(config.hud.healthScale == doctest::Approx(2.0f));
@@ -77,7 +78,7 @@ TEST_CASE("los valores fuera de rango se llevan al rango") {
     TempDir dir;
     dir.WriteJson("game.json", json{
         {"window", {{"width", 10}, {"height", 99999}}},
-        {"titleScreen", {{"titleSize", 1}, {"subtitleSize", 500}, {"subtitleColor", {{"r", 900}, {"g", -4}}}}},
+        {"titleScreen", {{"titleSize", 1}, {"subtitleSize", 500}, {"subtitleColor", {{"r", 900}, {"g", -4}}}, {"musicVolume", 300}}},
         {"hud", {{"healthScale", 9}, {"healthPerHeart", 0}, {"segments", 1}}},
     });
     const GameConfig config = LoadGameConfig(dir.Path());
@@ -87,6 +88,7 @@ TEST_CASE("los valores fuera de rango se llevan al rango") {
     CHECK(config.titleScreen.subtitleSize == doctest::Approx(120.0f));
     CHECK(config.titleScreen.subtitleColor.r == 255);
     CHECK(config.titleScreen.subtitleColor.g == 0);
+    CHECK(config.titleScreen.musicVolume == doctest::Approx(1.0f));
     CHECK(config.hud.healthScale == doctest::Approx(3.0f));
     CHECK(config.hud.healthPerHeart == doctest::Approx(1.0f));
     CHECK(config.hud.segments == 2);

@@ -257,6 +257,8 @@ export interface Level {
    * bucle mientras se juega. Ausente = el nivel no tiene musica.
    */
   music?: string;
+  /** Volumen de esa musica en porcentaje (0-100). Ausente = 100, el del archivo. */
+  musicVolume?: number;
   /** Camara del runtime. Ausente = fija, con el nivel centrado y zoom 1, como siempre. */
   camera?: CameraConfig;
   grid: GridConfig;
