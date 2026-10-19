@@ -1,0 +1,38 @@
+@startuml runtime-game-flow
+title Runtime - Flujo de la partida (pantallas, niveles y guardado)
+
+[*] --> Portada : juego exportado (doble clic)\no Ejecutar con --portada
+[*] --> Jugando : Ejecutar desde el editor\n(slot "prueba")
+
+state Portada : estilo, fondo y textos de game.json
+state Jugando {
+  [*] --> Nivel
+  Nivel --> PasoDeNivel : accion load_level\n(transicion con titulo)
+  PasoDeNivel --> Nivel : carga el nivel siguiente
+  Nivel --> Nivel : punto de control / accion save_game\n-> Progress::Write
+  Nivel --> Pausa : Esc
+  Pausa --> Nivel : Continuar /\nReiniciar el nivel
+}
+state Pausa : menu de pausa (game.json)
+state FinDePartida : vida en 0
+state Creditos : textos de game.json
+
+Portada --> Jugando : Nueva partida (nivel inicial de game.json)\no Continuar (Progress::Load)
+Portada --> Creditos : Creditos
+Creditos --> Portada : volver
+Portada --> [*] : Salir del juego
+Jugando --> FinDePartida : el jugador cae
+FinDePartida --> Jugando : Volver al punto de control\n(o reintentar si no hay partida)
+FinDePartida --> Portada : Volver a la portada
+Pausa --> Portada : Volver a la portada
+Pausa --> [*] : Salir del juego
+FinDePartida --> [*] : Salir del juego
+
+note right of Jugando
+La partida guarda lo del jugador (vida, armas, monedas,
+marcas, variables) y lo que evita repetir recompensas
+(objetos juntados, eventos disparados). Los enemigos
+reaparecen. Se escribe a .tmp y se renombra; la anterior
+queda en .bak.
+end note
+@enduml

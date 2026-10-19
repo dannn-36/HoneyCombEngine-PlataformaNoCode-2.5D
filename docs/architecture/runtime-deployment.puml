@@ -3,27 +3,52 @@ title Runtime - Despliegue
 left to right direction
 skinparam componentStyle rectangle
 
-node "Equipo del jugador" as machine {
-  node "Proceso runtime" as process {
-    component "engine.exe" as exe
-    component "raylib / SDL2" as libs
-    component "DLLs del toolchain" as toolchain
+actor "Disenador" as designer
+actor "Jugador" as player
+
+node "Equipo del disenador (desde el editor)" as devMachine {
+  node "Proceso runtime" as devProcess {
+    component "engine/build/engine.exe\nDebug: panel F3, F1/F2, F8" as debugExe
+    component "engine/build-release/engine.exe\nRelease: -O3, sin herramientas" as releaseExe
   }
-  folder "Directorio de ejecucion" as data {
+  folder "Carpeta del editor" as project {
     folder "levels/" as levels
     folder "assets/" as assets
+    file "game.json" as gameJson
+    folder "saves/\nprueba.json (Ejecutar)\npartida.json (portada)" as devSaves
   }
 }
 
-actor "Jugador" as player
-player --> exe : inicia y envia input
-exe --> libs : ventana, input, audio y render
-exe --> toolchain : dependencias nativas
-exe --> levels : lee JSON
-exe --> assets : lee texturas y sonidos
+node "Equipo del jugador (juego exportado)" as playerMachine {
+  folder "<Juego>/" as gameDir {
+    component "<Juego>.exe\n(motor Release renombrado,\nsin consola, con su icono)" as gameExe
+    component "SDL2 y DLLs de MinGW" as dlls
+    file "honeycomb-export.json\n(marca)" as mark
+    folder "levels/ assets/ game.json" as gameData
+  }
+  folder "%APPDATA%\\<Juego>\\saves" as userSaves
+}
 
-note bottom of data
+designer --> debugExe : Ejecutar (nivel absoluto)
+designer --> releaseExe : Ejecutar con Release
+debugExe --> levels : lee JSON
+debugExe --> assets : {nivel}/../../assets
+debugExe --> gameJson : ventana, portada, HUD
+debugExe --> devSaves : guarda / continua
+player --> gameExe : doble clic: arranca en la portada
+gameExe --> dlls
+gameExe --> mark : detecta que es un juego exportado
+gameExe --> gameData : lee niveles y assets
+gameExe --> userSaves : partida guardada
+
+note bottom of project
 El directorio de trabajo se fija a la carpeta
-del ejecutable al iniciar main.cpp.
+del ejecutable al iniciar main.cpp; el nivel
+llega por argumento con su ruta absoluta.
+end note
+
+note bottom of gameDir
+Si no puede arrancar, lo dice en una ventana:
+el jugador no ve la consola.
 end note
 @enduml

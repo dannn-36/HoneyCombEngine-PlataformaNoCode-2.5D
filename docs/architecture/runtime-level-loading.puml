@@ -1,36 +1,53 @@
 @startuml runtime-level-loading
-title Runtime - Carga de nivel
+title Runtime - Carga de nivel (inicio, paso de nivel o Continuar)
 autonumber
 
 participant "GameSession" as main
+participant "Progress" as progress
 participant "LevelLoader" as loader
 participant "nlohmann::json" as json
 participant "AssetResolver" as resolver
 participant "ResourceManager" as resources
+participant "ItemLoader" as itemLoader
 participant "EventLoader" as eventLoader
 participant "EventSystem" as events
 participant "CameraSystem" as camera
-database "levels/test_level.json" as levelFile
+database "levels/<nivel>.json" as levelFile
 database "assets/" as assets
+database "saves/<slot>.json" as saveFile
+
+alt Continuar (portada o volver al punto de control)
+  main -> progress : Load(slot)
+  progress -> saveFile : leer (o la copia .bak si esta rota)
+  progress --> main : nivel, jugador, objetos juntados,\neventos ya disparados
+else Nueva partida / paso de nivel / Ejecutar
+  main -> main : nivel de game.json, de la accion\nload_level o del argumento
+end
 
 main -> loader : Load(levelPath, eventSystem)
 loader -> levelFile : abrir y leer
 levelFile --> loader : JSON de nivel
-loader -> json : parse y validar estructura
-json --> loader : datos de grid, entidades y camara
+loader -> json : parse y validar el contrato
+json --> loader : grid, visuals (piso por capas,\nparedes), fondo, entidades, camara
 loader -> resolver : Resolve(texturePath)
-resolver -> assets : localizar recurso
+resolver -> assets : localizar recurso\n(subcarpetas de paquetes incluidas)
 assets --> resolver : ruta absoluta/normalizada
 resolver --> loader : asset path
 loader -> resources : cargar o reutilizar textura
 resources --> loader : Texture2D
+loader -> itemLoader : objetos, zonas y combate
 loader -> eventLoader : cargar eventos del nivel
 eventLoader -> json : parse definiciones
-json --> eventLoader : triggers y acciones
+json --> eventLoader : triggers, condiciones y acciones
 eventLoader -> events : registrar eventos
 loader --> main : LoadedLevel
 main -> main : PrepareLevel: indices, animaciones, inventario
+opt viene de una partida guardada
+  main -> main : aplicar vida, armas, monedas, marcas y variables;\nquitar objetos ya juntados
+  main -> events : SetNonRepeatable(eventos ya disparados)
+end
+main -> resources : ReleaseTexturesExcept(las del nivel nuevo)
 main -> camera : Configure(level.camera)
 main -> camera : SnapTo(jugador) -- sin barrido desde el nivel anterior
-main -> events : Update() durante el loop
+main -> events : Update() durante el loop (on_level_start primero)
 @enduml

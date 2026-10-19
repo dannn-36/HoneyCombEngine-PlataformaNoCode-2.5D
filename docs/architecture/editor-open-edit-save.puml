@@ -4,11 +4,12 @@ autonumber
 
 actor Disenador as designer
 participant "App\nAngular\n(ProjectController)" as app
-participant "LevelService" as level
+participant "LevelService\n+ LevelHistoryService" as level
 participant "ProjectService" as project
 participant "preload.js" as preload
 participant "Electron main\nipc/" as main
 database "Carpeta del editor" as disk
+database "Datos de Electron\nrecuperacion/" as recoveryDir
 database "Archivos de afuera" as outside
 
 == Arranque: la carpeta del editor se abre sola ==
@@ -20,11 +21,20 @@ initWorkspace() ya corrio antes de abrir
 la ventana: la carpeta guardada o
 Documentos/HoneyComb, con su estructura.
 La primera vez se copia el contenido
-del repositorio.
+del repositorio. Se borran los .tmp
+de un guardado cortado.
 end note
 main --> preload : raiz
 preload --> project : raiz
-project --> app : listar niveles y texturas
+project --> app : listar niveles, texturas y sonidos
+app -> project : readRecovery()
+project -> main : IPC recovery:read
+main -> recoveryDir : copia de esta carpeta del editor
+alt hay cambios sin guardar de la sesion anterior
+  app -> designer : "Recuperarlos?"
+  designer --> app : Aceptar / Cancelar
+  app -> level : abrir la copia (sin guardar)\no descartarla (recovery:clear)
+end
 
 == Abrir un nivel del proyecto ==
 designer -> app : elegir nivel
@@ -34,7 +44,7 @@ preload -> main : IPC project:readFile
 main -> disk : leer JSON (ruta validada)
 disk --> main : contenido
 main --> preload : contenido
-preload --> project : contenido
+preload --> project : contenido\n(lo recuerda para detectar cambios)
 project --> level : parse Level
 level --> app : estado reactivo actualizado
 
@@ -57,9 +67,15 @@ project --> level : parse Level
 level --> app : estado reactivo actualizado
 
 == Editar ==
-designer -> app : mover entidad / cambiar evento
-app -> level : updateEntity / updateEvent
-level --> app : signal actualizado
+designer -> app : mover entidad / pintar piso / cambiar evento
+app -> level : updateEntity / paintFloor / updateEvent
+level -> level : historial (Ctrl+Z / Ctrl+Y)
+level --> app : signal actualizado (dirty)
+loop cada pocos segundos mientras hay cambios sin guardar
+  app -> project : writeRecovery(nivel)
+  project -> main : IPC recovery:write
+  main -> recoveryDir : copia atomica
+end
 
 == Guardar ==
 designer -> app : Guardar
@@ -72,12 +88,22 @@ else nivel nuevo o de una subcarpeta: Guardar como
   app -> level : save()
 end
 level -> project : saveLevel(fileName, level)
+project -> preload : readFile (lo que hay ahora en el disco)
+alt cambio en el disco desde que se abrio (otro programa, git...)
+  project --> app : LevelChangedOnDiskError
+  app -> designer : "Reemplazarlo?"
+end
 project -> preload : writeFile(levels/..., JSON)
 preload -> main : IPC project:writeFile
-main -> disk : escribir JSON (nunca fuera de la carpeta)
+main -> disk : temporal + fsync + renombrar;\nla version anterior queda en .bak
 disk --> main : confirmacion
 main --> preload : ok
 preload --> project : ok
 project --> level : guardado
 level --> app : dirty=false
+app -> project : clearRecovery()
+app -> project : checkLevel(JSON)
+project -> main : IPC level:check
+main -> main : Ajv contra schema/level.schema.json
+main --> app : problemas (solo avisa en la Consola)
 @enduml

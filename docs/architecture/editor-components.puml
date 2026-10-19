@@ -4,117 +4,145 @@ top to bottom direction
 skinparam componentStyle rectangle
 
 package "Proceso Electron renderer" as renderer {
-  component "App\nAngular component (shell)" as app
-  component "Canvas isometrico\nrender y entrada" as canvas
-  component "Paneles y formularios\n(app.html)" as panels
+  package "Shell" as shell {
+    component "App\nAngular component (shell)\nestado de la ventana y cableado" as app
+    component "MenuBar\nmenus y atajos" as menuBar
+    component "PanelsController\nNamePromptController" as uiCtl
+  }
+
+  package "Escena" as scene {
+    component "ViewportController\ncanvas isometrico,\nzoom, arrastre, pintado" as viewport
+    component "IsoCanvasRenderer\nSpriteCache" as renderer2d
+    component "SelectionController\nEntityOpsController\nPaletteController" as sceneOps
+    component "InspectorController\nBackgroundPickerController" as inspector
+    component "MapController\nsalas y tuneles" as map
+    component "FloorController\npisos por capas" as floor
+  }
+
+  package "Contenido" as content {
+    component "EventsController\neventos NoCode" as eventsCtl
+    component "TransitionController\npasar de nivel" as transition
+    component "CharactersController\npersonajes del proyecto" as characters
+    component "ItemEditorController\nItemsPanelController\nCombatInspectorController\nPuzzleController" as combat
+    component "AttackPreviewDirective" as attackPreview
+  }
+
+  package "Recursos" as resources {
+    component "TexturesController\nTextureThumbDirective" as texLib
+    component "ImageConverterController\nPNG/JPG -> PNG" as converter
+    component "SoundsController\nimportar y escuchar" as sounds
+    component "SpriteEditorController\nherramienta de sprites" as spriteEditor
+  }
+
+  package "Proyecto" as projectPkg {
+    component "ProjectController\nabrir, guardar, recuperar,\nexportar" as projectCtl
+    component "ExplorerController\narbol de archivos" as explorer
+    component "EngineController\nmotor Debug / Release,\ncompilar, Ejecutar" as engineCtl
+    component "GameConfigController\ngame.json" as gameCfg
+    component "JsonViewController\nvista del JSON" as jsonView
+  }
+
   package "dialogs/ (cargados con @defer)" as dialogs {
-    component "DialogBase\nEDITOR_HOST + helpers" as dialogBase
-    component "Objetos y armas, Personajes,\nConvertidor, Puzzle, Grilla,\nTunel, Pasar de nivel" as dialogViews
+    component "DialogBase\nEDITOR_HOST" as dialogBase
+    component "Sala, Tunel, Personajes,\nObjetos y armas, Pasar de nivel,\nConvertidor, Puzzle,\nConfiguracion del juego,\nSpriteEditor" as dialogViews
   }
-  package "combat/" as combat {
-    component "ItemEditorController\nventana Objetos y armas" as itemEditor
-    component "CombatInspectorController\npanel Combate / Tienda" as combatInspector
-    component "PuzzleController\ndialogo Puzzle de sala" as puzzle
-    component "AttackPreviewDirective\nforma del ataque en canvas" as attackPreview
+
+  package "services/ (estado)" as services {
+    component "LevelService\nnivel abierto" as levelService
+    component "LevelHistoryService\ndeshacer / rehacer" as history
+    component "SelectionService" as selection
+    component "CatalogService\ncatalogo de eventos" as catalog
+    component "ItemLibraryService\nCharacterPresetService\nGameConfigService" as libraries
+    component "ThemeService" as theme
+    component "ProjectService\nfachada tipada del disco;\ndetecta cambios de afuera" as projectService
   }
-  package "textures/" as textures {
-    component "TexturesController\nbiblioteca y miniaturas\nbajo demanda" as texLib
-    component "TextureThumbDirective\npide la miniatura\nal entrar en pantalla" as thumb
-    component "ImageConverterController\nPNG/JPG/JPEG -> PNG" as converter
-  }
-  component "ProjectController\nnivel como documento,\nGuardar como" as projectCtl
-  component "NamePromptController\npedir un nombre" as namePrompt
-  component "core/items.ts\ndefaults, validacion,\ncopia al nivel" as itemsCore
-  component "core/puzzles.ts\neventos de un puzzle" as puzzlesCore
-  component "core/texture-fit.ts\ntamano y formato\nde las texturas" as textureFit
-  component "core/file-names.ts\nnombres seguros" as fileNames
-  component "LevelService\nestado del nivel" as levelService
-  component "CatalogService\ncatalogo de eventos" as catalogService
-  component "ItemLibraryService\nbiblioteca de objetos" as itemLibrary
-  component "ProjectService\nfachada tipada" as projectService
-  component "IsoProjection\nproyeccion de coordenadas" as projection
-  component "Modelos TypeScript\nLevel / ItemDef / EventCatalog" as models
+
+  component "core/ (logica pura, con tests)\niso-projection, dungeon-layout, floors,\nitems, puzzles, characters, entity-refs,\nlevel-diff, undo-history, sprite-doc,\ntexture-fit, file-names, game-config, camera" as core
+  component "Modelos TypeScript\nLevel / ItemDef / GameConfig /\nEventCatalog / CharacterPreset" as models
 }
 
-component "preload.js\ncontextBridge" as preload
+component "preload.js\ncontextBridge\nhoneycombProject" as preload
 
 package "Proceso Electron main" as mainProcess {
-  component "main.js\nventana y registro de IPC" as main
+  component "main.js\nventana, CSP y registro de IPC" as main
   package "ipc/ (un modulo por dominio)" as ipc {
     component "project-root.js\ncarpeta del editor y\nbarrera de rutas" as root
-    component "workspace.js\ncual es, cambiarla,\ncatalogo de eventos" as workspace
+    component "workspace.js\ncambiar / crear proyecto,\ncatalogo de eventos" as workspace
+    component "files.js + safe-write.js\nleer, listar, escribir\natomico con .bak" as filesIpc
     component "levels.js\nabrir / importar nivel" as levelsIpc
-    component "files.js\nleer, escribir, listar,\ncrear carpetas" as filesIpc
-    component "convert.js\nimportar imagenes" as convertIpc
+    component "convert.js, textures.js,\nsounds.js, names.js,\nmedia-types.js" as assetsIpc
+    component "level-check.js\nAjv contra level.schema" as levelCheck
+    component "recovery.js\ncopia del nivel sin guardar" as recovery
+    component "engine-modes.js + engine-build.js\nDebug / Release, CMake" as engineBuild
     component "run.js\nlanzar engine.exe" as runIpc
-    component "names.js\nnombres seguros y libres" as names
+    component "export.js + zip.js + exe-icon.js\nexportar el juego" as exportIpc
   }
-  component "fs/promises\nacceso a archivos" as fs
 }
 
 folder "Carpeta del editor" as disk {
   file "levels/*.json" as levelFiles
-  file "items.json" as itemsFile
-  file "characters.json" as charactersFile
-  folder "assets/textures\nassets/sounds" as textureFiles
+  file "game.json\nitems.json\ncharacters.json" as projectFiles
+  folder "assets/textures\nassets/sounds" as assetFiles
+  folder "saves/" as saves
+}
+folder "Datos de Electron" as userData {
+  file "honeycomb-settings.json" as settings
+  folder "recuperacion/" as recoveryDir
 }
 folder "Instalacion" as install {
-  file "schema/event_catalog.json" as eventFile
-  file "engine/.../engine.exe" as engineExe
+  file "schema/*.json" as schemaFiles
+  file "engine/build\nengine/build-release" as engineExe
 }
+folder "Destino de la exportacion" as exportDir
 
-app --> canvas
-app --> panels
+app --> menuBar
+app --> uiCtl
+app --> scene
+app --> content
+app --> resources
+app --> projectPkg
 app --> dialogs : @defer (when ...)
 dialogViews --> dialogBase
 dialogBase --> app : controladores\npor EDITOR_HOST
-app --> itemEditor
-app --> combatInspector
-app --> puzzle
-app --> projectCtl
-app --> converter
-app --> texLib
-dialogViews --> attackPreview
-panels --> thumb
-dialogViews --> thumb
-thumb --> texLib
-texLib --> textureFit
-converter --> textureFit
-projectCtl --> namePrompt
-projectCtl --> fileNames
+viewport --> renderer2d
+viewport --> core
+map --> core
+floor --> core
+combat --> attackPreview
+scene --> levelService
+content --> levelService
+content --> libraries
+eventsCtl --> catalog
+sceneOps --> selection
 projectCtl --> levelService
-app --> levelService
-app --> catalogService
-itemEditor --> itemLibrary
-itemEditor --> itemsCore
-combatInspector --> levelService
-combatInspector --> itemLibrary
-puzzle --> puzzlesCore
-puzzle --> levelService
-attackPreview --> itemsCore
-canvas --> projection
+projectCtl --> history
+gameCfg --> libraries
+levelService --> history
 levelService --> models
-levelService --> itemsCore
-catalogService --> models
-itemLibrary --> projectService
-levelService --> projectService
-catalogService --> projectService
-texLib --> projectService
-converter --> projectService
+levelService --> core
+history --> core
+services --> projectService
+resources --> projectService
+projectCtl --> projectService
+engineCtl --> projectService
 projectService --> preload : honeycombProject API
 preload --> main : ipcRenderer.invoke
 main --> ipc
 workspace --> root
-levelsIpc --> root
-levelsIpc --> names
 filesIpc --> root
-convertIpc --> root
-convertIpc --> names
+levelsIpc --> root
+assetsIpc --> root
 runIpc --> root
-root --> fs
-fs --> disk : rutas relativas validadas
-workspace --> eventFile
+exportIpc --> root
+root --> disk : rutas relativas validadas
+root --> settings
+recovery --> recoveryDir
+levelCheck --> schemaFiles
+workspace --> schemaFiles
+engineBuild --> engineExe
 runIpc --> engineExe
+exportIpc --> engineExe : copia el Release
+exportIpc --> exportDir
 
 note right of preload
 Boundary de seguridad:
@@ -122,16 +150,19 @@ contextIsolation=true
 nodeIntegration=false
 API minima expuesta al renderer.
 Ninguna ruta puede salir de la
-carpeta del editor.
+carpeta del editor; los destinos de
+afuera (exportar, importar) los elige
+un dialogo del proceso main.
 end note
 
-note bottom of combat
+note bottom of content
 Controladores y no componentes: el ESTADO vive en
 los controladores de App. Los dialogos grandes de
 dialogs/ son componentes solo por peso (se cargan
 con @defer) y usan los controladores de App; por eso
 app.scss no esta encapsulado.
-Un objeto usado por el nivel se COPIA a "items"
-del nivel: el nivel no depende de items.json.
+Un objeto o personaje usado por el nivel se COPIA a la
+entidad o a "items" del nivel: el nivel no depende de
+items.json ni de characters.json.
 end note
 @enduml

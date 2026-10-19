@@ -7,25 +7,33 @@ actor "Disenador" as designer
 rectangle "Editor de niveles\nAngular + Electron" as editor
 folder "Carpeta del editor\n(Documentos/HoneyComb por defecto)" as project {
   file "levels/*.json" as levels
-  folder "assets/\ntextures, sounds" as assets
+  folder "assets/\ntextures, sounds\n(en paquetes por carpeta)" as assets
   file "characters.json\nitems.json" as libraries
+  file "game.json\nconfiguracion del juego" as gameJson
+  folder "saves/\npartida y prueba" as saves
 }
 folder "Instalacion de HoneyComb" as install {
-  file "schema/level.schema.json\nschema/event_catalog.json" as schema
-  file "engine.exe" as exe
+  file "schema/level.schema.json\nschema/game.schema.json\nschema/event_catalog.json" as schema
+  file "engine/build (Debug)\nengine/build-release (Release)" as exe
 }
+folder "Juego exportado\n<Juego>/ y <Juego>.zip" as exported
 rectangle "Runtime HoneyComb\nC++ + raylib" as runtime
 actor "Jugador" as player
 
 designer --> editor : crea y configura niveles
 editor --> levels : lee / escribe
-editor --> assets : copia imagenes y niveles\nde afuera (importar)
+editor --> assets : copia imagenes y sonidos\nde afuera (importar)
 editor --> libraries : lee / escribe
-editor --> schema : lee el catalogo de eventos
-editor --> exe : Ejecutar (nivel por argumento)
+editor --> gameJson : Configuracion del juego
+editor --> schema : catalogo de eventos;\nrevisa el nivel al guardar
+editor --> exe : compila (CMake) y\nEjecutar (nivel por argumento)
+editor --> exported : Exportar juego
 exe --> runtime
 runtime --> levels : carga nivel
 runtime --> assets : carga texturas y sonidos\n({nivel}/../../assets)
+runtime --> gameJson : ventana, portada, HUD,\nnivel inicial
+runtime --> saves : guarda y continua
+exported --> runtime : motor Release renombrado\n+ levels, assets, game.json
 player --> runtime : entrada y juego
 
 note bottom of project
@@ -39,8 +47,13 @@ end note
 note bottom of install
 Los schemas son el CONTRATO entre los dos programas:
 el editor tiene modelos TypeScript espejo de
-level.schema.json, y el runtime implementa en C++
-cada bloque de event_catalog.json. Son del programa,
-no de cada proyecto.
+level.schema.json y game.schema.json, y el runtime
+implementa en C++ cada bloque de event_catalog.json.
+Son del programa, no de cada proyecto.
+end note
+
+note bottom of exported
+Se juega sin el editor: arranca en la portada y
+guarda en %APPDATA%\<Juego>\saves.
 end note
 @enduml

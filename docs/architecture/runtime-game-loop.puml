@@ -11,31 +11,41 @@ participant "ZSortSystem" as zsort
 participant "CollisionSystem" as collision
 participant "EventSystem" as events
 participant "AudioSystem" as audio
+participant "Screens / HealthHud" as screens
 
 loop Mientras la ventana no se cierre
-  session -> camera : SetScreenSize(ventana)
-  session -> input : leer acciones y mouse
-  session -> camera : ScreenToWorld(mouse) -> apuntar
-  session -> rules : mover al jugador, combate, objetos
-  session -> camera : Update(jugador, limites del mapa)
-  session -> graphics : BeginFrame(fondo)
-  session -> graphics : BeginWorld(camara)
-  session -> zsort : SetView(lo que ve la camara)
-  session -> zsort : Submit(piso ya ordenado, paredes, entidades)
-  note right of zsort : lo que cae fuera de la vista no se encola
-  session -> collision : Submit(colliders, en coordenadas del mundo)
-  zsort -> graphics : Flush(): piso sin ordenar, el resto por profundidad
-  session -> graphics : overlays F1/F2 (solo Debug), golpes y proyectiles
-  session -> graphics : EndWorld()
-  session -> graphics : barras de vida (en pantalla, via WorldToScreen)
-  collision --> session : Flush() -> pares que se tocan
-  session -> events : Update() (salvo durante el paso de nivel)
-  session -> audio : Update()
-  session -> graphics : HUD, tienda, pantalla de paso de nivel
-  session -> graphics : panel F3 (solo Debug)
+  alt pantalla de portada o creditos
+    session -> screens : RunTitle / RunCredits (game.json)
+    screens --> session : Nueva partida / Continuar / Salir
+  else jugando
+    session -> camera : SetScreenSize(ventana)
+    session -> input : leer acciones y mouse
+    opt pausa o fin de partida
+      session -> screens : menu de pausa / fin\n(volver al punto de control, portada...)
+    end
+    session -> camera : ScreenToWorld(mouse) -> apuntar
+    session -> rules : mover al jugador, combate, objetos
+    session -> session : CheckCheckpoints() -> guardar partida
+    session -> camera : Update(jugador, limites del mapa)
+    session -> graphics : BeginFrame(fondo: color o imagen)
+    session -> graphics : BeginWorld(camara)
+    session -> zsort : SetView(lo que ve la camara)
+    session -> zsort : Submit(piso por capas, paredes, entidades)
+    note right of zsort : lo que cae fuera de la vista no se encola
+    session -> collision : Submit(colliders, en coordenadas del mundo)
+    zsort -> graphics : Flush(): piso sin ordenar, el resto por profundidad
+    session -> graphics : overlays F1/F2 (solo Debug), golpes y proyectiles
+    session -> graphics : EndWorld()
+    session -> graphics : barras de vida (en pantalla, via WorldToScreen)
+    collision --> session : Flush() -> pares que se tocan
+    session -> events : Update() (salvo durante el paso de nivel)
+    session -> audio : Update() (musica en curso)
+    session -> screens : HUD de vida, inventario, tienda,\ndialogos, pantalla de paso de nivel
+    session -> graphics : panel F3 (solo Debug)
+  end
   session -> graphics : EndFrame()
-  opt el paso de nivel termino
-    session -> session : cargar el nivel siguiente y PrepareLevel
+  opt el paso de nivel termino (accion load_level o puerta)
+    session -> session : cargar el nivel siguiente,\nPrepareLevel y liberar texturas sin uso
   end
 end
 

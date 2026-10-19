@@ -1,0 +1,51 @@
+@startuml editor-export-game
+title Editor - Exportar el juego (Windows)
+autonumber
+
+actor Disenador as designer
+participant "App\n(ProjectController)" as app
+participant "ProjectService" as project
+participant "Electron main\nipc/export.js" as exporter
+participant "exe-icon.js\n(PowerShell + API de recursos)" as icon
+participant "zip.js" as zip
+database "Carpeta del editor\nlevels/, assets/, game.json" as disk
+database "engine/build-release" as release
+database "Carpeta elegida\n<Juego>/" as dest
+
+designer -> app : Archivo > Exportar juego
+app -> project : exportGame(nivel inicial)
+project -> exporter : IPC game:export
+exporter -> release : hay engine.exe Release?
+alt no esta compilado
+  exporter --> app : error: compilar el motor Release primero
+else listo
+  exporter -> designer : dialogo: donde exportar
+  designer --> exporter : carpeta
+  exporter -> exporter : revisar destino: vacio o una\nexportacion anterior (con la marca)
+  exporter -> exporter : armar todo en una carpeta TEMPORAL
+  exporter -> release : copiar engine.exe como <Juego>.exe\n(sin consola) + DLLs
+  opt game.json trae un icono
+    exporter -> icon : reemplazar el icono en la COPIA del .exe
+  end
+  exporter -> disk : copiar levels/, assets/, game.json\n(sin .bak ni .tmp), revisar assets faltantes
+  exporter -> exporter : honeycomb-export.json (marca: nombre\ny nivel inicial), LEEME, avisos de terceros
+  exporter -> dest : renombrar la temporal al destino
+  exporter -> zip : <Juego>.zip junto a la carpeta
+  zip -> dest : escribe .zip.tmp y renombra
+  exporter --> app : resultado (carpeta, zip, avisos)
+  app -> designer : "Juego exportado" + Mostrar carpeta
+end
+
+note over exporter
+La UI no manda rutas: el destino lo elige el dialogo
+en el proceso main. Una carpeta con otra cosa adentro
+nunca se reemplaza. Si algo falla a la mitad, el
+destino queda como estaba.
+end note
+
+note over dest
+Al abrirlo, el motor ve la marca (ExportedGame):
+arranca en la portada y guarda en
+%APPDATA%\<Juego>\saves.
+end note
+@enduml

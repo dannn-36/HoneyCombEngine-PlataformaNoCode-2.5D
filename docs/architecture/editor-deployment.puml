@@ -9,9 +9,19 @@ node "Equipo del disenador" as workstation {
     component "Preload isolated\npreload.js" as preload
     component "Renderer\nAngular build" as renderer
   }
-  folder "Carpeta del editor\nDocumentos/HoneyComb" as project
-  folder "Datos de Electron\nhoneycomb-settings.json" as settings
-  folder "Instalacion\nschema/, engine/" as install
+  folder "Carpeta del editor\nDocumentos/HoneyComb\n(o la elegida)" as project
+  folder "Datos de Electron\nhoneycomb-settings.json\nrecuperacion/" as settings
+  folder "Instalacion\nschema/, editor/, engine/" as install
+  node "Toolchain del motor" as toolchain {
+    component "CMake + Ninja" as cmake
+    component "MSYS2 UCRT64 (g++)" as gcc
+    component "vcpkg\nraylib, SDL2, nlohmann-json" as vcpkg
+  }
+  node "Procesos del motor" as engines {
+    component "engine/build/engine.exe\nDebug (F3, F1, F2...)" as debugExe
+    component "engine/build-release/engine.exe\nRelease (-O3)" as releaseExe
+  }
+  folder "Juego exportado\n<Juego>/ y <Juego>.zip" as exported
 }
 
 node "Entorno de desarrollo" as dev {
@@ -19,26 +29,34 @@ node "Entorno de desarrollo" as dev {
   component "Node.js / npm" as node
 }
 
-node "Runtime distribuido" as runtime {
-  component "engine.exe" as exe
-}
+component "HoneyComb-Setup.cmd\nasistente de instalacion" as setup
+component "HoneyComb.cmd\n(editor compilado)\neditor.cmd\n(dev server)" as launchers
 
-dev --> electron : abre editor instalado
-ng --> renderer : ELECTRON_START_URL
+setup --> toolchain : instala lo que falte
+setup --> install : compila motor y editor
+launchers --> electron : abre el editor
 node --> ng : npm run dev
+ng --> renderer : ELECTRON_START_URL
 main --> preload
 preload --> renderer
 renderer --> project : IPC y filesystem
-main --> settings : recuerda la carpeta elegida
-main --> install : catalogo de eventos
-project --> exe : levels y assets
-install --> exe : Ejecutar lo lanza
+main --> settings : carpeta elegida,\ncopia sin guardar
+main --> install : catalogo de eventos,\nschema del nivel
+main --> cmake : compilar Debug / Release
+cmake --> gcc
+cmake --> vcpkg
+cmake --> engines
+main --> engines : Ejecutar (nivel absoluto,\n--portada)
+project --> engines : levels, assets, game.json
+main --> exported : Exportar juego\n(copia el Release)
 
 note bottom
 Desarrollo: Electron carga Angular desde localhost si esta disponible.
-Distribucion: Electron carga dist/ y electron-builder empaqueta la aplicacion.
+Instalado: HoneyComb.cmd abre el build de editor/dist sin dev server.
 Primer arranque: si la carpeta del editor por defecto no existe, se crea con
 una COPIA de levels/, assets/, characters.json e items.json del repositorio.
+El motor Release lo compila el editor la primera vez que se pide, copiando
+compilador y vcpkg de una carpeta ya configurada (engine-modes.js).
 El renderer carga los dialogos grandes en archivos aparte (@defer).
 end note
 @enduml

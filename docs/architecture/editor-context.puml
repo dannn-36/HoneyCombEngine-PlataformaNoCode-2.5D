@@ -5,19 +5,26 @@ skinparam componentStyle rectangle
 
 actor "Disenador" as designer
 rectangle "HoneyComb Editor" as editor
-folder "Carpeta del editor\nlevels/, assets/,\ncharacters.json, items.json" as project
+folder "Carpeta del editor\nlevels/, assets/, game.json,\ncharacters.json, items.json, saves/" as project
 folder "Archivos de afuera\n(Descargas, otra carpeta...)" as outside
+folder "Datos de Electron\nhoneycomb-settings.json\nrecuperacion/" as userData
 file "level.schema.json" as levelSchema
 file "event_catalog.json" as eventSchema
-rectangle "Runtime C++" as runtime
+rectangle "Toolchain del motor\nCMake + MSYS2 + vcpkg" as toolchain
+rectangle "Runtime C++\nDebug / Release" as runtime
+folder "Juego exportado\n<Juego>/ y .zip" as exported
 
-designer --> editor : editar escena y eventos
-editor --> project : abrir, leer, guardar,\ncrear carpetas
-outside --> editor : imagenes y niveles\nque se importan
-editor --> levelSchema : contrato (modelos\nTypeScript espejo)
+designer --> editor : editar escena, eventos,\npersonajes, objetos, sprites
+editor --> project : abrir, leer, guardar\n(atomico, con .bak)
+outside --> editor : imagenes, sonidos y niveles\nque se importan
+editor --> userData : carpeta elegida y copia\ndel nivel sin guardar
+editor --> levelSchema : revisa el nivel al guardar\n(modelos TypeScript espejo)
 editor --> eventSchema : cargar definiciones
+editor --> toolchain : compilar el motor\nDebug o Release
+toolchain --> runtime : engine.exe
+editor --> runtime : Ejecutar (nivel o portada)
 project --> runtime : archivos JSON y assets
-designer --> runtime : ejecutar preview o juego
+editor --> exported : Exportar juego\n(motor Release + proyecto)
 
 note right of editor
 Aplicacion de escritorio.
@@ -28,7 +35,7 @@ lo que viene de afuera se copia adentro.
 end note
 
 note bottom of eventSchema
-Los dos schemas viven en la instalacion
+Los schemas viven en la instalacion
 (schema/), no en la carpeta del editor.
 end note
 @enduml

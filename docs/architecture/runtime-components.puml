@@ -3,20 +3,20 @@ title Runtime - Componentes internos
 top to bottom direction
 skinparam componentStyle rectangle
 
-component "main.cpp\npunto de entrada:\nresuelve la ruta del nivel" as main
+component "main.cpp\npunto de entrada: ruta del nivel,\njuego exportado, game.json,\n--portada, --bench, --captura" as main
 
 package "Core" as core {
   component "GraphicsDevice\nventana y dibujo" as graphics
-  component "ResourceManager\ncache de recursos" as resources
+  component "ResourceManager\ncache de recursos,\nlibera lo que no se usa" as resources
 }
 
 package "World (modelo del nivel)" as world {
-  component "Level\nLevelEntity, LoadedLevel" as levelModel
+  component "Level\nLevelEntity, LoadedLevel,\npisos por capas, fondo" as levelModel
   component "ItemDefs\nobjetos, inventario,\nzonas" as itemDefs
 }
 
 package "Loaders" as loaders {
-  component "LevelLoader\nJSON -> LoadedLevel" as levelLoader
+  component "LevelLoader\nJSON -> LoadedLevel\n(valida el contrato)" as levelLoader
   component "ItemLoader\nobjetos, zonas y\nbloques de combate" as itemLoader
   component "EventLoader\nJSON -> eventos" as eventLoader
   component "AssetResolver\nrutas de assets" as assetResolver
@@ -24,18 +24,23 @@ package "Loaders" as loaders {
 
 package "Systems" as systems {
   component "IsoGridSystem\ncoordenadas" as iso
-  component "ZSortSystem\norden de dibujo" as zsort
+  component "ZSortSystem\norden de dibujo, culling" as zsort
   component "CollisionSystem\ncolisiones" as collision
-  component "EventSystem\ntriggers y acciones" as events
+  component "EventSystem\ntriggers, condiciones\ny acciones" as events
   component "AnimationSystem\nclips e instancias" as animation
-  component "AudioSystem\nsonido" as audio
+  component "AudioSystem\nsonidos y musica" as audio
   component "InputSystem\nacciones" as input
   component "CameraSystem\nencuadre, zoom,\nseguimiento" as camera
 }
 
 package "Game (reglas del juego)" as game {
-  component "GameSession\nla partida: capas,\nnivel y bucle" as session
+  component "GameSession\nla partida: pantallas,\nnivel, paso de nivel y bucle" as session
   component "EventBindings\nque significa cada\nbloque del catalogo" as bindings
+  component "GameConfig\ngame.json" as gameConfig
+  component "Progress\npartida guardada\n(slots partida / prueba)" as progress
+  component "ExportedGame\nmarca del juego exportado,\nsaves en %APPDATA%" as exported
+  component "Screens\nportada, pausa,\nfin y creditos" as screens
+  component "HealthHud\nvida con estilo\nde game.json" as healthHud
   component "Movement\npiso, paredes, solidos" as movement
   component "Mobility\ncaminar, esquive, defensa" as mobility
   component "Combat\nataques, proyectiles,\nhabilidades, IA" as combat
@@ -43,12 +48,16 @@ package "Game (reglas del juego)" as game {
   component "Loot\njuntar, botin, tienda" as loot
   component "Zones\nzonas de puzzle" as zones
   component "CombatView\nefectos y HUD" as combatView
+  component "DevTools\npanel F3 (solo Debug)" as devTools
 }
 
-database "Proyecto en disco" as disk
+database "Proyecto en disco\nlevels/, assets/, game.json" as disk
+database "saves/" as saves
 component "raylib / SDL2" as raylib
 component "nlohmann::json" as json
 
+main --> exported
+main --> gameConfig
 main --> session
 session --> graphics
 session --> resources
@@ -66,7 +75,13 @@ session --> combat
 session --> loot
 session --> zones
 session --> combatView
+session --> screens
+session --> healthHud
+session --> progress
+session --> devTools
 bindings --> events
+screens --> gameConfig
+healthHud --> gameConfig
 levelLoader --> levelModel
 levelModel --> itemDefs
 levelModel --> iso
@@ -82,6 +97,10 @@ eventLoader --> events
 assetResolver --> disk
 levelLoader --> disk
 levelLoader --> json
+gameConfig --> disk
+gameConfig --> json
+progress --> saves
+progress --> json
 events --> json
 mobility --> movement
 combat --> movement
@@ -91,6 +110,7 @@ loot --> combat
 zones --> combat
 combatView --> zsort
 combatView --> graphics
+screens --> graphics
 graphics --> raylib
 resources --> raylib
 zsort --> graphics
@@ -117,5 +137,7 @@ Capa 4: trabaja sobre el LoadedLevel ya cargado.
 loader/ arma el modelo de world/ desde el JSON;
 game/ decide que pasa con el cada frame.
 world/ no depende de ninguna de las dos.
+Sin game.json todo se ve como antes: ventana
+de 800x450, el nivel que se abre y el HUD de siempre.
 end note
 @enduml
