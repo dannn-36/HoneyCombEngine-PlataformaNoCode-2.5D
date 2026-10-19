@@ -508,7 +508,6 @@ async function guardadoDe(escenario: Escenario): Promise<string> {
 // Texturas que no estan en assets/: los archivos no se subieron al repositorio.
 // El motor carga igual el nivel (raylib avisa y la entidad queda sin sprite).
 const TEXTURAS_FALTANTES: Record<string, string[]> = {
-  'combate_demo.json': ['textures/WhatsApp Image 2026-09-28 at 6.02.02 PM.jpeg'],
   'Test_Ajuste.json': ['textures/♡.jpg'],
   'Test_imagen.json': ['textures/bf4f7e8e-9d8c-4503-8ed5-0d064c11ddd9.png', 'textures/(NieR Replicant).png'],
 };
