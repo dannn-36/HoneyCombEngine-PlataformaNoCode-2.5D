@@ -1,0 +1,7825 @@
+{
+  "name": "El Santuario de la Colmena",
+  "music": "sounds/musica/rpgchip07_the_shrine_of_mysteries.ogg",
+  "backgroundColor": {
+    "r": 26,
+    "g": 19,
+    "b": 13
+  },
+  "camera": {
+    "mode": "follow",
+    "zoom": 1.5,
+    "smoothing": 0.18,
+    "deadzone": {
+      "width": 120,
+      "height": 60
+    },
+    "clampToLevel": true
+  },
+  "grid": {
+    "width": 42,
+    "height": 28,
+    "tileWidth": 64,
+    "tileHeight": 32
+  },
+  "visuals": {
+    "floor": {
+      "texture": "textures/suelo/piso.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 128,
+        "height": 128
+      }
+    },
+    "wall": {
+      "texture": "textures/paredes/muro.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      }
+    }
+  },
+  "tiles": [
+    {
+      "col": 1,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 3,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 4,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 5,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 6,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 7,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 8,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 9,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 10,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 11,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 31,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 32,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 33,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 34,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 35,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 36,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 37,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 38,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 39,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 40,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 41,
+      "row": 1,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 2
+    },
+    {
+      "col": 3,
+      "row": 2
+    },
+    {
+      "col": 4,
+      "row": 2
+    },
+    {
+      "col": 5,
+      "row": 2
+    },
+    {
+      "col": 6,
+      "row": 2
+    },
+    {
+      "col": 7,
+      "row": 2
+    },
+    {
+      "col": 8,
+      "row": 2
+    },
+    {
+      "col": 9,
+      "row": 2
+    },
+    {
+      "col": 10,
+      "row": 2
+    },
+    {
+      "col": 11,
+      "row": 2
+    },
+    {
+      "col": 12,
+      "row": 2
+    },
+    {
+      "col": 13,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 18,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 19,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 20,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 21,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 22,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 23,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 24,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 25,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 26,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 2
+    },
+    {
+      "col": 31,
+      "row": 2
+    },
+    {
+      "col": 32,
+      "row": 2
+    },
+    {
+      "col": 33,
+      "row": 2
+    },
+    {
+      "col": 34,
+      "row": 2
+    },
+    {
+      "col": 35,
+      "row": 2
+    },
+    {
+      "col": 36,
+      "row": 2
+    },
+    {
+      "col": 37,
+      "row": 2
+    },
+    {
+      "col": 38,
+      "row": 2
+    },
+    {
+      "col": 39,
+      "row": 2
+    },
+    {
+      "col": 40,
+      "row": 2
+    },
+    {
+      "col": 41,
+      "row": 2,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 3,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 3
+    },
+    {
+      "col": 3,
+      "row": 3
+    },
+    {
+      "col": 4,
+      "row": 3
+    },
+    {
+      "col": 5,
+      "row": 3
+    },
+    {
+      "col": 6,
+      "row": 3
+    },
+    {
+      "col": 7,
+      "row": 3
+    },
+    {
+      "col": 8,
+      "row": 3
+    },
+    {
+      "col": 9,
+      "row": 3
+    },
+    {
+      "col": 10,
+      "row": 3
+    },
+    {
+      "col": 11,
+      "row": 3
+    },
+    {
+      "col": 12,
+      "row": 3
+    },
+    {
+      "col": 13,
+      "row": 3,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 3,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 3
+    },
+    {
+      "col": 18,
+      "row": 3
+    },
+    {
+      "col": 19,
+      "row": 3
+    },
+    {
+      "col": 20,
+      "row": 3
+    },
+    {
+      "col": 21,
+      "row": 3
+    },
+    {
+      "col": 22,
+      "row": 3
+    },
+    {
+      "col": 23,
+      "row": 3
+    },
+    {
+      "col": 24,
+      "row": 3
+    },
+    {
+      "col": 25,
+      "row": 3
+    },
+    {
+      "col": 26,
+      "row": 3,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 3,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 3
+    },
+    {
+      "col": 31,
+      "row": 3
+    },
+    {
+      "col": 32,
+      "row": 3
+    },
+    {
+      "col": 33,
+      "row": 3
+    },
+    {
+      "col": 34,
+      "row": 3
+    },
+    {
+      "col": 35,
+      "row": 3
+    },
+    {
+      "col": 36,
+      "row": 3
+    },
+    {
+      "col": 37,
+      "row": 3
+    },
+    {
+      "col": 38,
+      "row": 3
+    },
+    {
+      "col": 39,
+      "row": 3
+    },
+    {
+      "col": 40,
+      "row": 3
+    },
+    {
+      "col": 41,
+      "row": 3,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 4,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 4
+    },
+    {
+      "col": 3,
+      "row": 4
+    },
+    {
+      "col": 4,
+      "row": 4
+    },
+    {
+      "col": 5,
+      "row": 4
+    },
+    {
+      "col": 6,
+      "row": 4
+    },
+    {
+      "col": 7,
+      "row": 4
+    },
+    {
+      "col": 8,
+      "row": 4
+    },
+    {
+      "col": 9,
+      "row": 4
+    },
+    {
+      "col": 10,
+      "row": 4
+    },
+    {
+      "col": 11,
+      "row": 4
+    },
+    {
+      "col": 12,
+      "row": 4
+    },
+    {
+      "col": 13,
+      "row": 4,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 4,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 4
+    },
+    {
+      "col": 18,
+      "row": 4
+    },
+    {
+      "col": 19,
+      "row": 4
+    },
+    {
+      "col": 20,
+      "row": 4
+    },
+    {
+      "col": 21,
+      "row": 4
+    },
+    {
+      "col": 22,
+      "row": 4
+    },
+    {
+      "col": 23,
+      "row": 4
+    },
+    {
+      "col": 24,
+      "row": 4
+    },
+    {
+      "col": 25,
+      "row": 4
+    },
+    {
+      "col": 26,
+      "row": 4,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 4,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 4
+    },
+    {
+      "col": 31,
+      "row": 4
+    },
+    {
+      "col": 32,
+      "row": 4
+    },
+    {
+      "col": 33,
+      "row": 4
+    },
+    {
+      "col": 34,
+      "row": 4
+    },
+    {
+      "col": 35,
+      "row": 4
+    },
+    {
+      "col": 36,
+      "row": 4
+    },
+    {
+      "col": 37,
+      "row": 4
+    },
+    {
+      "col": 38,
+      "row": 4
+    },
+    {
+      "col": 39,
+      "row": 4
+    },
+    {
+      "col": 40,
+      "row": 4
+    },
+    {
+      "col": 41,
+      "row": 4,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 5,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 5
+    },
+    {
+      "col": 3,
+      "row": 5
+    },
+    {
+      "col": 4,
+      "row": 5
+    },
+    {
+      "col": 5,
+      "row": 5
+    },
+    {
+      "col": 6,
+      "row": 5
+    },
+    {
+      "col": 7,
+      "row": 5
+    },
+    {
+      "col": 8,
+      "row": 5
+    },
+    {
+      "col": 9,
+      "row": 5
+    },
+    {
+      "col": 10,
+      "row": 5
+    },
+    {
+      "col": 11,
+      "row": 5
+    },
+    {
+      "col": 12,
+      "row": 5
+    },
+    {
+      "col": 13,
+      "row": 5,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 5,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 5
+    },
+    {
+      "col": 18,
+      "row": 5
+    },
+    {
+      "col": 19,
+      "row": 5
+    },
+    {
+      "col": 20,
+      "row": 5
+    },
+    {
+      "col": 21,
+      "row": 5
+    },
+    {
+      "col": 22,
+      "row": 5
+    },
+    {
+      "col": 23,
+      "row": 5
+    },
+    {
+      "col": 24,
+      "row": 5
+    },
+    {
+      "col": 25,
+      "row": 5
+    },
+    {
+      "col": 26,
+      "row": 5,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 5,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 5
+    },
+    {
+      "col": 31,
+      "row": 5
+    },
+    {
+      "col": 32,
+      "row": 5
+    },
+    {
+      "col": 33,
+      "row": 5
+    },
+    {
+      "col": 34,
+      "row": 5
+    },
+    {
+      "col": 35,
+      "row": 5
+    },
+    {
+      "col": 36,
+      "row": 5
+    },
+    {
+      "col": 37,
+      "row": 5
+    },
+    {
+      "col": 38,
+      "row": 5
+    },
+    {
+      "col": 39,
+      "row": 5
+    },
+    {
+      "col": 40,
+      "row": 5
+    },
+    {
+      "col": 41,
+      "row": 5,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 6
+    },
+    {
+      "col": 3,
+      "row": 6
+    },
+    {
+      "col": 4,
+      "row": 6
+    },
+    {
+      "col": 5,
+      "row": 6
+    },
+    {
+      "col": 6,
+      "row": 6
+    },
+    {
+      "col": 7,
+      "row": 6
+    },
+    {
+      "col": 8,
+      "row": 6
+    },
+    {
+      "col": 9,
+      "row": 6
+    },
+    {
+      "col": 10,
+      "row": 6
+    },
+    {
+      "col": 11,
+      "row": 6
+    },
+    {
+      "col": 12,
+      "row": 6
+    },
+    {
+      "col": 13,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 14,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 15,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 6
+    },
+    {
+      "col": 18,
+      "row": 6
+    },
+    {
+      "col": 19,
+      "row": 6
+    },
+    {
+      "col": 20,
+      "row": 6
+    },
+    {
+      "col": 21,
+      "row": 6
+    },
+    {
+      "col": 22,
+      "row": 6
+    },
+    {
+      "col": 23,
+      "row": 6
+    },
+    {
+      "col": 24,
+      "row": 6
+    },
+    {
+      "col": 25,
+      "row": 6
+    },
+    {
+      "col": 26,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 27,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 28,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 6
+    },
+    {
+      "col": 31,
+      "row": 6
+    },
+    {
+      "col": 32,
+      "row": 6
+    },
+    {
+      "col": 33,
+      "row": 6
+    },
+    {
+      "col": 34,
+      "row": 6
+    },
+    {
+      "col": 35,
+      "row": 6
+    },
+    {
+      "col": 36,
+      "row": 6
+    },
+    {
+      "col": 37,
+      "row": 6
+    },
+    {
+      "col": 38,
+      "row": 6
+    },
+    {
+      "col": 39,
+      "row": 6
+    },
+    {
+      "col": 40,
+      "row": 6
+    },
+    {
+      "col": 41,
+      "row": 6,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 7,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 7
+    },
+    {
+      "col": 3,
+      "row": 7
+    },
+    {
+      "col": 4,
+      "row": 7
+    },
+    {
+      "col": 5,
+      "row": 7
+    },
+    {
+      "col": 6,
+      "row": 7
+    },
+    {
+      "col": 7,
+      "row": 7
+    },
+    {
+      "col": 8,
+      "row": 7
+    },
+    {
+      "col": 9,
+      "row": 7
+    },
+    {
+      "col": 10,
+      "row": 7
+    },
+    {
+      "col": 11,
+      "row": 7
+    },
+    {
+      "col": 12,
+      "row": 7
+    },
+    {
+      "col": 13,
+      "row": 7
+    },
+    {
+      "col": 14,
+      "row": 7
+    },
+    {
+      "col": 15,
+      "row": 7
+    },
+    {
+      "col": 16,
+      "row": 7
+    },
+    {
+      "col": 17,
+      "row": 7
+    },
+    {
+      "col": 18,
+      "row": 7
+    },
+    {
+      "col": 19,
+      "row": 7
+    },
+    {
+      "col": 20,
+      "row": 7
+    },
+    {
+      "col": 21,
+      "row": 7
+    },
+    {
+      "col": 22,
+      "row": 7
+    },
+    {
+      "col": 23,
+      "row": 7
+    },
+    {
+      "col": 24,
+      "row": 7
+    },
+    {
+      "col": 25,
+      "row": 7
+    },
+    {
+      "col": 26,
+      "row": 7
+    },
+    {
+      "col": 27,
+      "row": 7
+    },
+    {
+      "col": 28,
+      "row": 7
+    },
+    {
+      "col": 29,
+      "row": 7
+    },
+    {
+      "col": 30,
+      "row": 7
+    },
+    {
+      "col": 31,
+      "row": 7
+    },
+    {
+      "col": 32,
+      "row": 7
+    },
+    {
+      "col": 33,
+      "row": 7
+    },
+    {
+      "col": 34,
+      "row": 7
+    },
+    {
+      "col": 35,
+      "row": 7
+    },
+    {
+      "col": 36,
+      "row": 7
+    },
+    {
+      "col": 37,
+      "row": 7
+    },
+    {
+      "col": 38,
+      "row": 7
+    },
+    {
+      "col": 39,
+      "row": 7
+    },
+    {
+      "col": 40,
+      "row": 7
+    },
+    {
+      "col": 41,
+      "row": 7,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 8,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 8
+    },
+    {
+      "col": 3,
+      "row": 8
+    },
+    {
+      "col": 4,
+      "row": 8
+    },
+    {
+      "col": 5,
+      "row": 8
+    },
+    {
+      "col": 6,
+      "row": 8
+    },
+    {
+      "col": 7,
+      "row": 8
+    },
+    {
+      "col": 8,
+      "row": 8
+    },
+    {
+      "col": 9,
+      "row": 8
+    },
+    {
+      "col": 10,
+      "row": 8
+    },
+    {
+      "col": 11,
+      "row": 8
+    },
+    {
+      "col": 12,
+      "row": 8
+    },
+    {
+      "col": 13,
+      "row": 8
+    },
+    {
+      "col": 14,
+      "row": 8
+    },
+    {
+      "col": 15,
+      "row": 8
+    },
+    {
+      "col": 16,
+      "row": 8
+    },
+    {
+      "col": 17,
+      "row": 8
+    },
+    {
+      "col": 18,
+      "row": 8
+    },
+    {
+      "col": 19,
+      "row": 8
+    },
+    {
+      "col": 20,
+      "row": 8
+    },
+    {
+      "col": 21,
+      "row": 8
+    },
+    {
+      "col": 22,
+      "row": 8
+    },
+    {
+      "col": 23,
+      "row": 8
+    },
+    {
+      "col": 24,
+      "row": 8
+    },
+    {
+      "col": 25,
+      "row": 8
+    },
+    {
+      "col": 26,
+      "row": 8
+    },
+    {
+      "col": 27,
+      "row": 8
+    },
+    {
+      "col": 28,
+      "row": 8
+    },
+    {
+      "col": 29,
+      "row": 8
+    },
+    {
+      "col": 30,
+      "row": 8
+    },
+    {
+      "col": 31,
+      "row": 8
+    },
+    {
+      "col": 32,
+      "row": 8
+    },
+    {
+      "col": 33,
+      "row": 8
+    },
+    {
+      "col": 34,
+      "row": 8
+    },
+    {
+      "col": 35,
+      "row": 8
+    },
+    {
+      "col": 36,
+      "row": 8
+    },
+    {
+      "col": 37,
+      "row": 8
+    },
+    {
+      "col": 38,
+      "row": 8
+    },
+    {
+      "col": 39,
+      "row": 8
+    },
+    {
+      "col": 40,
+      "row": 8
+    },
+    {
+      "col": 41,
+      "row": 8,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 9
+    },
+    {
+      "col": 3,
+      "row": 9
+    },
+    {
+      "col": 4,
+      "row": 9
+    },
+    {
+      "col": 5,
+      "row": 9
+    },
+    {
+      "col": 6,
+      "row": 9
+    },
+    {
+      "col": 7,
+      "row": 9
+    },
+    {
+      "col": 8,
+      "row": 9
+    },
+    {
+      "col": 9,
+      "row": 9
+    },
+    {
+      "col": 10,
+      "row": 9
+    },
+    {
+      "col": 11,
+      "row": 9
+    },
+    {
+      "col": 12,
+      "row": 9
+    },
+    {
+      "col": 13,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 14,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 15,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 9
+    },
+    {
+      "col": 18,
+      "row": 9
+    },
+    {
+      "col": 19,
+      "row": 9
+    },
+    {
+      "col": 20,
+      "row": 9
+    },
+    {
+      "col": 21,
+      "row": 9
+    },
+    {
+      "col": 22,
+      "row": 9
+    },
+    {
+      "col": 23,
+      "row": 9
+    },
+    {
+      "col": 24,
+      "row": 9
+    },
+    {
+      "col": 25,
+      "row": 9
+    },
+    {
+      "col": 26,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 27,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 28,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 9
+    },
+    {
+      "col": 31,
+      "row": 9
+    },
+    {
+      "col": 32,
+      "row": 9
+    },
+    {
+      "col": 33,
+      "row": 9
+    },
+    {
+      "col": 34,
+      "row": 9
+    },
+    {
+      "col": 35,
+      "row": 9
+    },
+    {
+      "col": 36,
+      "row": 9
+    },
+    {
+      "col": 37,
+      "row": 9
+    },
+    {
+      "col": 38,
+      "row": 9
+    },
+    {
+      "col": 39,
+      "row": 9
+    },
+    {
+      "col": 40,
+      "row": 9
+    },
+    {
+      "col": 41,
+      "row": 9,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 10,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 10
+    },
+    {
+      "col": 3,
+      "row": 10
+    },
+    {
+      "col": 4,
+      "row": 10
+    },
+    {
+      "col": 5,
+      "row": 10
+    },
+    {
+      "col": 6,
+      "row": 10
+    },
+    {
+      "col": 7,
+      "row": 10
+    },
+    {
+      "col": 8,
+      "row": 10
+    },
+    {
+      "col": 9,
+      "row": 10
+    },
+    {
+      "col": 10,
+      "row": 10
+    },
+    {
+      "col": 11,
+      "row": 10
+    },
+    {
+      "col": 12,
+      "row": 10
+    },
+    {
+      "col": 13,
+      "row": 10,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 10,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 10
+    },
+    {
+      "col": 18,
+      "row": 10
+    },
+    {
+      "col": 19,
+      "row": 10
+    },
+    {
+      "col": 20,
+      "row": 10
+    },
+    {
+      "col": 21,
+      "row": 10
+    },
+    {
+      "col": 22,
+      "row": 10
+    },
+    {
+      "col": 23,
+      "row": 10
+    },
+    {
+      "col": 24,
+      "row": 10
+    },
+    {
+      "col": 25,
+      "row": 10
+    },
+    {
+      "col": 26,
+      "row": 10,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 10,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 10
+    },
+    {
+      "col": 31,
+      "row": 10
+    },
+    {
+      "col": 32,
+      "row": 10
+    },
+    {
+      "col": 33,
+      "row": 10
+    },
+    {
+      "col": 34,
+      "row": 10
+    },
+    {
+      "col": 35,
+      "row": 10
+    },
+    {
+      "col": 36,
+      "row": 10
+    },
+    {
+      "col": 37,
+      "row": 10
+    },
+    {
+      "col": 38,
+      "row": 10
+    },
+    {
+      "col": 39,
+      "row": 10
+    },
+    {
+      "col": 40,
+      "row": 10
+    },
+    {
+      "col": 41,
+      "row": 10,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 11,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 11
+    },
+    {
+      "col": 3,
+      "row": 11
+    },
+    {
+      "col": 4,
+      "row": 11
+    },
+    {
+      "col": 5,
+      "row": 11
+    },
+    {
+      "col": 6,
+      "row": 11
+    },
+    {
+      "col": 7,
+      "row": 11
+    },
+    {
+      "col": 8,
+      "row": 11
+    },
+    {
+      "col": 9,
+      "row": 11
+    },
+    {
+      "col": 10,
+      "row": 11
+    },
+    {
+      "col": 11,
+      "row": 11
+    },
+    {
+      "col": 12,
+      "row": 11
+    },
+    {
+      "col": 13,
+      "row": 11,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 11,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 11
+    },
+    {
+      "col": 18,
+      "row": 11
+    },
+    {
+      "col": 19,
+      "row": 11
+    },
+    {
+      "col": 20,
+      "row": 11
+    },
+    {
+      "col": 21,
+      "row": 11
+    },
+    {
+      "col": 22,
+      "row": 11
+    },
+    {
+      "col": 23,
+      "row": 11
+    },
+    {
+      "col": 24,
+      "row": 11
+    },
+    {
+      "col": 25,
+      "row": 11
+    },
+    {
+      "col": 26,
+      "row": 11,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 11,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 11
+    },
+    {
+      "col": 31,
+      "row": 11
+    },
+    {
+      "col": 32,
+      "row": 11
+    },
+    {
+      "col": 33,
+      "row": 11
+    },
+    {
+      "col": 34,
+      "row": 11
+    },
+    {
+      "col": 35,
+      "row": 11
+    },
+    {
+      "col": 36,
+      "row": 11
+    },
+    {
+      "col": 37,
+      "row": 11
+    },
+    {
+      "col": 38,
+      "row": 11
+    },
+    {
+      "col": 39,
+      "row": 11
+    },
+    {
+      "col": 40,
+      "row": 11
+    },
+    {
+      "col": 41,
+      "row": 11,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 12
+    },
+    {
+      "col": 3,
+      "row": 12
+    },
+    {
+      "col": 4,
+      "row": 12
+    },
+    {
+      "col": 5,
+      "row": 12
+    },
+    {
+      "col": 6,
+      "row": 12
+    },
+    {
+      "col": 7,
+      "row": 12
+    },
+    {
+      "col": 8,
+      "row": 12
+    },
+    {
+      "col": 9,
+      "row": 12
+    },
+    {
+      "col": 10,
+      "row": 12
+    },
+    {
+      "col": 11,
+      "row": 12
+    },
+    {
+      "col": 12,
+      "row": 12
+    },
+    {
+      "col": 13,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 18,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 19,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 20,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 21,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 22,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 23,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 24,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 25,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 26,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 12
+    },
+    {
+      "col": 31,
+      "row": 12
+    },
+    {
+      "col": 32,
+      "row": 12
+    },
+    {
+      "col": 33,
+      "row": 12
+    },
+    {
+      "col": 34,
+      "row": 12
+    },
+    {
+      "col": 35,
+      "row": 12
+    },
+    {
+      "col": 36,
+      "row": 12
+    },
+    {
+      "col": 37,
+      "row": 12
+    },
+    {
+      "col": 38,
+      "row": 12
+    },
+    {
+      "col": 39,
+      "row": 12
+    },
+    {
+      "col": 40,
+      "row": 12
+    },
+    {
+      "col": 41,
+      "row": 12,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 1,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 2,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 3,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 4,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 5,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 6,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 7,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 8,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 9,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 10,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 11,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 31,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 32,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 33,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 34,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 35,
+      "row": 13
+    },
+    {
+      "col": 36,
+      "row": 13
+    },
+    {
+      "col": 37,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 38,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 39,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 40,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 41,
+      "row": 13,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 34,
+      "row": 14,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 35,
+      "row": 14
+    },
+    {
+      "col": 36,
+      "row": 14
+    },
+    {
+      "col": 37,
+      "row": 14,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 14,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 15,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 18,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 19,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 20,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 21,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 22,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 23,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 24,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 25,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 26,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 34,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 35,
+      "row": 15
+    },
+    {
+      "col": 36,
+      "row": 15
+    },
+    {
+      "col": 37,
+      "row": 15,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 16
+    },
+    {
+      "col": 14,
+      "row": 16
+    },
+    {
+      "col": 15,
+      "row": 16
+    },
+    {
+      "col": 16,
+      "row": 16
+    },
+    {
+      "col": 17,
+      "row": 16
+    },
+    {
+      "col": 18,
+      "row": 16
+    },
+    {
+      "col": 19,
+      "row": 16
+    },
+    {
+      "col": 20,
+      "row": 16
+    },
+    {
+      "col": 21,
+      "row": 16
+    },
+    {
+      "col": 22,
+      "row": 16
+    },
+    {
+      "col": 23,
+      "row": 16
+    },
+    {
+      "col": 24,
+      "row": 16
+    },
+    {
+      "col": 25,
+      "row": 16
+    },
+    {
+      "col": 26,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 31,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 32,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 33,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 34,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 35,
+      "row": 16
+    },
+    {
+      "col": 36,
+      "row": 16
+    },
+    {
+      "col": 37,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 38,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 39,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 40,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 41,
+      "row": 16,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 17,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 17
+    },
+    {
+      "col": 14,
+      "row": 17
+    },
+    {
+      "col": 15,
+      "row": 17
+    },
+    {
+      "col": 16,
+      "row": 17
+    },
+    {
+      "col": 17,
+      "row": 17
+    },
+    {
+      "col": 18,
+      "row": 17
+    },
+    {
+      "col": 19,
+      "row": 17
+    },
+    {
+      "col": 20,
+      "row": 17
+    },
+    {
+      "col": 21,
+      "row": 17
+    },
+    {
+      "col": 22,
+      "row": 17
+    },
+    {
+      "col": 23,
+      "row": 17
+    },
+    {
+      "col": 24,
+      "row": 17
+    },
+    {
+      "col": 25,
+      "row": 17
+    },
+    {
+      "col": 26,
+      "row": 17,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 17,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 17
+    },
+    {
+      "col": 31,
+      "row": 17
+    },
+    {
+      "col": 32,
+      "row": 17
+    },
+    {
+      "col": 33,
+      "row": 17
+    },
+    {
+      "col": 34,
+      "row": 17
+    },
+    {
+      "col": 35,
+      "row": 17
+    },
+    {
+      "col": 36,
+      "row": 17
+    },
+    {
+      "col": 37,
+      "row": 17
+    },
+    {
+      "col": 38,
+      "row": 17
+    },
+    {
+      "col": 39,
+      "row": 17
+    },
+    {
+      "col": 40,
+      "row": 17
+    },
+    {
+      "col": 41,
+      "row": 17,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 18,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 18
+    },
+    {
+      "col": 14,
+      "row": 18
+    },
+    {
+      "col": 15,
+      "row": 18
+    },
+    {
+      "col": 16,
+      "row": 18
+    },
+    {
+      "col": 17,
+      "row": 18
+    },
+    {
+      "col": 18,
+      "row": 18
+    },
+    {
+      "col": 19,
+      "row": 18
+    },
+    {
+      "col": 20,
+      "row": 18
+    },
+    {
+      "col": 21,
+      "row": 18
+    },
+    {
+      "col": 22,
+      "row": 18
+    },
+    {
+      "col": 23,
+      "row": 18
+    },
+    {
+      "col": 24,
+      "row": 18
+    },
+    {
+      "col": 25,
+      "row": 18
+    },
+    {
+      "col": 26,
+      "row": 18,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 18,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 18
+    },
+    {
+      "col": 31,
+      "row": 18
+    },
+    {
+      "col": 32,
+      "row": 18
+    },
+    {
+      "col": 33,
+      "row": 18
+    },
+    {
+      "col": 34,
+      "row": 18
+    },
+    {
+      "col": 35,
+      "row": 18
+    },
+    {
+      "col": 36,
+      "row": 18
+    },
+    {
+      "col": 37,
+      "row": 18
+    },
+    {
+      "col": 38,
+      "row": 18
+    },
+    {
+      "col": 39,
+      "row": 18
+    },
+    {
+      "col": 40,
+      "row": 18
+    },
+    {
+      "col": 41,
+      "row": 18,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 19,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 19
+    },
+    {
+      "col": 14,
+      "row": 19
+    },
+    {
+      "col": 15,
+      "row": 19
+    },
+    {
+      "col": 16,
+      "row": 19
+    },
+    {
+      "col": 17,
+      "row": 19
+    },
+    {
+      "col": 18,
+      "row": 19
+    },
+    {
+      "col": 19,
+      "row": 19
+    },
+    {
+      "col": 20,
+      "row": 19
+    },
+    {
+      "col": 21,
+      "row": 19
+    },
+    {
+      "col": 22,
+      "row": 19
+    },
+    {
+      "col": 23,
+      "row": 19
+    },
+    {
+      "col": 24,
+      "row": 19
+    },
+    {
+      "col": 25,
+      "row": 19
+    },
+    {
+      "col": 26,
+      "row": 19,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 19,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 19
+    },
+    {
+      "col": 31,
+      "row": 19
+    },
+    {
+      "col": 32,
+      "row": 19
+    },
+    {
+      "col": 33,
+      "row": 19
+    },
+    {
+      "col": 34,
+      "row": 19
+    },
+    {
+      "col": 35,
+      "row": 19
+    },
+    {
+      "col": 36,
+      "row": 19
+    },
+    {
+      "col": 37,
+      "row": 19
+    },
+    {
+      "col": 38,
+      "row": 19
+    },
+    {
+      "col": 39,
+      "row": 19
+    },
+    {
+      "col": 40,
+      "row": 19
+    },
+    {
+      "col": 41,
+      "row": 19,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 20,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 20
+    },
+    {
+      "col": 14,
+      "row": 20
+    },
+    {
+      "col": 15,
+      "row": 20
+    },
+    {
+      "col": 16,
+      "row": 20
+    },
+    {
+      "col": 17,
+      "row": 20
+    },
+    {
+      "col": 18,
+      "row": 20
+    },
+    {
+      "col": 19,
+      "row": 20
+    },
+    {
+      "col": 20,
+      "row": 20
+    },
+    {
+      "col": 21,
+      "row": 20
+    },
+    {
+      "col": 22,
+      "row": 20
+    },
+    {
+      "col": 23,
+      "row": 20
+    },
+    {
+      "col": 24,
+      "row": 20
+    },
+    {
+      "col": 25,
+      "row": 20
+    },
+    {
+      "col": 26,
+      "row": 20,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 27,
+      "row": 20,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 28,
+      "row": 20,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 20,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 20
+    },
+    {
+      "col": 31,
+      "row": 20
+    },
+    {
+      "col": 32,
+      "row": 20
+    },
+    {
+      "col": 33,
+      "row": 20
+    },
+    {
+      "col": 34,
+      "row": 20
+    },
+    {
+      "col": 35,
+      "row": 20
+    },
+    {
+      "col": 36,
+      "row": 20
+    },
+    {
+      "col": 37,
+      "row": 20
+    },
+    {
+      "col": 38,
+      "row": 20
+    },
+    {
+      "col": 39,
+      "row": 20
+    },
+    {
+      "col": 40,
+      "row": 20
+    },
+    {
+      "col": 41,
+      "row": 20,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 21,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 21
+    },
+    {
+      "col": 14,
+      "row": 21
+    },
+    {
+      "col": 15,
+      "row": 21
+    },
+    {
+      "col": 16,
+      "row": 21
+    },
+    {
+      "col": 17,
+      "row": 21
+    },
+    {
+      "col": 18,
+      "row": 21
+    },
+    {
+      "col": 19,
+      "row": 21
+    },
+    {
+      "col": 20,
+      "row": 21
+    },
+    {
+      "col": 21,
+      "row": 21
+    },
+    {
+      "col": 22,
+      "row": 21
+    },
+    {
+      "col": 23,
+      "row": 21
+    },
+    {
+      "col": 24,
+      "row": 21
+    },
+    {
+      "col": 25,
+      "row": 21
+    },
+    {
+      "col": 26,
+      "row": 21
+    },
+    {
+      "col": 27,
+      "row": 21
+    },
+    {
+      "col": 28,
+      "row": 21
+    },
+    {
+      "col": 29,
+      "row": 21
+    },
+    {
+      "col": 30,
+      "row": 21
+    },
+    {
+      "col": 31,
+      "row": 21
+    },
+    {
+      "col": 32,
+      "row": 21
+    },
+    {
+      "col": 33,
+      "row": 21
+    },
+    {
+      "col": 34,
+      "row": 21
+    },
+    {
+      "col": 35,
+      "row": 21
+    },
+    {
+      "col": 36,
+      "row": 21
+    },
+    {
+      "col": 37,
+      "row": 21
+    },
+    {
+      "col": 38,
+      "row": 21
+    },
+    {
+      "col": 39,
+      "row": 21
+    },
+    {
+      "col": 40,
+      "row": 21
+    },
+    {
+      "col": 41,
+      "row": 21,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 22,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 22
+    },
+    {
+      "col": 14,
+      "row": 22
+    },
+    {
+      "col": 15,
+      "row": 22
+    },
+    {
+      "col": 16,
+      "row": 22
+    },
+    {
+      "col": 17,
+      "row": 22
+    },
+    {
+      "col": 18,
+      "row": 22
+    },
+    {
+      "col": 19,
+      "row": 22
+    },
+    {
+      "col": 20,
+      "row": 22
+    },
+    {
+      "col": 21,
+      "row": 22
+    },
+    {
+      "col": 22,
+      "row": 22
+    },
+    {
+      "col": 23,
+      "row": 22
+    },
+    {
+      "col": 24,
+      "row": 22
+    },
+    {
+      "col": 25,
+      "row": 22
+    },
+    {
+      "col": 26,
+      "row": 22
+    },
+    {
+      "col": 27,
+      "row": 22
+    },
+    {
+      "col": 28,
+      "row": 22
+    },
+    {
+      "col": 29,
+      "row": 22
+    },
+    {
+      "col": 30,
+      "row": 22
+    },
+    {
+      "col": 31,
+      "row": 22
+    },
+    {
+      "col": 32,
+      "row": 22
+    },
+    {
+      "col": 33,
+      "row": 22
+    },
+    {
+      "col": 34,
+      "row": 22
+    },
+    {
+      "col": 35,
+      "row": 22
+    },
+    {
+      "col": 36,
+      "row": 22
+    },
+    {
+      "col": 37,
+      "row": 22
+    },
+    {
+      "col": 38,
+      "row": 22
+    },
+    {
+      "col": 39,
+      "row": 22
+    },
+    {
+      "col": 40,
+      "row": 22
+    },
+    {
+      "col": 41,
+      "row": 22,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 23,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 23
+    },
+    {
+      "col": 14,
+      "row": 23
+    },
+    {
+      "col": 15,
+      "row": 23
+    },
+    {
+      "col": 16,
+      "row": 23
+    },
+    {
+      "col": 17,
+      "row": 23
+    },
+    {
+      "col": 18,
+      "row": 23
+    },
+    {
+      "col": 19,
+      "row": 23
+    },
+    {
+      "col": 20,
+      "row": 23
+    },
+    {
+      "col": 21,
+      "row": 23
+    },
+    {
+      "col": 22,
+      "row": 23
+    },
+    {
+      "col": 23,
+      "row": 23
+    },
+    {
+      "col": 24,
+      "row": 23
+    },
+    {
+      "col": 25,
+      "row": 23
+    },
+    {
+      "col": 26,
+      "row": 23,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 27,
+      "row": 23,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 28,
+      "row": 23,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 23,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 23
+    },
+    {
+      "col": 31,
+      "row": 23
+    },
+    {
+      "col": 32,
+      "row": 23
+    },
+    {
+      "col": 33,
+      "row": 23
+    },
+    {
+      "col": 34,
+      "row": 23
+    },
+    {
+      "col": 35,
+      "row": 23
+    },
+    {
+      "col": 36,
+      "row": 23
+    },
+    {
+      "col": 37,
+      "row": 23
+    },
+    {
+      "col": 38,
+      "row": 23
+    },
+    {
+      "col": 39,
+      "row": 23
+    },
+    {
+      "col": 40,
+      "row": 23
+    },
+    {
+      "col": 41,
+      "row": 23,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 24,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 24
+    },
+    {
+      "col": 14,
+      "row": 24
+    },
+    {
+      "col": 15,
+      "row": 24
+    },
+    {
+      "col": 16,
+      "row": 24
+    },
+    {
+      "col": 17,
+      "row": 24
+    },
+    {
+      "col": 18,
+      "row": 24
+    },
+    {
+      "col": 19,
+      "row": 24
+    },
+    {
+      "col": 20,
+      "row": 24
+    },
+    {
+      "col": 21,
+      "row": 24
+    },
+    {
+      "col": 22,
+      "row": 24
+    },
+    {
+      "col": 23,
+      "row": 24
+    },
+    {
+      "col": 24,
+      "row": 24
+    },
+    {
+      "col": 25,
+      "row": 24
+    },
+    {
+      "col": 26,
+      "row": 24,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 24,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 24
+    },
+    {
+      "col": 31,
+      "row": 24
+    },
+    {
+      "col": 32,
+      "row": 24
+    },
+    {
+      "col": 33,
+      "row": 24
+    },
+    {
+      "col": 34,
+      "row": 24
+    },
+    {
+      "col": 35,
+      "row": 24
+    },
+    {
+      "col": 36,
+      "row": 24
+    },
+    {
+      "col": 37,
+      "row": 24
+    },
+    {
+      "col": 38,
+      "row": 24
+    },
+    {
+      "col": 39,
+      "row": 24
+    },
+    {
+      "col": 40,
+      "row": 24
+    },
+    {
+      "col": 41,
+      "row": 24,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 25,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 25
+    },
+    {
+      "col": 14,
+      "row": 25
+    },
+    {
+      "col": 15,
+      "row": 25
+    },
+    {
+      "col": 16,
+      "row": 25
+    },
+    {
+      "col": 17,
+      "row": 25
+    },
+    {
+      "col": 18,
+      "row": 25
+    },
+    {
+      "col": 19,
+      "row": 25
+    },
+    {
+      "col": 20,
+      "row": 25
+    },
+    {
+      "col": 21,
+      "row": 25
+    },
+    {
+      "col": 22,
+      "row": 25
+    },
+    {
+      "col": 23,
+      "row": 25
+    },
+    {
+      "col": 24,
+      "row": 25
+    },
+    {
+      "col": 25,
+      "row": 25
+    },
+    {
+      "col": 26,
+      "row": 25,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 25,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 25
+    },
+    {
+      "col": 31,
+      "row": 25
+    },
+    {
+      "col": 32,
+      "row": 25
+    },
+    {
+      "col": 33,
+      "row": 25
+    },
+    {
+      "col": 34,
+      "row": 25
+    },
+    {
+      "col": 35,
+      "row": 25
+    },
+    {
+      "col": 36,
+      "row": 25
+    },
+    {
+      "col": 37,
+      "row": 25
+    },
+    {
+      "col": 38,
+      "row": 25
+    },
+    {
+      "col": 39,
+      "row": 25
+    },
+    {
+      "col": 40,
+      "row": 25
+    },
+    {
+      "col": 41,
+      "row": 25,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 26
+    },
+    {
+      "col": 14,
+      "row": 26
+    },
+    {
+      "col": 15,
+      "row": 26
+    },
+    {
+      "col": 16,
+      "row": 26
+    },
+    {
+      "col": 17,
+      "row": 26
+    },
+    {
+      "col": 18,
+      "row": 26
+    },
+    {
+      "col": 19,
+      "row": 26
+    },
+    {
+      "col": 20,
+      "row": 26
+    },
+    {
+      "col": 21,
+      "row": 26
+    },
+    {
+      "col": 22,
+      "row": 26
+    },
+    {
+      "col": 23,
+      "row": 26
+    },
+    {
+      "col": 24,
+      "row": 26
+    },
+    {
+      "col": 25,
+      "row": 26
+    },
+    {
+      "col": 26,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 29,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 30,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 31,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 32,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 33,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 34,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 35,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 36,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 37,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 38,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 39,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 40,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 41,
+      "row": 26,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 12,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 13,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 14,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 15,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 16,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 17,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 18,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 19,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 20,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 21,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 22,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 23,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 24,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 25,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    },
+    {
+      "col": 26,
+      "row": 27,
+      "floor": false,
+      "wall": true
+    }
+  ],
+  "rooms": [
+    {
+      "id": "plaza",
+      "col": 2,
+      "row": 2,
+      "width": 11,
+      "height": 11
+    },
+    {
+      "id": "armeria",
+      "col": 17,
+      "row": 3,
+      "width": 9,
+      "height": 9
+    },
+    {
+      "id": "arena",
+      "col": 30,
+      "row": 2,
+      "width": 11,
+      "height": 11
+    },
+    {
+      "id": "cripta",
+      "col": 30,
+      "row": 17,
+      "width": 11,
+      "height": 9
+    },
+    {
+      "id": "santuario",
+      "col": 13,
+      "row": 16,
+      "width": 13,
+      "height": 11
+    }
+  ],
+  "tunnels": [
+    {
+      "id": "tunel_plaza_armeria",
+      "from": "plaza",
+      "to": "armeria",
+      "width": 2,
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "tunel_armeria_arena",
+      "from": "armeria",
+      "to": "arena",
+      "width": 2,
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "tunel_arena_cripta",
+      "from": "arena",
+      "to": "cripta",
+      "width": 2,
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "tunel_cripta_santuario",
+      "from": "cripta",
+      "to": "santuario",
+      "width": 2,
+      "fromSide": "left",
+      "toSide": "right"
+    }
+  ],
+  "zones": [
+    {
+      "id": "jardin",
+      "col": 9,
+      "row": 2,
+      "width": 4,
+      "height": 4
+    },
+    {
+      "id": "arena_centro",
+      "col": 32,
+      "row": 2,
+      "width": 9,
+      "height": 11
+    },
+    {
+      "id": "placa_1",
+      "col": 32,
+      "row": 19,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "placa_2",
+      "col": 38,
+      "row": 19,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "placa_3",
+      "col": 35,
+      "row": 24,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "santuario_centro",
+      "col": 13,
+      "row": 16,
+      "width": 11,
+      "height": 11
+    },
+    {
+      "id": "cofre_zona",
+      "col": 17,
+      "row": 20,
+      "width": 3,
+      "height": 3
+    }
+  ],
+  "items": [
+    {
+      "id": "espada",
+      "name": "Espada",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "melee",
+        "attack": {
+          "pattern": "cone",
+          "damage": 14,
+          "cooldown": 0.35,
+          "range": 1.6,
+          "angle": 110
+        },
+        "ability": {
+          "name": "Giro cargado",
+          "hitsRequired": 3,
+          "activation": "auto",
+          "resetAfter": 4,
+          "attack": {
+            "pattern": "area",
+            "damage": 28,
+            "cooldown": 0.5,
+            "range": 2.2
+          }
+        }
+      }
+    },
+    {
+      "id": "lanza",
+      "name": "Lanza",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 32,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "melee",
+        "attack": {
+          "pattern": "line",
+          "damage": 16,
+          "cooldown": 0.5,
+          "range": 2.4,
+          "width": 0.6
+        },
+        "ability": {
+          "name": "Estocada",
+          "hitsRequired": 3,
+          "activation": "manual",
+          "resetAfter": 0,
+          "attack": {
+            "pattern": "line",
+            "damage": 34,
+            "cooldown": 0.6,
+            "range": 4,
+            "width": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "arco",
+      "name": "Arco",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 64,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "ranged",
+        "attack": {
+          "pattern": "projectile",
+          "damage": 10,
+          "cooldown": 0.4,
+          "range": 8,
+          "speed": 11,
+          "width": 0.35
+        },
+        "ability": {
+          "name": "Flecha perforante",
+          "hitsRequired": 3,
+          "activation": "auto",
+          "resetAfter": 0,
+          "attack": {
+            "pattern": "projectile",
+            "damage": 22,
+            "cooldown": 0.5,
+            "range": 10,
+            "speed": 15,
+            "width": 0.5,
+            "pierce": true
+          }
+        }
+      }
+    },
+    {
+      "id": "baston_fuego",
+      "name": "Bastón de fuego",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 96,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "ranged",
+        "attack": {
+          "pattern": "explosive",
+          "damage": 14,
+          "cooldown": 0.9,
+          "range": 6,
+          "speed": 7,
+          "width": 0.5,
+          "radius": 1.6
+        },
+        "ability": {
+          "name": "Meteoro",
+          "hitsRequired": 3,
+          "activation": "manual",
+          "resetAfter": 0,
+          "attack": {
+            "pattern": "remote_area",
+            "damage": 40,
+            "cooldown": 1,
+            "range": 7,
+            "radius": 2.2,
+            "delay": 0.6
+          }
+        }
+      }
+    },
+    {
+      "id": "martillo",
+      "name": "Martillo",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "melee",
+        "attack": {
+          "pattern": "area",
+          "damage": 20,
+          "cooldown": 0.85,
+          "range": 1.5
+        },
+        "ability": {
+          "name": "Terremoto",
+          "hitsRequired": 2,
+          "activation": "auto",
+          "resetAfter": 0,
+          "attack": {
+            "pattern": "area",
+            "damage": 35,
+            "cooldown": 1,
+            "range": 2.8
+          }
+        }
+      }
+    },
+    {
+      "id": "totem_curacion",
+      "name": "Tótem de curación",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 160,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "ranged",
+        "attack": {
+          "pattern": "remote_area",
+          "damage": 6,
+          "cooldown": 1.8,
+          "range": 5,
+          "radius": 1.6,
+          "delay": 0.4,
+          "heal": 18
+        }
+      }
+    },
+    {
+      "id": "pocion",
+      "name": "Poción",
+      "kind": "healing",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 192,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "heal": 40
+    },
+    {
+      "id": "moneda",
+      "name": "Moneda",
+      "kind": "coin",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 224,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "value": 1,
+      "scale": 0.5
+    },
+    {
+      "id": "escupitajo",
+      "name": "Escupitajo de miel",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "ranged",
+        "attack": {
+          "pattern": "projectile",
+          "damage": 7,
+          "cooldown": 1.8,
+          "range": 5,
+          "speed": 5.5,
+          "width": 0.4
+        }
+      }
+    },
+    {
+      "id": "aguijon_real",
+      "name": "Aguijón real",
+      "kind": "weapon",
+      "texture": "textures/objetos/iconos.png",
+      "sourceRect": {
+        "x": 288,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "scale": 0.75,
+      "weapon": {
+        "category": "ranged",
+        "attack": {
+          "pattern": "projectile",
+          "damage": 10,
+          "cooldown": 1.1,
+          "range": 7,
+          "speed": 7.5,
+          "width": 0.45
+        },
+        "ability": {
+          "name": "Lluvia de miel",
+          "hitsRequired": 2,
+          "activation": "auto",
+          "resetAfter": 0,
+          "attack": {
+            "pattern": "remote_area",
+            "damage": 18,
+            "cooldown": 1.4,
+            "range": 7,
+            "radius": 2,
+            "delay": 0.9
+          }
+        }
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "fuente",
+      "type": "decoracion",
+      "position": {
+        "col": 6,
+        "row": 6
+      },
+      "texture": "textures/objetos/fuente.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "span": 2,
+      "groundOffset": 18,
+      "collider": {
+        "width": 128,
+        "height": 64,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "antorcha_plaza_1",
+      "type": "decoracion",
+      "position": {
+        "col": 4,
+        "row": 4
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_plaza_2",
+      "type": "decoracion",
+      "position": {
+        "col": 9,
+        "row": 4
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_plaza_3",
+      "type": "decoracion",
+      "position": {
+        "col": 4,
+        "row": 9
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_plaza_4",
+      "type": "decoracion",
+      "position": {
+        "col": 9,
+        "row": 9
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "pino_1",
+      "type": "decoracion",
+      "position": {
+        "col": 11,
+        "row": 2
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.8,
+      "collider": {
+        "width": 73,
+        "height": 37,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "pino_2",
+      "type": "decoracion",
+      "position": {
+        "col": 12,
+        "row": 4
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.7,
+      "collider": {
+        "width": 73,
+        "height": 37,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "pino_3",
+      "type": "decoracion",
+      "position": {
+        "col": 9,
+        "row": 2
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.6,
+      "collider": {
+        "width": 63,
+        "height": 31,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "arbusto_1",
+      "type": "decoracion",
+      "position": {
+        "col": 12,
+        "row": 2
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.55,
+      "collider": {
+        "width": 56,
+        "height": 28,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "arbusto_2",
+      "type": "decoracion",
+      "position": {
+        "col": 10,
+        "row": 5
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.45,
+      "collider": {
+        "width": 46,
+        "height": 23,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "colmena_plaza",
+      "type": "decoracion",
+      "position": {
+        "col": 10,
+        "row": 3
+      },
+      "texture": "textures/objetos/colmena.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.18,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "flores_1",
+      "type": "decoracion",
+      "position": {
+        "col": 11,
+        "row": 4
+      },
+      "texture": "textures/objetos/flores.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 24
+      },
+      "frames": 4,
+      "frameDuration": 0.3
+    },
+    {
+      "id": "flores_2",
+      "type": "decoracion",
+      "position": {
+        "col": 12,
+        "row": 6
+      },
+      "texture": "textures/objetos/flores.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 24,
+        "width": 32,
+        "height": 24
+      },
+      "frames": 4,
+      "frameDuration": 0.3
+    },
+    {
+      "id": "flores_3",
+      "type": "decoracion",
+      "position": {
+        "col": 8,
+        "row": 3
+      },
+      "texture": "textures/objetos/flores.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 24,
+        "width": 32,
+        "height": 24
+      },
+      "frames": 4,
+      "frameDuration": 0.3
+    },
+    {
+      "id": "abejitas_1",
+      "type": "decoracion",
+      "position": {
+        "col": 11,
+        "row": 5
+      },
+      "texture": "textures/objetos/abejitas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 48,
+        "height": 40
+      },
+      "frames": 8,
+      "frameDuration": 0.09
+    },
+    {
+      "id": "abejitas_2",
+      "type": "decoracion",
+      "position": {
+        "col": 9,
+        "row": 4
+      },
+      "texture": "textures/objetos/abejitas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 48,
+        "height": 40
+      },
+      "frames": 8,
+      "frameDuration": 0.11
+    },
+    {
+      "id": "Zumbo",
+      "type": "npc",
+      "position": {
+        "col": 3,
+        "row": 10
+      },
+      "texture": "textures/personajes/mercader.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.22,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 10,
+        "damage": 0,
+        "speed": 0
+      },
+      "shop": {
+        "items": [
+          {
+            "item": "pocion",
+            "price": 3
+          },
+          {
+            "item": "martillo",
+            "price": 8
+          },
+          {
+            "item": "totem_curacion",
+            "price": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "caja_1",
+      "type": "decoracion",
+      "position": {
+        "col": 2,
+        "row": 9
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "caja_2",
+      "type": "decoracion",
+      "position": {
+        "col": 2,
+        "row": 11
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "barril_1",
+      "type": "decoracion",
+      "position": {
+        "col": 2,
+        "row": 12
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 384,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 52,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "barril_2",
+      "type": "decoracion",
+      "position": {
+        "col": 3,
+        "row": 12
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 384,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.45,
+      "collider": {
+        "width": 47,
+        "height": 24,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "flores_4",
+      "type": "decoracion",
+      "position": {
+        "col": 4,
+        "row": 12
+      },
+      "texture": "textures/objetos/flores.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 24
+      },
+      "frames": 4,
+      "frameDuration": 0.3
+    },
+    {
+      "id": "colmena_tienda",
+      "type": "decoracion",
+      "position": {
+        "col": 2,
+        "row": 8
+      },
+      "texture": "textures/objetos/colmena.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "obelisco_1",
+      "type": "decoracion",
+      "position": {
+        "col": 12,
+        "row": 6
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.65,
+      "collider": {
+        "width": 35,
+        "height": 17,
+        "solid": true
+      }
+    },
+    {
+      "id": "obelisco_2",
+      "type": "decoracion",
+      "position": {
+        "col": 12,
+        "row": 9
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.65,
+      "collider": {
+        "width": 35,
+        "height": 17,
+        "solid": true
+      }
+    },
+    {
+      "id": "roca_1",
+      "type": "decoracion",
+      "position": {
+        "col": 3,
+        "row": 3
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.4,
+      "collider": {
+        "width": 41,
+        "height": 20,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "roca_2",
+      "type": "decoracion",
+      "position": {
+        "col": 2,
+        "row": 4
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.3,
+      "collider": {
+        "width": 31,
+        "height": 15,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "flores_5",
+      "type": "decoracion",
+      "position": {
+        "col": 3,
+        "row": 2
+      },
+      "texture": "textures/objetos/flores.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 24,
+        "width": 32,
+        "height": 24
+      },
+      "frames": 4,
+      "frameDuration": 0.3
+    },
+    {
+      "id": "moneda_1",
+      "type": "item",
+      "position": {
+        "col": 6,
+        "row": 3
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "moneda_2",
+      "type": "item",
+      "position": {
+        "col": 3,
+        "row": 6
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "moneda_3",
+      "type": "item",
+      "position": {
+        "col": 5,
+        "row": 11
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "moneda_4",
+      "type": "item",
+      "position": {
+        "col": 8,
+        "row": 12
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "moneda_5",
+      "type": "item",
+      "position": {
+        "col": 11,
+        "row": 10
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "moneda_6",
+      "type": "item",
+      "position": {
+        "col": 10,
+        "row": 7
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "moneda_7",
+      "type": "item",
+      "position": {
+        "col": 7,
+        "row": 9
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "moneda_8",
+      "type": "item",
+      "position": {
+        "col": 5,
+        "row": 4
+      },
+      "texture": "textures/objetos/moneda.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 24
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "scale": 0.75,
+      "item": "moneda"
+    },
+    {
+      "id": "arma_espada",
+      "type": "item",
+      "position": {
+        "col": 19,
+        "row": 4
+      },
+      "texture": "textures/objetos/armas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 52
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "scale": 0.75,
+      "item": "espada"
+    },
+    {
+      "id": "arma_lanza",
+      "type": "item",
+      "position": {
+        "col": 21,
+        "row": 4
+      },
+      "texture": "textures/objetos/armas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 52,
+        "width": 40,
+        "height": 52
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "scale": 0.75,
+      "item": "lanza"
+    },
+    {
+      "id": "arma_arco",
+      "type": "item",
+      "position": {
+        "col": 23,
+        "row": 4
+      },
+      "texture": "textures/objetos/armas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 104,
+        "width": 40,
+        "height": 52
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "scale": 0.75,
+      "item": "arco"
+    },
+    {
+      "id": "arma_baston_fuego",
+      "type": "item",
+      "position": {
+        "col": 25,
+        "row": 5
+      },
+      "texture": "textures/objetos/armas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 156,
+        "width": 40,
+        "height": 52
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "scale": 0.75,
+      "item": "baston_fuego"
+    },
+    {
+      "id": "muneco_1",
+      "type": "enemy",
+      "position": {
+        "col": 21,
+        "row": 9
+      },
+      "texture": "textures/personajes/muneco.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 600,
+        "damage": 0,
+        "speed": 0
+      }
+    },
+    {
+      "id": "muneco_2",
+      "type": "enemy",
+      "position": {
+        "col": 23,
+        "row": 8
+      },
+      "texture": "textures/personajes/muneco.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 600,
+        "damage": 0,
+        "speed": 0
+      }
+    },
+    {
+      "id": "muneco_3",
+      "type": "enemy",
+      "position": {
+        "col": 24,
+        "row": 10
+      },
+      "texture": "textures/personajes/muneco.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 600,
+        "damage": 0,
+        "speed": 0
+      }
+    },
+    {
+      "id": "antorcha_armeria_1",
+      "type": "decoracion",
+      "position": {
+        "col": 17,
+        "row": 6
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_armeria_2",
+      "type": "decoracion",
+      "position": {
+        "col": 17,
+        "row": 9
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_armeria_3",
+      "type": "decoracion",
+      "position": {
+        "col": 25,
+        "row": 6
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_armeria_4",
+      "type": "decoracion",
+      "position": {
+        "col": 25,
+        "row": 9
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "armero_caja_1",
+      "type": "decoracion",
+      "position": {
+        "col": 17,
+        "row": 3
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "armero_caja_2",
+      "type": "decoracion",
+      "position": {
+        "col": 18,
+        "row": 3
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "armero_barril",
+      "type": "decoracion",
+      "position": {
+        "col": 17,
+        "row": 4
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 384,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.45,
+      "collider": {
+        "width": 47,
+        "height": 24,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "armero_columna_1",
+      "type": "decoracion",
+      "position": {
+        "col": 20,
+        "row": 3
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.6,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "armero_columna_2",
+      "type": "decoracion",
+      "position": {
+        "col": 24,
+        "row": 3
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.6,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "armero_yunque",
+      "type": "decoracion",
+      "position": {
+        "col": 17,
+        "row": 11
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 384,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "armero_caja_3",
+      "type": "decoracion",
+      "position": {
+        "col": 18,
+        "row": 11
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 0,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 64,
+        "height": 32,
+        "solid": true
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "puerta_arena_entrada_1",
+      "type": "puerta",
+      "position": {
+        "col": 29,
+        "row": 7
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true,
+      "hidden": true
+    },
+    {
+      "id": "puerta_arena_entrada_2",
+      "type": "puerta",
+      "position": {
+        "col": 29,
+        "row": 8
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true,
+      "hidden": true
+    },
+    {
+      "id": "puerta_arena_salida_1",
+      "type": "puerta",
+      "position": {
+        "col": 35,
+        "row": 13
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true
+    },
+    {
+      "id": "puerta_arena_salida_2",
+      "type": "puerta",
+      "position": {
+        "col": 36,
+        "row": 13
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true
+    },
+    {
+      "id": "columna_arena_1",
+      "type": "decoracion",
+      "position": {
+        "col": 33,
+        "row": 5
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 52,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "columna_arena_2",
+      "type": "decoracion",
+      "position": {
+        "col": 37,
+        "row": 5
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.45,
+      "collider": {
+        "width": 47,
+        "height": 24,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "columna_arena_3",
+      "type": "decoracion",
+      "position": {
+        "col": 33,
+        "row": 9
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "collider": {
+        "width": 52,
+        "height": 26,
+        "solid": true,
+        "shape": "ellipse"
+      },
+      "scale": 0.5
+    },
+    {
+      "id": "columna_arena_4",
+      "type": "decoracion",
+      "position": {
+        "col": 37,
+        "row": 9
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.45,
+      "collider": {
+        "width": 47,
+        "height": 24,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "antorcha_arena_1",
+      "type": "decoracion",
+      "position": {
+        "col": 31,
+        "row": 3
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_arena_2",
+      "type": "decoracion",
+      "position": {
+        "col": 39,
+        "row": 3
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_arena_3",
+      "type": "decoracion",
+      "position": {
+        "col": 31,
+        "row": 11
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_arena_4",
+      "type": "decoracion",
+      "position": {
+        "col": 39,
+        "row": 11
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "slime_verde_1",
+      "type": "enemy",
+      "position": {
+        "col": 35,
+        "row": 4
+      },
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.15,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 30,
+        "damage": 8,
+        "speed": 1.9
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.7
+        },
+        {
+          "item": "pocion",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "id": "slime_verde_2",
+      "type": "enemy",
+      "position": {
+        "col": 38,
+        "row": 7
+      },
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.15,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 30,
+        "damage": 8,
+        "speed": 1.9
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.7
+        },
+        {
+          "item": "pocion",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "id": "slime_verde_3",
+      "type": "enemy",
+      "position": {
+        "col": 35,
+        "row": 11
+      },
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.15,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 30,
+        "damage": 8,
+        "speed": 1.9
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.7
+        },
+        {
+          "item": "pocion",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "id": "slime_azul_1",
+      "type": "enemy",
+      "position": {
+        "col": 36,
+        "row": 7
+      },
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 32,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 48,
+        "damage": 11,
+        "speed": 1.4
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.7
+        },
+        {
+          "item": "pocion",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "id": "slime_azul_2",
+      "type": "enemy",
+      "position": {
+        "col": 40,
+        "row": 9
+      },
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 32,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 48,
+        "damage": 11,
+        "speed": 1.4
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.7
+        },
+        {
+          "item": "pocion",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "id": "slime_miel_1",
+      "type": "enemy",
+      "position": {
+        "col": 40,
+        "row": 3
+      },
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 64,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.15,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 34,
+        "damage": 6,
+        "speed": 1.2
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.7
+        },
+        {
+          "item": "pocion",
+          "chance": 0.15
+        }
+      ],
+      "weapon": "escupitajo"
+    },
+    {
+      "id": "slime_miel_2",
+      "type": "enemy",
+      "position": {
+        "col": 40,
+        "row": 11
+      },
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 64,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.15,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 34,
+        "damage": 6,
+        "speed": 1.2
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.7
+        },
+        {
+          "item": "pocion",
+          "chance": 0.15
+        }
+      ],
+      "weapon": "escupitajo"
+    },
+    {
+      "id": "roca_arena_1",
+      "type": "decoracion",
+      "position": {
+        "col": 40,
+        "row": 6
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.35,
+      "collider": {
+        "width": 36,
+        "height": 18,
+        "solid": true,
+        "shape": "ellipse"
+      }
+    },
+    {
+      "id": "cristal_arena_1",
+      "type": "decoracion",
+      "position": {
+        "col": 30,
+        "row": 2
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "cristal_arena_2",
+      "type": "decoracion",
+      "position": {
+        "col": 30,
+        "row": 12
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.25,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "sello_cripta_1",
+      "type": "puerta",
+      "position": {
+        "col": 29,
+        "row": 21
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true
+    },
+    {
+      "id": "sello_cripta_2",
+      "type": "puerta",
+      "position": {
+        "col": 29,
+        "row": 22
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true
+    },
+    {
+      "id": "placa_1_apagada",
+      "type": "decoracion",
+      "position": {
+        "col": 31,
+        "row": 18
+      },
+      "texture": "textures/objetos/placa.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 36
+      },
+      "groundOffset": 52
+    },
+    {
+      "id": "placa_1_encendida",
+      "type": "decoracion",
+      "position": {
+        "col": 31,
+        "row": 18
+      },
+      "texture": "textures/objetos/placa.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 36,
+        "width": 64,
+        "height": 36
+      },
+      "frames": 4,
+      "frameDuration": 0.18,
+      "groundOffset": 52,
+      "hidden": true
+    },
+    {
+      "id": "placa_2_apagada",
+      "type": "decoracion",
+      "position": {
+        "col": 37,
+        "row": 18
+      },
+      "texture": "textures/objetos/placa.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 36
+      },
+      "groundOffset": 52
+    },
+    {
+      "id": "placa_2_encendida",
+      "type": "decoracion",
+      "position": {
+        "col": 37,
+        "row": 18
+      },
+      "texture": "textures/objetos/placa.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 36,
+        "width": 64,
+        "height": 36
+      },
+      "frames": 4,
+      "frameDuration": 0.18,
+      "groundOffset": 52,
+      "hidden": true
+    },
+    {
+      "id": "placa_3_apagada",
+      "type": "decoracion",
+      "position": {
+        "col": 34,
+        "row": 23
+      },
+      "texture": "textures/objetos/placa.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 36
+      },
+      "groundOffset": 52
+    },
+    {
+      "id": "placa_3_encendida",
+      "type": "decoracion",
+      "position": {
+        "col": 34,
+        "row": 23
+      },
+      "texture": "textures/objetos/placa.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 36,
+        "width": 64,
+        "height": 36
+      },
+      "frames": 4,
+      "frameDuration": 0.18,
+      "groundOffset": 52,
+      "hidden": true
+    },
+    {
+      "id": "antorcha_cripta_1",
+      "type": "decoracion",
+      "position": {
+        "col": 30,
+        "row": 18
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 48,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_cripta_2",
+      "type": "decoracion",
+      "position": {
+        "col": 40,
+        "row": 19
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 48,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_cripta_3",
+      "type": "decoracion",
+      "position": {
+        "col": 30,
+        "row": 24
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 48,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_cripta_4",
+      "type": "decoracion",
+      "position": {
+        "col": 40,
+        "row": 23
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 48,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "espectro_1",
+      "type": "enemy",
+      "position": {
+        "col": 34,
+        "row": 20
+      },
+      "texture": "textures/personajes/espectro.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 2,
+      "frameDuration": 0.35,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 28,
+        "damage": 9,
+        "speed": 1.3
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.8
+        }
+      ]
+    },
+    {
+      "id": "espectro_2",
+      "type": "enemy",
+      "position": {
+        "col": 37,
+        "row": 23
+      },
+      "texture": "textures/personajes/espectro.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 2,
+      "frameDuration": 0.35,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 28,
+        "damage": 9,
+        "speed": 1.3
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.8
+        }
+      ]
+    },
+    {
+      "id": "espectro_3",
+      "type": "enemy",
+      "position": {
+        "col": 39,
+        "row": 21
+      },
+      "texture": "textures/personajes/espectro.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 2,
+      "frameDuration": 0.35,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 28,
+        "damage": 9,
+        "speed": 1.3
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.8
+        }
+      ]
+    },
+    {
+      "id": "tumba_1",
+      "type": "decoracion",
+      "position": {
+        "col": 32,
+        "row": 17
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.4,
+      "collider": {
+        "width": 51,
+        "height": 26,
+        "solid": true
+      }
+    },
+    {
+      "id": "tumba_2",
+      "type": "decoracion",
+      "position": {
+        "col": 38,
+        "row": 17
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 128,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.4,
+      "collider": {
+        "width": 51,
+        "height": 26,
+        "solid": true
+      }
+    },
+    {
+      "id": "lapida_1",
+      "type": "decoracion",
+      "position": {
+        "col": 39,
+        "row": 24
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.4,
+      "collider": {
+        "width": 51,
+        "height": 26,
+        "solid": true
+      }
+    },
+    {
+      "id": "lapida_2",
+      "type": "decoracion",
+      "position": {
+        "col": 32,
+        "row": 25
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 256,
+        "y": 384,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.4,
+      "collider": {
+        "width": 51,
+        "height": 26,
+        "solid": true
+      }
+    },
+    {
+      "id": "columna_cripta_1",
+      "type": "decoracion",
+      "position": {
+        "col": 33,
+        "row": 24
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.65,
+      "collider": {
+        "width": 35,
+        "height": 17,
+        "solid": true
+      }
+    },
+    {
+      "id": "columna_cripta_2",
+      "type": "decoracion",
+      "position": {
+        "col": 37,
+        "row": 21
+      },
+      "texture": "textures/objetos/decorado.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 192,
+        "width": 128,
+        "height": 192
+      },
+      "groundOffset": 34,
+      "scale": 0.65,
+      "collider": {
+        "width": 35,
+        "height": 17,
+        "solid": true
+      }
+    },
+    {
+      "id": "cristal_cripta_1",
+      "type": "decoracion",
+      "position": {
+        "col": 40,
+        "row": 17
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.22,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "cristal_cripta_2",
+      "type": "decoracion",
+      "position": {
+        "col": 30,
+        "row": 25
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "pocion_cripta",
+      "type": "item",
+      "position": {
+        "col": 40,
+        "row": 25
+      },
+      "texture": "textures/objetos/armas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 260,
+        "width": 40,
+        "height": 52
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "scale": 0.75,
+      "item": "pocion"
+    },
+    {
+      "id": "puerta_santuario_1",
+      "type": "puerta",
+      "position": {
+        "col": 26,
+        "row": 21
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true,
+      "hidden": true
+    },
+    {
+      "id": "puerta_santuario_2",
+      "type": "puerta",
+      "position": {
+        "col": 26,
+        "row": 22
+      },
+      "texture": "textures/paredes/barrera.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.14,
+      "groundOffset": 21.333,
+      "wall": true,
+      "hidden": true
+    },
+    {
+      "id": "Reina Colmena",
+      "type": "enemy",
+      "position": {
+        "col": 19,
+        "row": 20
+      },
+      "texture": "textures/personajes/reina.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 64,
+        "height": 64
+      },
+      "frames": 4,
+      "frameDuration": 0.09,
+      "scale": 1.25,
+      "boss": true,
+      "weapon": "aguijon_real",
+      "collider": {
+        "width": 48,
+        "height": 24,
+        "solid": true
+      },
+      "stats": {
+        "health": 320,
+        "damage": 14,
+        "speed": 1.3
+      }
+    },
+    {
+      "id": "abeja_obrera_1",
+      "type": "enemy",
+      "position": {
+        "col": 21,
+        "row": 18
+      },
+      "texture": "textures/personajes/abeja.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.07,
+      "collider": {
+        "width": 20,
+        "height": 10,
+        "solid": true
+      },
+      "stats": {
+        "health": 16,
+        "damage": 6,
+        "speed": 2.6
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.5
+        },
+        {
+          "item": "pocion",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "id": "abeja_obrera_2",
+      "type": "enemy",
+      "position": {
+        "col": 16,
+        "row": 23
+      },
+      "texture": "textures/personajes/abeja.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.07,
+      "collider": {
+        "width": 20,
+        "height": 10,
+        "solid": true
+      },
+      "stats": {
+        "health": 16,
+        "damage": 6,
+        "speed": 2.6
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.5
+        },
+        {
+          "item": "pocion",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "id": "abeja_obrera_3",
+      "type": "enemy",
+      "position": {
+        "col": 21,
+        "row": 24
+      },
+      "texture": "textures/personajes/abeja.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.07,
+      "collider": {
+        "width": 20,
+        "height": 10,
+        "solid": true
+      },
+      "stats": {
+        "health": 16,
+        "damage": 6,
+        "speed": 2.6
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.5
+        },
+        {
+          "item": "pocion",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "id": "abeja_obrera_4",
+      "type": "enemy",
+      "position": {
+        "col": 16,
+        "row": 18
+      },
+      "texture": "textures/personajes/abeja.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.07,
+      "collider": {
+        "width": 20,
+        "height": 10,
+        "solid": true
+      },
+      "stats": {
+        "health": 16,
+        "damage": 6,
+        "speed": 2.6
+      },
+      "drops": [
+        {
+          "item": "moneda",
+          "chance": 0.5
+        },
+        {
+          "item": "pocion",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "id": "colmena_santuario_1",
+      "type": "decoracion",
+      "position": {
+        "col": 16,
+        "row": 16
+      },
+      "texture": "textures/objetos/colmena.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.18,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "colmena_santuario_2",
+      "type": "decoracion",
+      "position": {
+        "col": 21,
+        "row": 16
+      },
+      "texture": "textures/objetos/colmena.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.2,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "colmena_santuario_3",
+      "type": "decoracion",
+      "position": {
+        "col": 13,
+        "row": 19
+      },
+      "texture": "textures/objetos/colmena.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.22,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "colmena_santuario_4",
+      "type": "decoracion",
+      "position": {
+        "col": 13,
+        "row": 24
+      },
+      "texture": "textures/objetos/colmena.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.24,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "cristal_santuario_1",
+      "type": "decoracion",
+      "position": {
+        "col": 24,
+        "row": 17
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.21,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "cristal_santuario_2",
+      "type": "decoracion",
+      "position": {
+        "col": 14,
+        "row": 26
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.24,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "cristal_santuario_3",
+      "type": "decoracion",
+      "position": {
+        "col": 24,
+        "row": 26
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.27,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "cristal_santuario_4",
+      "type": "decoracion",
+      "position": {
+        "col": 19,
+        "row": 26
+      },
+      "texture": "textures/objetos/cristal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 40
+      },
+      "frames": 4,
+      "frameDuration": 0.3,
+      "collider": {
+        "width": 32,
+        "height": 16,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_santuario_1",
+      "type": "decoracion",
+      "position": {
+        "col": 25,
+        "row": 19
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_santuario_2",
+      "type": "decoracion",
+      "position": {
+        "col": 25,
+        "row": 24
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_santuario_3",
+      "type": "decoracion",
+      "position": {
+        "col": 13,
+        "row": 16
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "antorcha_santuario_4",
+      "type": "decoracion",
+      "position": {
+        "col": 18,
+        "row": 16
+      },
+      "texture": "textures/objetos/antorcha.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.12,
+      "collider": {
+        "width": 16,
+        "height": 8,
+        "solid": true
+      }
+    },
+    {
+      "id": "cofre_cerrado",
+      "type": "decoracion",
+      "position": {
+        "col": 18,
+        "row": 21
+      },
+      "texture": "textures/objetos/cofre.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "hidden": true
+    },
+    {
+      "id": "cofre_abierto",
+      "type": "decoracion",
+      "position": {
+        "col": 18,
+        "row": 21
+      },
+      "texture": "textures/objetos/cofre.png",
+      "sourceRect": {
+        "x": 32,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.15,
+      "hidden": true
+    },
+    {
+      "id": "portal",
+      "type": "decoracion",
+      "position": {
+        "col": 14,
+        "row": 21
+      },
+      "texture": "textures/objetos/portal.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 48,
+        "height": 68
+      },
+      "frames": 6,
+      "frameDuration": 0.1,
+      "hidden": true,
+      "collider": {
+        "width": 24,
+        "height": 12
+      }
+    },
+    {
+      "id": "pocion_santuario_1",
+      "type": "item",
+      "position": {
+        "col": 23,
+        "row": 25
+      },
+      "texture": "textures/objetos/armas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 260,
+        "width": 40,
+        "height": 52
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "scale": 0.75,
+      "item": "pocion"
+    },
+    {
+      "id": "pocion_santuario_2",
+      "type": "item",
+      "position": {
+        "col": 14,
+        "row": 17
+      },
+      "texture": "textures/objetos/armas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 260,
+        "width": 40,
+        "height": 52
+      },
+      "frames": 4,
+      "frameDuration": 0.16,
+      "scale": 0.75,
+      "item": "pocion"
+    },
+    {
+      "id": "player_1",
+      "type": "player",
+      "position": {
+        "col": 8,
+        "row": 10
+      },
+      "texture": "textures/personajes/jugador.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 2,
+      "frameDuration": 0.4,
+      "collider": {
+        "width": 24,
+        "height": 12
+      },
+      "stats": {
+        "health": 150,
+        "damage": 10,
+        "speed": 3.2
+      },
+      "inventory": {
+        "slots": 3,
+        "locked": false,
+        "onFull": "manual_replace",
+        "items": [],
+        "coins": 0
+      },
+      "mobility": {
+        "dash": {
+          "distance": 3,
+          "duration": 0.18,
+          "cooldown": 0.7,
+          "iframes": 0.3
+        },
+        "defense": {
+          "reduction": 0.6,
+          "speedMultiplier": 0.5
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "plaza"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "bienvenida"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Bienvenido al Santuario de la Colmena"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "bienvenida"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "jardin"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "jardin_visto"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Profundidad: pasa por detrás de los árboles"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "jardin_visto"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_items_collected",
+        "params": {
+          "item": "moneda",
+          "count": 0
+        }
+      },
+      "actions": [
+        {
+          "type": "add_coins",
+          "params": {
+            "amount": 5
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "¡Todas las monedas de la plaza! +5"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/recompensa/monedas.wav"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "armeria"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "armeria_vista"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Armería: hasta 3 armas (1-3 elige, E cambia)"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "armeria_vista"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "arena_centro"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "arena_cerrada"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "puerta_arena_entrada_1"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "puerta_arena_entrada_2"
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "¡Emboscada! Vence a todos los slimes"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/combate/alerta.wav"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "arena_cerrada"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_zone_cleared",
+        "params": {
+          "zone": "arena"
+        }
+      },
+      "actions": [
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "puerta_arena_entrada_1"
+          }
+        },
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "puerta_arena_entrada_2"
+          }
+        },
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "puerta_arena_salida_1"
+          }
+        },
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "puerta_arena_salida_2"
+          }
+        },
+        {
+          "type": "set_inventory_slots",
+          "params": {
+            "slots": 4
+          }
+        },
+        {
+          "type": "give_item",
+          "params": {
+            "item": "totem_curacion"
+          }
+        },
+        {
+          "type": "heal_player",
+          "params": {
+            "amount": 40
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "¡Arena despejada! +1 casillero y un tótem"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/recompensa/victoria.wav"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "arena_resuelta"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "cripta"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "cripta_vista"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Cripta: pisa las 3 placas para romper el sello"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "cripta_vista"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "placa_1"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "placa_1"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "placa_1_apagada"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "placa_1_encendida"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "placa_1"
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Placa 1 de 3"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/mundo/placa.wav"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "placa_2"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "placa_2"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "placa_2_apagada"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "placa_2_encendida"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "placa_2"
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Placa 2 de 3"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/mundo/placa.wav"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "placa_3"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "placa_3"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "placa_3_apagada"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "placa_3_encendida"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "placa_3"
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Placa 3 de 3"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/mundo/placa.wav"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "cripta"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_set",
+          "params": {
+            "flag": "placa_1"
+          }
+        },
+        {
+          "type": "flag_is_set",
+          "params": {
+            "flag": "placa_2"
+          }
+        },
+        {
+          "type": "flag_is_set",
+          "params": {
+            "flag": "placa_3"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "sello_cripta_1"
+          }
+        },
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "sello_cripta_2"
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "¡Sello roto! El santuario está abierto"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/mundo/sello.wav"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "santuario_centro"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "reina_despierta"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "puerta_santuario_1"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "puerta_santuario_2"
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "¡La Reina Colmena despierta!"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/combate/alerta.wav"
+          }
+        },
+        {
+          "type": "play_music",
+          "params": {
+            "music": "sounds/musica/rpgchip14_battle_2.ogg"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "reina_despierta"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_boss_defeated",
+        "params": {}
+      },
+      "actions": [
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "puerta_santuario_1"
+          }
+        },
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "puerta_santuario_2"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "cofre_cerrado"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "portal"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "reina_vencida"
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "¡Reina vencida! Abre el cofre y cruza el portal"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/recompensa/victoria.wav"
+          }
+        },
+        {
+          "type": "play_music",
+          "params": {
+            "music": "sounds/musica/rpgchip07_the_shrine_of_mysteries.ogg"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_player_enter_zone",
+        "params": {
+          "zone": "cofre_zona"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_set",
+          "params": {
+            "flag": "reina_vencida"
+          }
+        },
+        {
+          "type": "flag_is_not_set",
+          "params": {
+            "flag": "cofre_abierto"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "hide_entity",
+          "params": {
+            "entity": "cofre_cerrado"
+          }
+        },
+        {
+          "type": "show_entity",
+          "params": {
+            "entity": "cofre_abierto"
+          }
+        },
+        {
+          "type": "add_coins",
+          "params": {
+            "amount": 20
+          }
+        },
+        {
+          "type": "show_message",
+          "params": {
+            "text": "Cofre real: +20 monedas"
+          }
+        },
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/recompensa/monedas.wav"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "cofre_abierto"
+          }
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_collision",
+        "params": {
+          "entityA": "player_1",
+          "entityB": "portal"
+        }
+      },
+      "conditions": [
+        {
+          "type": "flag_is_set",
+          "params": {
+            "flag": "reina_vencida"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "show_credits",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "trigger": {
+        "type": "on_ability_used",
+        "params": {
+          "item": ""
+        }
+      },
+      "actions": [
+        {
+          "type": "play_sound",
+          "params": {
+            "soundPath": "sounds/combate/golpe.wav"
+          }
+        }
+      ]
+    }
+  ]
+}

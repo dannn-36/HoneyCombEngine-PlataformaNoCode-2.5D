@@ -1,124 +1,227 @@
 {
   "presets": [
     {
-      "id": "nuevo_enemigo",
-      "name": "Mordecai",
-      "kind": "enemy",
-      "texture": "textures/Captura de pantalla 2026-08-19 210134.png",
+      "id": "jugador",
+      "name": "Jugador",
+      "kind": "player",
+      "texture": "textures/personajes/jugador.png",
       "sourceRect": {
-        "x": 18,
-        "y": 15,
+        "x": 0,
+        "y": 0,
         "width": 32,
-        "height": 30
+        "height": 32
       },
-      "frames": 1,
+      "frames": 2,
+      "frameDuration": 0.4,
+      "scale": 1,
+      "collider": {
+        "width": 24,
+        "height": 12
+      },
+      "stats": {
+        "health": 150,
+        "damage": 10,
+        "speed": 3.2
+      }
+    },
+    {
+      "id": "espectro",
+      "name": "Espectro",
+      "kind": "enemy",
+      "texture": "textures/personajes/espectro.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 2,
+      "frameDuration": 0.35,
+      "scale": 1,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 28,
+        "damage": 9,
+        "speed": 1.3
+      }
+    },
+    {
+      "id": "abeja_obrera",
+      "name": "Abeja obrera",
+      "kind": "enemy",
+      "texture": "textures/personajes/abeja.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
+      "frameDuration": 0.07,
+      "scale": 1,
+      "collider": {
+        "width": 20,
+        "height": 10,
+        "solid": true
+      },
+      "stats": {
+        "health": 16,
+        "damage": 6,
+        "speed": 2.6
+      }
+    },
+    {
+      "id": "slime_verde",
+      "name": "Slime verde",
+      "kind": "enemy",
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
       "frameDuration": 0.15,
       "scale": 1,
       "collider": {
-        "width": 16,
-        "height": 16,
+        "width": 24,
+        "height": 12,
         "solid": true
       },
       "stats": {
         "health": 30,
-        "damage": 10,
-        "speed": 1.5
+        "damage": 8,
+        "speed": 1.9
       }
     },
     {
-      "id": "flutershy",
-      "name": "Flutershy",
+      "id": "slime_azul",
+      "name": "Slime azul",
       "kind": "enemy",
-      "texture": "textures/Captura de pantalla 2026-08-19 210144.png",
+      "texture": "textures/personajes/slimes.png",
       "sourceRect": {
-        "x": 15,
-        "y": 10,
+        "x": 0,
+        "y": 32,
         "width": 32,
         "height": 32
       },
-      "frames": 1,
+      "frames": 4,
+      "frameDuration": 0.2,
+      "scale": 1,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 48,
+        "damage": 11,
+        "speed": 1.4
+      }
+    },
+    {
+      "id": "slime_miel",
+      "name": "Slime de miel",
+      "kind": "enemy",
+      "texture": "textures/personajes/slimes.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 64,
+        "width": 32,
+        "height": 32
+      },
+      "frames": 4,
       "frameDuration": 0.15,
       "scale": 1,
       "collider": {
-        "width": 16,
-        "height": 16
+        "width": 24,
+        "height": 12,
+        "solid": true
       },
       "stats": {
-        "health": 30,
-        "damage": 10,
-        "speed": 1.5
+        "health": 34,
+        "damage": 6,
+        "speed": 1.2
       }
     },
     {
-      "id": "kaine",
-      "name": "Kaine",
-      "kind": "player",
-      "texture": "textures/♡.jpg",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "width": 736,
-        "height": 736
-      },
-      "frames": 1,
-      "frameDuration": 0.4,
-      "scale": 1,
-      "collider": {
-        "width": 16,
-        "height": 16
-      },
-      "stats": {
-        "health": 100,
-        "damage": 10,
-        "speed": 3
-      }
-    },
-    {
-      "id": "mounstro",
-      "name": "Mounstro",
-      "kind": "player",
-      "texture": "textures/♡.png",
+      "id": "reina_colmena",
+      "name": "Reina Colmena",
+      "kind": "enemy",
+      "texture": "textures/personajes/reina.png",
       "sourceRect": {
         "x": 0,
         "y": 0,
         "width": 64,
         "height": 64
       },
-      "frames": 1,
-      "frameDuration": 0.4,
-      "scale": 1,
+      "frames": 4,
+      "frameDuration": 0.09,
+      "scale": 1.25,
       "collider": {
-        "width": 16,
-        "height": 16
+        "width": 48,
+        "height": 24,
+        "solid": true
       },
       "stats": {
-        "health": 100,
-        "damage": 10,
-        "speed": 3
+        "health": 320,
+        "damage": 14,
+        "speed": 1.3
       }
     },
     {
-      "id": "nuevo_jugador",
-      "name": "Nuevo jugador",
-      "kind": "player",
-      "texture": "textures/(NieR Replicant).png",
+      "id": "muneco_practica",
+      "name": "Muñeco de práctica",
+      "kind": "enemy",
+      "texture": "textures/personajes/muneco.png",
       "sourceRect": {
         "x": 0,
         "y": 0,
-        "width": 64,
-        "height": 64
+        "width": 32,
+        "height": 48
       },
-      "frames": 1,
-      "frameDuration": 0.4,
+      "frames": 4,
+      "frameDuration": 0.2,
       "scale": 1,
       "collider": {
-        "width": 16,
-        "height": 16
+        "width": 24,
+        "height": 12,
+        "solid": true
       },
       "stats": {
-        "health": 100,
-        "damage": 10,
-        "speed": 3
+        "health": 600,
+        "damage": 0,
+        "speed": 0
+      }
+    },
+    {
+      "id": "zumbo",
+      "name": "Zumbo (mercader)",
+      "kind": "npc",
+      "texture": "textures/personajes/mercader.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 48
+      },
+      "frames": 4,
+      "frameDuration": 0.22,
+      "scale": 1,
+      "collider": {
+        "width": 24,
+        "height": 12,
+        "solid": true
+      },
+      "stats": {
+        "health": 10,
+        "damage": 0,
+        "speed": 0
       }
     }
   ]
