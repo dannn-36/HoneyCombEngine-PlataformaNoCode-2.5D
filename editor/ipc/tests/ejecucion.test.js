@@ -326,6 +326,32 @@ describe('engine:build solo corre la compilacion de la instalacion', () => {
     // Un motor en la carpeta del editor no cuenta como "compilado".
     motorFalso(entorno.root);
     const estado = await entorno.invocar('engine:status', 'debug');
-    assert.deepEqual(estado, { debug: false, release: false });
+    assert.deepEqual(estado, { debug: false, release: false, canBuild: true });
+  });
+});
+
+describe('la app instalada no compila el motor', () => {
+  // La del instalador (scripts/build-installer.js): trae los motores ya
+  // compilados y no tiene CMake ni compilador.
+  beforeEach(async () => {
+    entorno.limpiar();
+    entorno = await prepararEntorno({ instalacion: 'copia', isPackaged: true });
+  });
+
+  it('engine:status dice que no se puede compilar', async () => {
+    motorFalso(entorno.installRoot);
+    motorFalso(entorno.installRoot, 'build-release');
+    const estado = await entorno.invocar('engine:status');
+    assert.deepEqual(estado, { debug: true, release: true, canBuild: false });
+  });
+
+  it('engine:build contesta el error sin lanzar nada, aunque haya un CMakeCache', async () => {
+    const carpeta = path.join(entorno.installRoot, 'engine', 'build');
+    fs.mkdirSync(carpeta, { recursive: true });
+    fs.writeFileSync(path.join(carpeta, 'CMakeCache.txt'), 'CMAKE_BUILD_TYPE:STRING=Debug\n');
+    const resultado = await entorno.invocar('engine:build', 'debug');
+    assert.equal(resultado.ok, false);
+    assert.match(resultado.error, /reinstala/i);
+    assert.equal(entorno.lanzados.length, 0);
   });
 });

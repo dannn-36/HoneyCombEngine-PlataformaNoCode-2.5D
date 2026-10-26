@@ -177,8 +177,8 @@ export interface HoneycombProjectApi {
   /** Muestra la ultima exportacion en el explorador de archivos. */
   revealExport(): Promise<void>;
 
-  /** Que motores estan compilados (ver ipc/engine-modes.js). */
-  engineStatus(): Promise<Record<EngineMode, boolean>>;
+  /** Que motores estan compilados (ver ipc/engine-modes.js), y si se pueden compilar. */
+  engineStatus(): Promise<EngineStatus>;
   /** Compila el motor de un modo con CMake. La salida llega por onEngineBuildLog. */
   buildEngine(mode: EngineMode): Promise<{ ok: boolean; executable?: string | null; error?: string }>;
   /** Escucha la salida de la compilacion, de a una linea. Devuelve como dejar de escucharla. */
@@ -214,6 +214,12 @@ export type EngineMode = 'debug' | 'release';
  * editando) o "title" en la portada, como el juego terminado.
  */
 export type EngineStart = 'level' | 'title';
+
+/**
+ * Cuales motores estan compilados. "canBuild" es false en la app instalada:
+ * trae los motores ya compilados y no tiene compilador (ver ipc/engine-build.js).
+ */
+export type EngineStatus = Record<EngineMode, boolean> & { canBuild?: boolean };
 
 export interface EngineRunResult {
   ok: boolean;

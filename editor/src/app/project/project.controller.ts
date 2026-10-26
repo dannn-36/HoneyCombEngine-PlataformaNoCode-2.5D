@@ -768,6 +768,11 @@ export class ProjectController {
       this.note('Exportación cancelada.');
       return;
     }
+    if (result.missing && !this.engine.canBuild()) {
+      // La app instalada no compila: el motor Release venia con ella.
+      this.note('No se pudo exportar el juego: falta el motor Release. Reinstala HoneyComb para recuperarlo.');
+      return;
+    }
     if (result.missing) {
       // El juego exportado lleva el motor Release. Sin el, se ofrece compilarlo
       // y se sigue sin volver a preguntar lo mismo.

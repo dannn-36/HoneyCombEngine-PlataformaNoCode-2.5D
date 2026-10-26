@@ -1140,16 +1140,22 @@ export class App {
             checked: this.engine.mode() === mode.id,
             run: () => this.engine.setMode(mode.id),
           })),
-          separator,
-          ...this.engine.modes.map((mode) => ({
-            kind: 'action' as const,
-            label:
-              this.engine.building() === mode.id
-                ? 'Compilando motor ' + mode.label + '… ' + this.engine.progress()
-                : 'Compilar motor ' + mode.label,
-            disabled: this.engine.building() !== null || !this.hasFileSystem,
-            run: () => void this.engine.build(mode.id),
-          })),
+          // Compilar, solo donde hay compilador: la app instalada trae los dos
+          // motores ya compilados y no lo tiene.
+          ...(this.engine.canBuild()
+            ? [
+                separator,
+                ...this.engine.modes.map((mode) => ({
+                  kind: 'action' as const,
+                  label:
+                    this.engine.building() === mode.id
+                      ? 'Compilando motor ' + mode.label + '… ' + this.engine.progress()
+                      : 'Compilar motor ' + mode.label,
+                  disabled: this.engine.building() !== null || !this.hasFileSystem,
+                  run: () => void this.engine.build(mode.id),
+                })),
+              ]
+            : []),
         ],
       },
     ];

@@ -1,6 +1,8 @@
 {
   "name": "editor",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Editor NoCode de juegos isométricos 2.5D",
+  "author": "HoneyComb Engine",
   "main": "main.js",
   "scripts": {
     "ng": "ng",
@@ -12,7 +14,7 @@
     "electron": "electron .",
     "dev": "node scripts/dev.js",
     "icons": "node scripts/build-icons.mjs",
-    "electron:build": "ng build && electron-builder"
+    "installer": "node scripts/build-installer.js"
   },
   "private": true,
   "packageManager": "npm@12.0.2",
@@ -38,5 +40,87 @@
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
     "vitest": "^4.0.8"
+  },
+  "build": {
+    "appId": "HoneyComb.Engine.Editor",
+    "productName": "HoneyComb Engine",
+    "extraMetadata": {
+      "productName": "HoneyComb Engine"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "ipc/**/*",
+      "!ipc/tests{,/**/*}",
+      "public/favicon.ico",
+      "public/icon.png",
+      "dist/editor/browser/**/*",
+      "dist/editor/3rdpartylicenses.txt",
+      "!node_modules/@angular{,/**/*}",
+      "!node_modules/@fontsource{,/**/*}",
+      "!node_modules/rxjs{,/**/*}",
+      "!node_modules/tslib{,/**/*}"
+    ],
+    "extraResources": [
+      {
+        "from": "../engine/build",
+        "to": "engine/build",
+        "filter": ["engine.exe", "*.dll"]
+      },
+      {
+        "from": "../engine/build-release",
+        "to": "engine/build-release",
+        "filter": ["engine.exe", "*.dll"]
+      },
+      {
+        "from": "../schema",
+        "to": "schema"
+      },
+      {
+        "from": "../levels",
+        "to": "levels"
+      },
+      {
+        "from": "../assets",
+        "to": "assets"
+      },
+      {
+        "from": "../characters.json",
+        "to": "characters.json"
+      },
+      {
+        "from": "../items.json",
+        "to": "items.json"
+      }
+    ],
+    "electronLanguages": ["es", "es-419", "en-US"],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/favicon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "HoneyComb Engine",
+      "uninstallDisplayName": "HoneyComb Engine",
+      "installerLanguages": ["es_ES"],
+      "language": "3082",
+      "artifactName": "HoneyComb-Engine-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
