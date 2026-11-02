@@ -11,21 +11,33 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('honeycombProject', {
-  // Abrir un nivel con el dialogo. Uno de fuera de la carpeta del editor se
-  // importa (se copia adentro con sus assets): ver ipc/levels.js.
+  // Abrir un nivel con el dialogo. Uno de otro proyecto cambia a ese proyecto;
+  // uno suelto se importa al abierto (ver ipc/levels.js).
   open: () => ipcRenderer.invoke('project:open'),
 
-  // La carpeta del editor, que es siempre la raiz del proyecto (ver
-  // ipc/project-root.js): cual es, cambiarla, y mostrarla en el sistema.
+  // El proyecto abierto (ver ipc/project-root.js y ipc/workspace.js). Ningun
+  // canal recibe una ruta a la que cambiar: abrir es con el dialogo, o un
+  // reciente que el proceso principal ya tiene anotado.
   workspaceInfo: () => ipcRenderer.invoke('workspace:info'),
-  changeWorkspace: () => ipcRenderer.invoke('workspace:change'),
-  // Inicio: volver a una carpeta reciente. El proceso principal solo acepta
-  // las que ya se eligieron con el dialogo (ver ipc/project-root.js).
-  openRecentWorkspace: (root) => ipcRenderer.invoke('workspace:openRecent', root),
-  // Archivo > Nuevo proyecto: una carpeta vacia con la estructura y las
-  // imagenes basicas, que pasa a ser la carpeta del editor.
-  createProject: () => ipcRenderer.invoke('workspace:createProject'),
+  recentProjects: () => ipcRenderer.invoke('workspace:recentProjects'),
+  forgetRecentProject: (root) => ipcRenderer.invoke('workspace:forgetRecent', root),
+  openProject: () => ipcRenderer.invoke('workspace:openProject'),
+  openRecentProject: (root) => ipcRenderer.invoke('workspace:openRecent', root),
+  // Nuevo proyecto: la ubicacion se elige con el dialogo; el nombre (y si es
+  // el de ejemplo) lo manda la UI.
+  chooseProjectsLocation: () => ipcRenderer.invoke('workspace:chooseLocation'),
+  createProject: (options) => ipcRenderer.invoke('workspace:createProject', options),
+  closeProject: () => ipcRenderer.invoke('workspace:close'),
+  rememberLevel: (level) => ipcRenderer.invoke('workspace:rememberLevel', level),
   revealWorkspace: () => ipcRenderer.invoke('workspace:reveal'),
+  // Doble clic en un .honey con el editor abierto: llega el aviso (con el
+  // nombre del archivo, para preguntar), y la UI pide abrirlo cuando puede.
+  openRequestedProject: () => ipcRenderer.invoke('workspace:openRequested'),
+  onOpenRequested: (callback) => {
+    const listener = (_event, fileName) => callback(fileName);
+    ipcRenderer.on('workspace:open-requested', listener);
+    return () => ipcRenderer.removeListener('workspace:open-requested', listener);
+  },
   // El catalogo de eventos es del programa, no del proyecto: se lee de la instalacion.
   readEventCatalog: () => ipcRenderer.invoke('workspace:readEventCatalog'),
   ensureRoot: () => ipcRenderer.invoke('project:ensureRoot'),
@@ -56,7 +68,7 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   checkLevel: (contents) => ipcRenderer.invoke('level:check', contents),
 
   // Guardado automatico del nivel sin guardar, para recuperarlo si el editor
-  // se cierra de golpe (ver ipc/recovery.js). Fuera de la carpeta del editor.
+  // se cierra de golpe (ver ipc/recovery.js). Fuera del proyecto.
   writeRecovery: (payload) => ipcRenderer.invoke('recovery:write', payload),
   readRecovery: () => ipcRenderer.invoke('recovery:read'),
   clearRecovery: () => ipcRenderer.invoke('recovery:clear'),

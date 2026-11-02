@@ -1,9 +1,9 @@
 // =============================================================================
-// Archivos de la carpeta del editor: leer, escribir, listar, crear carpetas
+// Archivos del proyecto abierto: leer, escribir, listar, crear carpetas
 // =============================================================================
 //
-// Todas las rutas que llegan del renderer se resuelven relativas a la carpeta
-// del editor y se validan para que no puedan escapar de ella (ver
+// Todas las rutas que llegan del renderer se resuelven relativas al proyecto
+// abierto y se validan para que no puedan escapar de el (ver
 // ipc/project-root.js). El renderer no es confiable por definicion, aunque
 // contextIsolation ya limita mucho el riesgo -- esto es una segunda barrera
 // barata.
@@ -12,7 +12,7 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const { ipcMain } = require('electron');
 
-const { getProjectRoot, resolveInProject, ensureProjectRoot } = require('./project-root');
+const { getProjectRoot, resolveInProject } = require('./project-root');
 const { writeFileAtomic, describeWriteError } = require('./safe-write');
 const {
   TEXT_FILE_NAMES,
@@ -25,8 +25,9 @@ const {
 } = require('./media-types');
 
 function register() {
-  // La raiz es siempre la carpeta del editor: ya no se deduce ni se pregunta.
-  ipcMain.handle('project:ensureRoot', () => ensureProjectRoot());
+  // La raiz es la del proyecto abierto, o null sin proyecto: nunca se deduce
+  // ni se pregunta desde aca (el proyecto se elige en Inicio).
+  ipcMain.handle('project:ensureRoot', () => getProjectRoot());
 
   // Carpeta nueva dentro del proyecto (el boton "Nueva carpeta" del
   // explorador). Falla si ya existe: crear no debe parecer que anduvo cuando

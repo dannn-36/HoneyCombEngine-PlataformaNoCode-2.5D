@@ -11,9 +11,13 @@ import type {
   EngineStart,
   EngineStatus,
   GameExportResult,
+  CreatedProject,
   LevelImport,
+  NewProjectOptions,
   ProjectFileData,
+  ProjectInfo,
   ProjectNode,
+  RecentProject,
   RecoveryPayload,
   SoundImportResult,
   TextureWriteResult,
@@ -154,57 +158,94 @@ function parseLevel(contents: string, source: string): Level {
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
   /**
-   * La carpeta del editor, que es la raiz del proyecto (ver
-   * ipc/project-root.js). Null solo hasta que el editor termina de arrancar.
+   * El proyecto abierto (ver ipc/project-root.js): su carpeta, su .honey y el
+   * nombre del juego. Null sin proyecto: se elige o se crea en Inicio.
    */
+  readonly project = signal<ProjectInfo | null>(null);
+
+  /** La carpeta del proyecto abierto, o null. Todas las rutas del editor son relativas a ella. */
   readonly projectRoot = signal<string | null>(null);
 
-  /** Pregunta cual es la carpeta del editor, y que se copio a ella si se creo recien. */
+  /**
+   * Pasa a mostrar "info" como proyecto abierto (o ninguno). Lo conocido de los
+   * archivos del anterior se olvida: las rutas son relativas a la carpeta, y
+   * "levels/a.json" de un proyecto no dice nada del de otro.
+   */
+  setProject(info: ProjectInfo | null): void {
+    this.project.set(info);
+    this.projectRoot.set(info?.root ?? null);
+    this.knownText.clear();
+  }
+
+  /**
+   * El proyecto abierto al arrancar (el del doble clic en un .honey, o ninguno),
+   * donde se crean los proyectos nuevos, y si el del doble clic fallo.
+   */
   async workspaceInfo(): Promise<WorkspaceInfo> {
     const info = await window.honeycombProject.workspaceInfo();
-    this.projectRoot.set(info.root);
+    this.setProject(info.project);
     return info;
   }
 
-  /** Elige otra carpeta del editor con el dialogo. Null si se cancelo. */
-  async changeWorkspace(): Promise<string | null> {
-    const root = await window.honeycombProject.changeWorkspace();
-    if (root) {
-      this.projectRoot.set(root);
-      // Las rutas son relativas a la carpeta: lo conocido de la anterior no
-      // dice nada de los archivos de esta.
-      this.knownText.clear();
-    }
-    return root;
+  // Abrir y crear devuelven el proyecto pero NO lo ponen como abierto: eso lo
+  // hace quien llama (ProjectController.enterProject), despues de cerrar el
+  // nivel del proyecto anterior. Asi nada ve un rato el proyecto nuevo con el
+  // nivel del viejo.
+
+  /** Abrir proyecto con el dialogo (.honey, o una carpeta de antes). Null si se cancelo. */
+  async openProject(): Promise<ProjectInfo | null> {
+    return window.honeycombProject.openProject();
   }
 
-  /**
-   * Vuelve a una carpeta del editor reciente (pantalla de Inicio). Falla si el
-   * proceso principal no la tiene anotada o si ya no existe.
-   */
-  async openRecentWorkspace(root: string): Promise<string> {
-    const opened = await window.honeycombProject.openRecentWorkspace(root);
-    this.projectRoot.set(opened);
-    this.knownText.clear();
-    return opened;
+  /** Vuelve a un proyecto reciente. Null si era de antes y no se quiso convertir. */
+  async openRecentProject(root: string): Promise<ProjectInfo | null> {
+    return window.honeycombProject.openRecentProject(root);
   }
 
-  /** Abre la carpeta del editor en el explorador de archivos del sistema. */
+  /** El .honey de un doble clic con el editor abierto. Null si ya no hay ninguno pendiente. */
+  async openRequestedProject(): Promise<ProjectInfo | null> {
+    return window.honeycombProject.openRequestedProject();
+  }
+
+  /** Escucha los doble clic en un .honey con el editor abierto. Devuelve como dejar de escuchar. */
+  onOpenRequested(callback: (fileName: string) => void): () => void {
+    return window.honeycombProject.onOpenRequested(callback);
+  }
+
+  /** Crea un proyecto (vacio o de ejemplo) en la ubicacion de proyectos; queda abierto en el proceso principal. */
+  async createProject(options: NewProjectOptions): Promise<CreatedProject> {
+    return window.honeycombProject.createProject(options);
+  }
+
+  /** Elige con el dialogo donde se crean los proyectos. Null si se cancelo. */
+  async chooseProjectsLocation(): Promise<string | null> {
+    return window.honeycombProject.chooseProjectsLocation();
+  }
+
+  /** Cierra el proyecto: el editor queda sin proyecto. */
+  async closeProject(): Promise<void> {
+    await window.honeycombProject.closeProject();
+    this.setProject(null);
+  }
+
+  /** Los proyectos recientes, el ultimo primero. */
+  async recentProjects(): Promise<RecentProject[]> {
+    return window.honeycombProject.recentProjects();
+  }
+
+  /** Quita un proyecto de la lista de recientes. La carpeta no se toca. */
+  async forgetRecentProject(root: string): Promise<void> {
+    return window.honeycombProject.forgetRecentProject(root);
+  }
+
+  /** Anota el nivel que se esta editando, para volver a el al reabrir el proyecto. */
+  async rememberLevel(level: string): Promise<void> {
+    await window.honeycombProject.rememberLevel(level);
+  }
+
+  /** Abre la carpeta del proyecto en el explorador de archivos del sistema. */
   async revealWorkspace(): Promise<void> {
     return window.honeycombProject.revealWorkspace();
-  }
-
-  /**
-   * Archivo › Nuevo proyecto: una carpeta vacia con la estructura y las
-   * imagenes basicas, que pasa a ser la carpeta del editor. Null si se cancelo.
-   */
-  async createProject(): Promise<{ root: string; copied: string[] } | null> {
-    const created = await window.honeycombProject.createProject();
-    if (created) {
-      this.projectRoot.set(created.root);
-      this.knownText.clear();
-    }
-    return created;
   }
 
   /** Copia sonidos elegidos con el dialogo a assets/sounds/ (ver ipc/sounds.js). */
@@ -251,14 +292,14 @@ export class ProjectService {
     return window.honeycombProject.clearRecovery();
   }
 
-  /** Crea una carpeta dentro de la carpeta del editor. Falla si ya existe. */
+  /** Crea una carpeta dentro del proyecto. Falla si ya existe. */
   async createDir(relativePath: string): Promise<void> {
     return window.honeycombProject.createDir(relativePath);
   }
 
   // Las rutas de abajo ("levels/", "assets/textures/") son la convencion de
-  // carpetas de un proyecto HoneyComb, relativas a la carpeta del editor:
-  // main.js las resuelve contra ella y rechaza cualquiera que se salga.
+  // carpetas de un proyecto HoneyComb, relativas al proyecto abierto: el
+  // proceso principal las resuelve contra el y rechaza cualquiera que se salga.
 
   /** Nombres de archivo de los niveles del proyecto (solo .json). */
   async listLevels(): Promise<string[]> {
@@ -372,18 +413,42 @@ export class ProjectService {
    * elegirlo del desplegable del proyecto.
    *
    * El dialogo arranca en levels/, pero se puede elegir un .json de cualquier
-   * parte: ese se importa (se copia a levels/ con sus texturas y sonidos) y lo
-   * que vuelve es la copia. "relativePath" es siempre relativa a la carpeta del
-   * editor. Null si se cancelo.
+   * parte. Uno de otro proyecto cambia el editor a ese proyecto ("project"
+   * viene con el); uno suelto se importa (se copia a levels/ con sus texturas
+   * y sonidos) y lo que vuelve es la copia. "relativePath" es siempre relativa
+   * al proyecto en que queda abierto. Null si se cancelo.
+   *
+   * Si cambio de proyecto, el texto del nivel NO queda anotado como conocido:
+   * quien llama pone el proyecto nuevo (setProject, que olvida lo conocido) y
+   * despues lo anota con rememberOpened.
    */
-  async openLevelFile(): Promise<{ relativePath: string; level: Level; imported?: LevelImport } | null> {
+  async openLevelFile(): Promise<{
+    relativePath: string;
+    contents: string;
+    level: Level;
+    imported?: LevelImport;
+    project?: ProjectInfo;
+  } | null> {
     const result = await window.honeycombProject.open();
     if (result.canceled) {
       return null;
     }
     const level = parseLevel(result.contents, result.relativePath);
-    this.knownText.set(result.relativePath, result.contents);
-    return { relativePath: result.relativePath, level, imported: result.imported };
+    if (!result.project) {
+      this.knownText.set(result.relativePath, result.contents);
+    }
+    return {
+      relativePath: result.relativePath,
+      contents: result.contents,
+      level,
+      imported: result.imported,
+      project: result.project,
+    };
+  }
+
+  /** Anota el texto con que se abrio un nivel, para darse cuenta al guardar si cambio por fuera. */
+  rememberOpened(relativePath: string, contents: string): void {
+    this.knownText.set(relativePath, contents);
   }
 
   /**
@@ -470,8 +535,8 @@ export class ProjectService {
   }
 
   /**
-   * La raiz del proyecto, que es siempre la carpeta del editor. Lo usa lo que
-   * necesita escribir en el proyecto antes de que termine de arrancar.
+   * La carpeta del proyecto abierto, preguntandola al proceso principal. Null
+   * sin proyecto (nunca abre ni crea uno).
    */
   async ensureRoot(): Promise<string | null> {
     const root = await window.honeycombProject.ensureRoot();
@@ -584,7 +649,7 @@ export class ProjectService {
     return window.honeycombProject.revealExport();
   }
 
-  /** El catalogo de eventos es del programa: se lee de la instalacion, no de la carpeta del editor. */
+  /** El catalogo de eventos es del programa: se lee de la instalacion, no del proyecto. */
   async readEventCatalog(): Promise<EventCatalog> {
     const contents = await window.honeycombProject.readEventCatalog();
     return JSON.parse(contents) as EventCatalog;

@@ -331,7 +331,7 @@ export class App {
   /** preload.js expone el control de la ventana solo bajo Electron. */
   readonly hasWindowApi = typeof window !== 'undefined' && 'honeycombWindow' in window;
 
-  readonly status = signal('Listo. Abre una carpeta de proyecto, o crea un nivel y usa Guardar como.');
+  readonly status = signal('Listo. Crea o abre un proyecto desde Inicio para empezar.');
 
   /** Hay cambios sin guardar. Lo enciende cualquier edicion; solo save() lo apaga. */
   readonly dirty = signal(false);
@@ -632,8 +632,8 @@ export class App {
   });
 
   /**
-   * El nivel como documento: abrir, crear, guardar, ejecutar. Ver
-   * project/project.controller.ts.
+   * El proyecto, y el nivel como documento: abrir, crear, guardar, ejecutar.
+   * Ver project/project.controller.ts.
    */
   readonly proj: ProjectController = new ProjectController({
     note: (message) => this.note(message),
@@ -647,9 +647,10 @@ export class App {
     prompt: this.prompt,
     engine: this.engine,
     sounds: this.snd,
+    showStart: () => this.start.show(),
   });
 
-  /** La pantalla de Inicio con los niveles recientes. Ver start/start.controller.ts. */
+  /** La pantalla de Inicio con los proyectos recientes. Ver start/start.controller.ts. */
   readonly start: StartController = new StartController({
     proj: this.proj,
     hasFileSystem: this.hasFileSystem,
@@ -673,10 +674,15 @@ export class App {
   readonly json: JsonViewController = new JsonViewController((message) => this.note(message));
 
   constructor() {
-    // La carpeta del editor se abre sola al arrancar: ya no hay que elegir
-    // ninguna (ver ipc/project-root.js). Despues, la pantalla de Inicio con
-    // los niveles recientes, como en Premiere o GameMaker.
+    // Al arrancar no hay proyecto (salvo que el editor se abriera con doble
+    // clic en un .honey): se elige o se crea en Inicio, como en Godot o Unity.
     void this.proj.openWorkspace().then(() => this.start.openAtStartup());
+
+    // El juego abierto en el titulo de la ventana (y en la barra de tareas).
+    effect(() => {
+      const name = this.project.project()?.name;
+      document.title = name ? `${name} — HoneyComb Engine` : 'HoneyComb Engine — Editor';
+    });
     // Para marcar en la barra el motor que todavia no esta compilado.
     void this.engine.refresh();
 
@@ -830,6 +836,8 @@ export class App {
   readonly menus = computed<MenuDef[]>(() => {
     const separator: MenuLeaf = { kind: 'separator' };
     const nothingSelected = this.selectionCount() === 0;
+    // En el editor de escritorio, sin proyecto no hay donde crear ni guardar.
+    const noProject = this.hasFileSystem && !this.proj.hasProject();
 
     return [
       {
@@ -837,23 +845,34 @@ export class App {
         label: 'Archivo',
         items: [
           { kind: 'action', label: 'Inicio…', disabled: !this.hasFileSystem, run: () => this.start.show() },
+          { kind: 'action', label: 'Nuevo proyecto…', disabled: !this.hasFileSystem, run: () => this.proj.newProject() },
+          { kind: 'action', label: 'Abrir proyecto…', disabled: !this.hasFileSystem, run: () => void this.proj.openProject() },
           {
             kind: 'submenu',
-            label: 'Abrir reciente',
-            emptyLabel: 'Todavía no hay niveles recientes',
+            label: 'Proyectos recientes',
+            emptyLabel: 'Todavía no hay proyectos recientes',
             items: this.start.rows().map((row) => ({
               kind: 'action' as const,
-              label: row.here ? row.title : row.title + '  ·  ' + row.folder,
+              label: row.title,
+              checked: row.here,
+              disabled: !row.entry.exists,
               run: () => void this.start.openRecent(row.entry),
             })),
           },
+          {
+            kind: 'action',
+            label: 'Mostrar carpeta del proyecto',
+            disabled: noProject,
+            run: () => void this.proj.revealWorkspace(),
+          },
+          { kind: 'action', label: 'Cerrar proyecto', disabled: noProject, run: () => void this.proj.closeProject() },
           separator,
-          { kind: 'action', label: 'Nuevo nivel…', shortcut: 'Ctrl+N', run: () => this.proj.newLevel() },
+          { kind: 'action', label: 'Nuevo nivel…', shortcut: 'Ctrl+N', disabled: noProject, run: () => this.proj.newLevel() },
           { kind: 'action', label: 'Abrir nivel…', shortcut: 'Ctrl+O', run: () => void this.proj.openLevelFile() },
           {
             kind: 'submenu',
             label: 'Abrir nivel del proyecto',
-            emptyLabel: 'Sin proyecto abierto, o sin niveles en levels/',
+            emptyLabel: noProject ? 'Sin proyecto abierto' : 'El proyecto no tiene niveles en levels/',
             items: this.proj.levelFiles().map((file) => ({
               kind: 'action' as const,
               label: file,
@@ -862,12 +881,8 @@ export class App {
             })),
           },
           separator,
-          { kind: 'action', label: 'Configuración del juego…', run: () => void this.game.open() },
-          { kind: 'action', label: 'Exportar juego…', run: () => void this.proj.exportGame() },
-          separator,
-          { kind: 'action', label: 'Nuevo proyecto…', disabled: !this.hasFileSystem, run: () => void this.proj.newProject() },
-          { kind: 'action', label: 'Mostrar carpeta del editor', run: () => void this.proj.revealWorkspace() },
-          { kind: 'action', label: 'Cambiar carpeta del editor…', run: () => void this.proj.changeWorkspace() },
+          { kind: 'action', label: 'Configuración del juego…', disabled: noProject, run: () => void this.game.open() },
+          { kind: 'action', label: 'Exportar juego…', disabled: noProject, run: () => void this.proj.exportGame() },
           separator,
           {
             kind: 'action',
@@ -875,14 +890,21 @@ export class App {
             // boton "Guardar *" del topbar.
             label: this.dirty() ? 'Guardar  ●' : 'Guardar',
             shortcut: 'Ctrl+S',
+            disabled: noProject,
             run: () => void this.proj.save(),
           },
-          { kind: 'action', label: 'Guardar como…', shortcut: 'Ctrl+Shift+S', run: () => void this.proj.saveAs() },
+          {
+            kind: 'action',
+            label: 'Guardar como…',
+            shortcut: 'Ctrl+Shift+S',
+            disabled: noProject,
+            run: () => void this.proj.saveAs(),
+          },
           separator,
           {
             kind: 'action',
             label: 'Importar imágenes…',
-            disabled: this.converter.busy(),
+            disabled: noProject || this.converter.busy(),
             run: () => void this.converter.openAndAdd('files'),
           },
           separator,
@@ -1325,6 +1347,13 @@ export class App {
       return;
     }
     // Un dialogo abierto se lleva todos los atajos: solo responde a Escape.
+    // El de proyecto nuevo va primero: se abre encima de Inicio.
+    if (this.proj.showNewProjectDialog()) {
+      if (event.key === 'Escape') {
+        this.proj.cancelNewProject();
+      }
+      return;
+    }
     if (this.start.open()) {
       if (event.key === 'Escape') {
         this.start.close();

@@ -25,7 +25,7 @@ export interface OpenFile {
 /**
  * El explorador de archivos del proyecto.
  *
- * Muestra la carpeta del editor entera (ver ipc/project-root.js), como el
+ * Muestra la carpeta del proyecto abierto entera (ver ipc/project-root.js), como el
  * explorador de VS Code, y
  * deja ABRIR lo que encuentra: un nivel se carga en el viewport, una textura
  * queda elegida para colocar, y cualquier otro archivo se muestra en el visor
@@ -113,7 +113,7 @@ export class ExplorerController {
    */
   async refreshTree(): Promise<void> {
     if (!this.project.projectRoot()) {
-      this.note('La carpeta del editor todavia no esta lista.');
+      this.note('No hay ningún proyecto abierto.');
       return;
     }
     try {
@@ -130,7 +130,7 @@ export class ExplorerController {
     }
   }
 
-  /** Carga la raiz del arbol. Se llama al abrir (o cambiar) la carpeta del editor. */
+  /** Carga la raiz del arbol. Se llama al abrir, cambiar o cerrar el proyecto. */
   async loadRoot(): Promise<void> {
     this.treeChildren.set({ '': await this.project.listEntries('') });
     this.expandedDirs.set({});
@@ -149,7 +149,7 @@ export class ExplorerController {
       label: 'Nombre',
       value: 'nueva_carpeta',
       confirmLabel: 'Crear',
-      hint: 'Se crea en ' + (parent ? parent + '/' : 'la raíz') + ' de la carpeta del editor.',
+      hint: 'Se crea en ' + (parent ? parent + '/' : 'la raíz') + ' del proyecto.',
     });
     if (answer === null) {
       return;

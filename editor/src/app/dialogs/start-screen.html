@@ -1,5 +1,6 @@
-<!-- Inicio: lo primero que se ve al abrir el editor. A la izquierda crear o
-     abrir; a la derecha los niveles recientes. Ver start/start.controller.ts. -->
+<!-- Inicio: donde se elige el proyecto. A la izquierda crear o abrir; a la
+     derecha los proyectos recientes. Sin proyecto abierto no se puede cerrar.
+     Ver start/start.controller.ts. -->
 @if (start.open()) {
   <div class="modal-backdrop" (click)="start.close()">
     <section class="modal start" role="dialog" aria-modal="true" aria-labelledby="start-title"
@@ -9,65 +10,76 @@
           <img class="start__logo" [src]="brandLogo()" alt="" />
           <h2 id="start-title">HoneyComb</h2>
         </div>
-        <button class="icon-button" type="button" title="Cerrar (Esc)" aria-label="Cerrar" (click)="start.close()">
-          <svg hcIcon="x"></svg>
-        </button>
+        @if (start.canClose()) {
+          <button class="icon-button" type="button" title="Cerrar (Esc)" aria-label="Cerrar" (click)="start.close()">
+            <svg hcIcon="x"></svg>
+          </button>
+        }
       </div>
 
       <div class="start__body">
         <nav class="start__actions" aria-label="Empezar">
-          <h3 class="start__label">Nivel</h3>
-          <button class="start__action" type="button" (click)="start.run('nuevo-nivel')">
-            <svg hcIcon="file-plus"></svg>Nuevo nivel…
-          </button>
-          <button class="start__action" type="button" (click)="start.run('abrir-nivel')">
-            <svg hcIcon="folder-open"></svg>Abrir nivel…
-          </button>
-
           <h3 class="start__label">Proyecto</h3>
           <button class="start__action" type="button" (click)="start.run('nuevo-proyecto')"
-                  title="Una carpeta vacía con la estructura y las imágenes básicas">
+                  title="Un juego nuevo, en su propia carpeta">
             <svg hcIcon="folder-plus"></svg>Nuevo proyecto…
           </button>
-          <button class="start__action" type="button" (click)="start.run('abrir-carpeta')"
-                  title="Elegir otra carpeta del editor">
-            <svg hcIcon="folder"></svg>Abrir carpeta…
+          <button class="start__action" type="button" (click)="start.run('abrir-proyecto')"
+                  title="Elegir el archivo .honey de un juego">
+            <svg hcIcon="folder-open"></svg>Abrir proyecto…
+          </button>
+          <button class="start__action" type="button" (click)="start.run('ejemplo')"
+                  title="Una copia del juego de muestra, para ver cómo está hecho">
+            <svg hcIcon="gem"></svg>Proyecto de ejemplo…
           </button>
 
-          @if (start.currentFolder(); as folder) {
+          <h3 class="start__label">Nivel</h3>
+          @if (start.currentProject()) {
+            <button class="start__action" type="button" (click)="start.run('nuevo-nivel')">
+              <svg hcIcon="file-plus"></svg>Nuevo nivel…
+            </button>
+          }
+          <button class="start__action" type="button" (click)="start.run('abrir-nivel')"
+                  title="Un nivel de cualquier proyecto: el editor se cambia a ese proyecto">
+            <svg hcIcon="map"></svg>Abrir nivel…
+          </button>
+
+          @if (start.currentProject(); as name) {
             <p class="start__current" [title]="proj.levelFiles().length + ' niveles en levels/'">
-              Carpeta abierta<br /><b>{{ folder }}</b>
+              Proyecto abierto<br /><b>{{ name }}</b>
             </p>
           }
         </nav>
 
         <div class="start__list">
           @if (start.rows().length > 0) {
-            <h3 class="start__label">Recientes</h3>
-            <ul class="recent" aria-label="Niveles recientes">
-              @for (row of start.rows(); track row.entry.root + '|' + row.entry.level) {
+            <h3 class="start__label">Proyectos recientes</h3>
+            <ul class="recent" aria-label="Proyectos recientes">
+              @for (row of start.rows(); track row.entry.root) {
                 @let failed = start.failure()?.entry === row.entry ? start.failure() : null;
-                <li class="recent__row" [class.is-failed]="failed">
+                <li class="recent__row" [class.is-failed]="failed" [class.is-missing]="!row.entry.exists">
                   <button class="recent__open" type="button" [disabled]="start.busy() !== null"
                           [attr.aria-busy]="start.busy() === row.entry"
                           (click)="start.openRecent(row.entry)"
-                          [title]="'Abrir ' + row.entry.level + ' de ' + row.entry.root">
-                    <svg class="recent__icon" hcIcon="map"></svg>
+                          [title]="'Abrir ' + row.entry.root">
+                    <svg class="recent__icon" hcIcon="folder"></svg>
                     <span class="recent__text">
-                      <span class="recent__title">{{ row.title }}</span>
-                      <span class="recent__path">
+                      <span class="recent__title">
+                        {{ row.title }}
                         @if (row.here) {
-                          <span class="recent__here">esta carpeta</span>
-                        } @else {
-                          {{ row.folder }}
+                          <span class="recent__tag recent__tag--here">abierto</span>
+                        } @else if (!row.entry.exists) {
+                          <span class="recent__tag">no se encuentra</span>
+                        } @else if (row.entry.legacy) {
+                          <span class="recent__tag" title="Es de una versión anterior: al abrirlo se ofrece convertirlo en proyecto">sin .honey</span>
                         }
-                        · {{ row.entry.root }}
                       </span>
+                      <span class="recent__path">{{ row.entry.root }}</span>
                     </span>
                     <span class="recent__when">{{ start.busy() === row.entry ? 'Abriendo…' : row.when }}</span>
                   </button>
                   <button class="ibtn recent__forget" type="button" (click)="start.forget(row.entry)"
-                          title="Quitar de la lista (el archivo no se borra)" aria-label="Quitar de la lista">
+                          title="Quitar de la lista (la carpeta no se borra)" aria-label="Quitar de la lista">
                     <svg hcIcon="x"></svg>
                   </button>
                   @if (failed) {
@@ -78,37 +90,25 @@
                 </li>
               }
             </ul>
-          } @else if (start.folderLevels().length > 0) {
-            <!-- La primera vez no hay recientes: los niveles de la carpeta abierta. -->
-            <h3 class="start__label">Niveles de esta carpeta</h3>
-            <ul class="recent" aria-label="Niveles de esta carpeta">
-              @for (level of start.folderLevels(); track level) {
-                <li class="recent__row">
-                  <button class="recent__open" type="button" (click)="start.openFolderLevel(level)">
-                    <svg class="recent__icon" hcIcon="map"></svg>
-                    <span class="recent__text">
-                      <span class="recent__title">{{ levelTitle(level) }}</span>
-                      <span class="recent__path">levels/{{ level }}</span>
-                    </span>
-                  </button>
-                </li>
-              }
-            </ul>
           } @else {
             <div class="empty">
-              <p class="empty__title">Todavía no hay niveles recientes</p>
-              <p>Los niveles que abras o guardes aparecen aquí, para seguir donde los dejaste.</p>
+              <p class="empty__title">Todavía no hay proyectos</p>
+              <p>Cada juego es un proyecto con su propia carpeta. Crea uno nuevo, abre uno que ya tengas,
+                 o empieza por el proyecto de ejemplo para ver cómo está hecho.</p>
             </div>
           }
         </div>
       </div>
 
       <div class="modal__actions start__foot">
-        <label class="check">
-          <input type="checkbox" [checked]="start.showOnStartup()" (change)="start.setShowOnStartup(checked($event))" />
-          <span>Mostrar al iniciar</span>
-        </label>
-        <button class="btn" type="button" (click)="start.close()">Seguir sin abrir</button>
+        @if (start.canClose()) {
+          <span></span>
+          <button class="btn" type="button" (click)="start.close()">
+            {{ start.currentProject() ? 'Seguir con «' + start.currentProject() + '»' : 'Cerrar' }}
+          </button>
+        } @else {
+          <span class="start__hint">Elige o crea un proyecto para empezar.</span>
+        }
       </div>
     </section>
   </div>

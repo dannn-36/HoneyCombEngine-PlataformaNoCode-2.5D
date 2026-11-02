@@ -74,7 +74,7 @@ El piso se arma en tres capas, y cada una pisa a la anterior: **todo el nivel**,
 
 #### Configuración del juego
 
-*Archivo › Configuración del juego…* arma lo que es del **juego** y no de un nivel. Se guarda en `game.json`, en la raíz de la carpeta del editor (formato en `schema/game.schema.json`); sin ese archivo el motor arranca como siempre. Cada pestaña tiene su vista previa a la proporción de la ventana del juego:
+*Archivo › Configuración del juego…* arma lo que es del **juego** y no de un nivel. Se guarda en `game.json`, en la raíz del proyecto (formato en `schema/game.schema.json`); sin ese archivo el motor arranca como siempre. Cada pestaña tiene su vista previa a la proporción de la ventana del juego:
 
 | Pestaña | Qué se elige |
 | :--- | :--- |
@@ -94,7 +94,7 @@ El piso se arma en tres capas, y cada una pisa a la anterior: **todo el nivel**,
 | :--- | :--- |
 | `<Juego>.exe` | El motor **Release** renombrado. Abre sin ventana de consola, arranca en la portada y lleva el **ícono del juego** (el de *Configuración del juego › General › Ícono*; sin ícono, el de HoneyComb). |
 | `*.dll` | Lo que necesita para correr en una PC sin nada instalado (SDL2 y el runtime de MinGW). |
-| `game.json`, `levels/`, `assets/` | Todo lo de la carpeta del editor, menos los respaldos `.bak` y los temporales. |
+| `game.json`, `levels/`, `assets/` | Todo lo del proyecto, menos los respaldos `.bak` y los temporales. |
 | `LEEME.txt`, `AVISOS-DE-TERCEROS.txt` | Cómo se juega, y las licencias de raylib, SDL2 y nlohmann-json. |
 | `honeycomb-export.json` | La marca de juego exportado (ver `engine/game/ExportedGame.hpp`). |
 
@@ -127,8 +127,8 @@ Además de los de combate, objetos y puzzles, hay bloques para armar escenas:
 
 #### Guardado: lo que no se pierde
 
-- **Guardado automático.** Con cambios sin guardar, el editor guarda una copia del nivel cada pocos segundos fuera de la carpeta del editor (en la carpeta de datos de Electron). Si se cierra de golpe, al volver a abrirlo pregunta si se quieren recuperar los cambios; se abren sin guardar, y guardarlos sigue siendo decisión de quien edita. Elegir *Salir sin guardar* o recargar descartando los cambios borra la copia.
-- **Escritura segura.** Los niveles, `game.json`, `items.json`, `characters.json`, las texturas que guarda la herramienta de sprites y la configuración del editor (`honeycomb-settings.json`, la carpeta que se usa) se escriben primero en un temporal y recién después reemplazan al archivo, con la versión anterior en `.bak`. Si `honeycomb-settings.json` se rompe, el editor usa el `.bak` y no se olvida de la carpeta. Los `.tmp` que quedan de un guardado cortado se borran al arrancar.
+- **Guardado automático.** Con cambios sin guardar, el editor guarda una copia del nivel cada pocos segundos fuera del proyecto (en la carpeta de datos de Electron, una por proyecto). Si se cierra de golpe, al volver a abrir ese proyecto pregunta si se quieren recuperar los cambios; se abren sin guardar, y guardarlos sigue siendo decisión de quien edita. Elegir *Salir sin guardar* o recargar descartando los cambios borra la copia.
+- **Escritura segura.** Los niveles, `game.json`, `items.json`, `characters.json`, las texturas que guarda la herramienta de sprites y la configuración del editor (`honeycomb-settings.json`: los proyectos recientes y dónde se crean los nuevos) se escriben primero en un temporal y recién después reemplazan al archivo, con la versión anterior en `.bak`. Si `honeycomb-settings.json` se rompe, el editor usa el `.bak` y no se olvida de los proyectos recientes. Los `.tmp` que quedan de un guardado cortado se borran al abrir el proyecto.
 - **Cambios de afuera.** Si `game.json`, `items.json`, `characters.json` o un nivel cambiaron en el disco desde que el editor los leyó (otro programa, git, una copia del proyecto), guardar pregunta antes de pisarlos.
 - **Revisión contra el schema.** Al guardar un nivel, el editor lo revisa contra `schema/level.schema.json` y avisa en la Consola lo que el motor rechazaría al cargarlo («a entities[3] le falta "position"»). Solo avisa: el nivel ya se guardó.
 - **Un objeto en todos los niveles.** Cada nivel guarda su propia copia de los objetos que usa. En *Combate › Objetos y armas…*, *Actualizar en todos los niveles* pone al día esa copia en cada nivel que la tiene (el abierto queda sin guardar, para no pisar lo que se está editando).
@@ -136,11 +136,18 @@ Además de los de combate, objetos y puzzles, hay bloques para armar escenas:
 
 **Guía del editor.** En *Nivel › Guía del editor* (barra derecha) se prende una grilla de referencia que sigue unas casillas más allá del nivel (cuántas, y qué tan visible, se elige ahí), para ver el espacio donde se pueden dibujar salas y ubicar cosas. Es solo del editor: no se guarda en el nivel, no cambia su tamaño ni lo que ve el motor, y la elección se recuerda en el equipo, como el tema.
 
-**Proyecto nuevo.** *Archivo › Nuevo proyecto…* pide una carpeta vacía, le arma la estructura (`levels/`, `assets/textures/`, `assets/sounds/`) con las imágenes básicas (piso, pared, jugador y figuras) y pasa a trabajar ahí, con el diálogo de nivel nuevo abierto.
+**Proyectos.** Cada juego es un **proyecto**: una carpeta con un archivo `<Nombre>.honey` (ver sección 7.2). Al abrir el editor se elige en *Inicio* (proyectos recientes, *Nuevo proyecto…*, *Abrir proyecto…* o *Proyecto de ejemplo…*), y sin proyecto abierto el editor no lee ni escribe nada.
+
+- *Nuevo proyecto…* pide el nombre del juego y crea `<ubicación>/<Nombre>/` con su `.honey`, `game.json`, `levels/` y `assets/` con las imágenes básicas (piso, pared, jugador y figuras), y abre el diálogo de nivel nuevo. La ubicación es `Documentos/Juegos HoneyComb` hasta que se elija otra con *Elegir…*.
+- *Proyecto de ejemplo…* crea un proyecto igual, pero con una copia del juego de muestra (`HoneyComb_Showcase`) como nivel inicial.
+- *Abrir proyecto…* abre un `.honey`. Una carpeta de antes de los proyectos (con `levels/` pero sin `.honey`) se puede elegir por su `game.json` o uno de sus niveles: el editor ofrece convertirla, que solo agrega el `.honey`.
+- *Abrir nivel…* con un nivel de **otro** proyecto cambia el editor a ese proyecto (no lo copia). Un nivel suelto, que no es de ningún proyecto, se importa al abierto.
+- *Nuevo nivel…* escribe el archivo en `levels/` del proyecto abierto en el momento, y si el juego todavía no tenía nivel inicial, este pasa a serlo.
+- El editor recuerda el último nivel editado de cada proyecto y lo abre al volver. Doble clic en un `.honey` (con la app instalada) abre ese proyecto, también con el editor ya abierto.
 
 **Íconos y logo.** El editor, el motor y el juego exportado tienen el ícono de HoneyComb (la abeja en el hexágono) en vez del de Electron o el genérico de Windows. Salen de dos imágenes: la oscura, `editor/public/favicon.png`, para el ícono de la ventana del editor, del `.exe` del motor y de su ventana, y para el logo de la barra de menús en el tema oscuro; la clara, `tools/brand/logo-claro.png`, para el logo en el tema claro (*Pastel claro*). `node tools/gen-icon.mjs` las recorta al hexágono (lo de afuera queda transparente) y escribe `editor/public/favicon.ico`, `icon.png`, `logo-oscuro.png`, `logo-claro.png` y `engine/resources/honeycomb.ico`, que entra al `.exe` con `engine/resources/engine.rc`. Un motor compilado antes de este cambio no tiene ícono: hay que recompilarlo para que el juego exportado pueda llevar el suyo.
 
-Los niveles, imágenes y bibliotecas que crees con el editor se guardan en **`Documentos/HoneyComb`** (la *carpeta del editor*, ver sección 7.2), no en el repositorio. Se puede cambiar desde *Archivo › Cambiar carpeta del editor…* y abrir con *Archivo › Mostrar carpeta del editor*.
+Los niveles, imágenes y bibliotecas que crees con el editor se guardan en la carpeta de **cada proyecto** (ver sección 7.2), no en el repositorio. *Archivo › Mostrar carpeta del proyecto* la abre en el explorador.
 
 El asistente **no reemplaza** la guía de abajo: si prefieres montar el entorno paso a paso, o algo falla y quieres entender qué hace cada pieza, las secciones 1 a 9 siguen siendo la referencia completa.
 
@@ -399,7 +406,7 @@ Al empezar se evaluaron estas librerías. Ninguna terminó usándose, y se quita
 
 Antes de construir canvas/paneles, el editor tiene una capa de lógica sin UI, espejo del mismo contrato de datos que usa el runtime C++:
 
-- **`main.js` / `preload.js` / `ipc/`** — API de proyecto vía `contextBridge`. La raíz es siempre la **carpeta del editor** (ver sección 7.2): ya no se elige ni se deduce. `readFile`/`writeFile`/`listDir`/`createDir` usan rutas relativas a ella, y el proceso principal (`ipc/project-root.js`) valida que ninguna se salga antes de tocar el disco. Abrir un nivel de afuera o importar una imagen los **copia** adentro.
+- **`main.js` / `preload.js` / `ipc/`** — API de proyecto vía `contextBridge`. La raíz es siempre el **proyecto abierto** (ver sección 7.2), y la UI nunca manda una ruta a la que cambiar: se elige con un diálogo del sistema, o es un proyecto reciente que anotó el proceso principal. `readFile`/`writeFile`/`listDir`/`createDir` usan rutas relativas a ella, y el proceso principal (`ipc/project-root.js`) valida que ninguna se salga antes de tocar el disco. Importar una imagen o un nivel suelto los **copia** adentro.
 - **`src/app/models/`** — interfaces TypeScript espejo de `level.schema.json` y `event_catalog.json` (`level.model.ts`, `event-catalog.model.ts`). Cualquier campo nuevo se agrega primero al schema, y aquí y en `LevelLoader.cpp` en simultáneo.
 - **`src/app/core/iso-projection.ts`** — espejo exacto en TypeScript de `IsoGridSystem::GridToScreen`/`ScreenToGrid` (C++), para que el canvas ubique las entidades en pantalla de la misma forma que el runtime.
 - **`src/app/services/`**:
@@ -416,7 +423,7 @@ El panel de eventos que se construya sobre `CatalogService` debe generar sus for
 Hay dos carpetas distintas, y no hay que confundirlas:
 
 - **El repositorio** (lo que está en git): el código del editor y del motor, los schemas y el contenido de ejemplo.
-- **La carpeta del editor**: donde el editor guarda y lee **todo** el trabajo del diseñador. Por defecto es `Documentos/HoneyComb`, y se cambia desde *Archivo › Cambiar carpeta del editor…*. El editor nunca lee ni escribe fuera de ella: lo que viene de afuera (una imagen, un nivel de Descargas) se **copia** adentro, y el original no se toca.
+- **Cada proyecto**: la carpeta de un juego, con su `.honey`. El editor trabaja dentro del proyecto abierto y nunca lee ni escribe fuera de él: lo que viene de afuera (una imagen, un nivel suelto de Descargas) se **copia** adentro, y el original no se toca.
 
 ### 7.1 El repositorio
 
@@ -463,26 +470,28 @@ Hay dos carpetas distintas, y no hay que confundirlas:
 │   └── event_catalog.json           # Catálogo de triggers/condiciones/acciones
 ├── docs/architecture/             # Diagramas PlantUML (contexto, componentes, secuencias)
 ├── tools/                         # Generadores de niveles y sprites, asistente de instalación
-├── assets/                        # Contenido de ejemplo (se copia a la carpeta del editor la primera vez)
-├── levels/                        # Niveles de ejemplo (ídem)
+├── assets/                        # Contenido de ejemplo (lo copia Proyecto de ejemplo…)
+├── levels/                        # Niveles de ejemplo y de prueba (el de ejemplo es HoneyComb_Showcase.json)
 └── characters.json / items.json   # Bibliotecas de ejemplo (ídem)
 ```
 
-### 7.2 La carpeta del editor
+### 7.2 Un proyecto
 
 ```
-Documentos/HoneyComb/              # o la que se elija en Archivo › Cambiar carpeta del editor…
-├── levels/                        # Los niveles (.json). Guardar y Guardar como escriben acá
-├── assets/
-│   ├── textures/                  # Imágenes ya convertidas a PNG, con nombres que el motor puede abrir
-│   └── sounds/
-├── characters.json                # Personajes configurados
-├── items.json                     # Biblioteca de objetos
-├── game.json                      # Configuración del juego: ventana, portada, HUD, variables
-└── saves/partida.json             # La partida guardada (la escribe el juego, no el editor)
+Documentos/Juegos HoneyComb/       # La ubicación de los proyectos nuevos (se cambia con Elegir… al crear uno)
+└── Mi juego/
+    ├── Mi juego.honey             # Marca la carpeta como proyecto: {"format": 1, "name": "Mi juego"}
+    ├── game.json                  # Configuración del juego: ventana, portada, HUD, variables, nivel inicial
+    ├── levels/                    # Los niveles (.json). Nuevo nivel, Guardar y Guardar como escriben acá
+    ├── assets/
+    │   ├── textures/              # Imágenes ya convertidas a PNG, con nombres que el motor puede abrir
+    │   └── sounds/
+    ├── characters.json            # Personajes configurados
+    ├── items.json                 # Biblioteca de objetos
+    └── saves/partida.json         # La partida guardada (la escribe el juego, no el editor)
 ```
 
-La primera vez que se abre el editor, si esta carpeta no existe, se crea con una **copia** de `levels/`, `assets/`, `characters.json` e `items.json` del repositorio. El runtime no necesita saber nada de esto: busca los assets en `<nivel>/../../assets`, así que un nivel guardado en `levels/` corre tal cual. La carpeta elegida se recuerda en `honeycomb-settings.json`, dentro de los datos de Electron.
+El `.honey` es del editor: el runtime no lo lee. Busca los assets en `<nivel>/../../assets`, así que un nivel guardado en `levels/` corre tal cual, con o sin `.honey`. Los proyectos recientes, el último nivel editado de cada uno y la ubicación de los proyectos nuevos se recuerdan en `honeycomb-settings.json`, dentro de los datos de Electron. Las carpetas que usaba la versión anterior (la "carpeta del editor") aparecen en Inicio como recientes *sin .honey*, y al abrirlas se ofrece convertirlas.
 
 ---
 

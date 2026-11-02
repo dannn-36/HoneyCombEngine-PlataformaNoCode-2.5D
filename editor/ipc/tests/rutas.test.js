@@ -23,6 +23,12 @@ const fs = require('node:fs');
 
 const { prepararEntorno, errorDe } = require('./support/entorno');
 
+/** true si "target" esta dentro de "folder". */
+const isInside = (folder, target) => {
+  const relative = path.relative(folder, target);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+};
+
 /** Las rutas tramposas, todas hacia "<base>/fuera/<archivo>". */
 function rutasTramposas(entorno, archivo = 'secreto.txt') {
   const absoluta = path.join(entorno.fuera, archivo);
@@ -219,13 +225,30 @@ describe('los handlers de rutas no aceptan tipos inesperados', () => {
 });
 
 describe('los canales sin rutas no usan lo que mande la UI', () => {
-  it('workspace:change no cambia la carpeta a una ruta mandada por la UI', async () => {
-    const resultado = await entorno.invocar('workspace:change', entorno.fuera);
+  it('workspace:openProject no cambia de proyecto a una ruta mandada por la UI', async () => {
+    fs.writeFileSync(path.join(entorno.fuera, 'trampa.honey'), '{}');
+    const resultado = await entorno.invocar('workspace:openProject', path.join(entorno.fuera, 'trampa.honey'));
     assert.equal(resultado, null, 'sin dialogo no hay cambio');
     assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
+    fs.rmSync(path.join(entorno.fuera, 'trampa.honey'));
   });
 
-  it('workspace:reveal abre solo la carpeta del editor', async () => {
+  it('workspace:createProject no crea el proyecto en una ruta mandada por la UI', async () => {
+    const antes = entorno.contenidoFuera();
+    try {
+      const err = await errorDe(
+        entorno.invocar('workspace:createProject', { name: path.join(entorno.fuera, 'juego'), root: entorno.fuera }),
+      );
+      // El nombre se limpia: las barras y los dos puntos no pueden armar una ruta.
+      assert.equal(err, null);
+      assert.deepEqual(entorno.contenidoFuera(), antes);
+      assert.ok(isInside(path.join(entorno.base, 'documentos'), entorno.projectRoot.getProjectRoot()));
+    } finally {
+      await entorno.projectRoot.openProjectFile(entorno.archivoProyecto);
+    }
+  });
+
+  it('workspace:reveal abre solo la carpeta del proyecto', async () => {
     await entorno.invocar('workspace:reveal', entorno.fuera);
     assert.deepEqual(entorno.electron.__prueba.abiertosShell, [entorno.root]);
   });

@@ -299,7 +299,7 @@ export class CharactersController {
     }
   }
 
-  /** La carpeta del proyecto, deduciendola o preguntandola si nadie abrio una. */
+  /** true si hay un proyecto abierto donde guardar characters.json. Nunca abre ni crea uno. */
   private async ensureProject(): Promise<boolean> {
     if (this.project.projectRoot()) {
       return true;
@@ -309,6 +309,7 @@ export class CharactersController {
       return false;
     }
     if (!(await this.project.ensureRoot())) {
+      this.note('Abre o crea un proyecto para guardar personajes.');
       return false;
     }
     await this.refreshProject();

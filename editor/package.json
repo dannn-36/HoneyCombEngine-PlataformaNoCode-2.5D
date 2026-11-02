@@ -96,6 +96,15 @@
         "to": "items.json"
       }
     ],
+    "fileAssociations": [
+      {
+        "ext": "honey",
+        "name": "Proyecto HoneyComb",
+        "description": "Proyecto de HoneyComb Engine",
+        "icon": "public/favicon.ico",
+        "role": "Editor"
+      }
+    ],
     "electronLanguages": ["es", "es-419", "en-US"],
     "electronFuses": {
       "runAsNode": false,

@@ -33,26 +33,33 @@ function metodosDelContrato(interfaz) {
 const API_ESPERADA = [
   'beginConvert',
   'buildEngine',
-  'changeWorkspace',
   'checkLevel',
+  'chooseProjectsLocation',
   'clearRecovery',
   'clearSave',
+  'closeProject',
   'createDir',
   'createProject',
   'engineStatus',
   'ensureRoot',
   'exportGame',
+  'forgetRecentProject',
   'importSounds',
   'listDir',
   'listEntries',
   'onEngineBuildLog',
+  'onOpenRequested',
   'open',
-  'openRecentWorkspace',
+  'openProject',
+  'openRecentProject',
+  'openRequestedProject',
   'readConvertImage',
   'readEventCatalog',
   'readFile',
   'readFileData',
   'readRecovery',
+  'recentProjects',
+  'rememberLevel',
   'resetConvert',
   'revealExport',
   'revealWorkspace',
@@ -63,6 +70,9 @@ const API_ESPERADA = [
   'writeRecovery',
   'writeTexture',
 ];
+
+/** Las que escuchan un aviso del proceso principal en vez de invocar un canal. */
+const ESCUCHAS = ['onEngineBuildLog', 'onOpenRequested'];
 
 const PROHIBIDOS = [
   'require',
@@ -141,7 +151,7 @@ describe('cada funcion invoca un canal fijo', () => {
     [{ canal: 'project:writeFile' }, ['window:toggleDevTools']],
   ];
 
-  for (const nombre of API_ESPERADA.filter((n) => n !== 'onEngineBuildLog')) {
+  for (const nombre of API_ESPERADA.filter((n) => !ESCUCHAS.includes(n))) {
     it(`${nombre} invoca siempre el mismo canal, sin importar los argumentos`, () => {
       const api = preload.expuesto.honeycombProject;
       const canales = new Set(casos.flatMap((args) => canalesDe(api, nombre, args)));
@@ -171,6 +181,16 @@ describe('cada funcion invoca un canal fijo', () => {
     assert.deepEqual(recibidos, [['Compilando 1/10']]);
     assert.equal(typeof dejar, 'function');
   });
+
+  it('onOpenRequested entrega solo el nombre del archivo, nunca el evento de ipc', () => {
+    const recibidos = [];
+    const dejar = preload.expuesto.honeycombProject.onOpenRequested((...args) => recibidos.push(args));
+    const [canal, listener] = preload.escuchasRenderer.at(-1);
+    assert.equal(canal, 'workspace:open-requested');
+    listener({ sender: { send() {} }, ports: [] }, 'Mi juego.honey');
+    assert.deepEqual(recibidos, [['Mi juego.honey']]);
+    assert.equal(typeof dejar, 'function');
+  });
 });
 
 describe('cada canal expuesto tiene su handler', () => {
@@ -182,7 +202,7 @@ describe('cada canal expuesto tiene su handler', () => {
     canalesPreload = new Set();
     for (const [global, api] of Object.entries(preload.expuesto)) {
       for (const nombre of Object.keys(api)) {
-        if (nombre === 'onEngineBuildLog') continue;
+        if (ESCUCHAS.includes(nombre)) continue;
         for (const canal of canalesDe(preload.expuesto[global], nombre, ['x', 'y']))
           canalesPreload.add(canal);
       }

@@ -10,6 +10,21 @@ import { App } from './app';
 import type { GameExportResult } from './electron-api';
 import { LevelChangedOnDiskError, ProjectService } from './services/project.service';
 
+/**
+ * Un editor "de escritorio" (con disco) y un proyecto abierto: sin proyecto,
+ * guardar y exportar no tienen donde escribir y muestran Inicio.
+ */
+function deEscritorio(app: App): App {
+  (app.proj as unknown as { hasFileSystem: boolean }).hasFileSystem = true;
+  TestBed.inject(ProjectService).setProject({
+    root: 'C:/Juegos/Mi juego',
+    file: 'C:/Juegos/Mi juego/Mi juego.honey',
+    name: 'Mi juego',
+    lastLevel: null,
+  });
+  return app;
+}
+
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -48,6 +63,7 @@ describe('App', () => {
     ['pasar a otro nivel', 'transition-title', (app) => app.transition.openTransitionDialog()],
     ['convertidor', 'converter-title', (app) => app.converter.isOpen.set(true)],
     ['puzzle de sala', 'puzzle-title', (app) => app.puzzle.open()],
+    ['inicio', 'start-title', (app) => app.start.show()],
     // No es un dialogo pero se carga igual, con @defer, al pasar a Sprites.
     ['herramienta de sprites', 'sprite-start-title', (app) => app.setCenterMode('sprites')],
   ];
@@ -112,8 +128,7 @@ describe('App', () => {
     // Guardar con un disco de mentira: lo que importa es que pasa con la marca
     // de "sin guardar" cuando se edita MIENTRAS se escribe.
     function editorQueGuarda(duranteLaEscritura: (app: App) => void) {
-      const app = editor();
-      (app.proj as unknown as { hasFileSystem: boolean }).hasFileSystem = true;
+      const app = deEscritorio(editor());
       vi.spyOn(TestBed.inject(ProjectService), 'listLevels').mockResolvedValue(['nivel.json']);
       vi.spyOn(app.explorer, 'reloadDir').mockResolvedValue();
       vi.spyOn(app.levels, 'save').mockImplementation(async () => duranteLaEscritura(app));
@@ -164,11 +179,87 @@ describe('App', () => {
       expect(app.dirty()).toBe(false);
     });
 
+    it('sin proyecto abierto, guardar no escribe y muestra Inicio', async () => {
+      const app = editor();
+      (app.proj as unknown as { hasFileSystem: boolean }).hasFileSystem = true;
+      const save = vi.spyOn(app.levels, 'save');
+      const show = vi.spyOn(app.start, 'show');
+      await app.proj.save();
+      expect(save).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalled();
+    });
+
+    it('sin proyecto abierto, nuevo nivel no abre el dialogo y muestra Inicio', () => {
+      const app = editor();
+      (app.proj as unknown as { hasFileSystem: boolean }).hasFileSystem = true;
+      const show = vi.spyOn(app.start, 'show');
+      app.proj.newLevel();
+      expect(app.proj.showNewLevelDialog()).toBe(false);
+      expect(show).toHaveBeenCalled();
+    });
+
     it('cerrar la ventana sin cambios no la frena', () => {
       const app = editor();
       const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
       app.onBeforeUnload(event);
       expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe('nivel nuevo en el proyecto abierto', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    function editorConNiveles(enDisco: string[]) {
+      const app = deEscritorio(TestBed.createComponent(App).componentInstance);
+      const project = TestBed.inject(ProjectService);
+      vi.spyOn(project, 'listLevels').mockResolvedValue(enDisco);
+      vi.spyOn(app.explorer, 'reloadDir').mockResolvedValue();
+      const save = vi.spyOn(app.levels, 'save').mockResolvedValue();
+      const gameSave = vi.spyOn(app.gameConfig, 'save').mockResolvedValue();
+      return { app, save, gameSave };
+    }
+
+    it('se escribe al instante en levels/ y, si el juego no tenia, queda como nivel inicial', async () => {
+      const { app, save, gameSave } = editorConNiveles([]);
+      app.proj.newLevel();
+      app.proj.newLevelName.set('Mi nivel');
+      await app.proj.confirmNewLevel();
+      expect(save).toHaveBeenCalledOnce();
+      expect(app.levels.fileName()).toBe('Mi nivel.json');
+      expect(app.dirty()).toBe(false);
+      expect(app.proj.showNewLevelDialog()).toBe(false);
+      expect(gameSave).toHaveBeenCalledWith(expect.objectContaining({ startLevel: 'Mi nivel.json' }), {});
+    });
+
+    it('con nivel inicial ya elegido no lo cambia', async () => {
+      const { app, gameSave } = editorConNiveles(['a.json']);
+      app.gameConfig.config.update((config) => ({ ...config, startLevel: 'a.json' }));
+      app.proj.newLevel();
+      app.proj.newLevelName.set('b');
+      await app.proj.confirmNewLevel();
+      expect(app.levels.fileName()).toBe('b.json');
+      expect(gameSave).not.toHaveBeenCalled();
+    });
+
+    it('un nombre que ya existe en el proyecto no se pisa: el dialogo sigue abierto con el aviso', async () => {
+      const { app, save } = editorConNiveles(['Nivel_1.json']);
+      app.proj.newLevel();
+      app.proj.newLevelName.set('nivel_1');
+      await app.proj.confirmNewLevel();
+      expect(save).not.toHaveBeenCalled();
+      expect(app.proj.showNewLevelDialog()).toBe(true);
+      expect(app.proj.newLevelError()).toContain('levels/nivel_1.json');
+    });
+
+    it('si no se puede escribir, queda abierto y sin guardar', async () => {
+      const { app, save, gameSave } = editorConNiveles([]);
+      save.mockRejectedValue(new Error('disco lleno'));
+      app.proj.newLevel();
+      app.proj.newLevelName.set('x');
+      await app.proj.confirmNewLevel();
+      expect(app.levels.fileName()).toBeNull();
+      expect(app.dirty()).toBe(true);
+      expect(gameSave).not.toHaveBeenCalled();
     });
   });
 
@@ -178,8 +269,7 @@ describe('App', () => {
     // Un editor "de escritorio" con un nivel abierto y guardado; exportGame del
     // servicio contesta lo que diga cada prueba.
     function editorQueExporta(...answers: GameExportResult[]) {
-      const app = TestBed.createComponent(App).componentInstance;
-      (app.proj as unknown as { hasFileSystem: boolean }).hasFileSystem = true;
+      const app = deEscritorio(TestBed.createComponent(App).componentInstance);
       app.levels.fileName.set('inicio.json');
       const project = TestBed.inject(ProjectService);
       const exportGame = vi.spyOn(project, 'exportGame');
@@ -249,6 +339,70 @@ describe('App', () => {
       await app.proj.exportGame();
       expect(exportGame).not.toHaveBeenCalled();
       expect(lastNotes(app)).toContain('Guarda el nivel antes de exportar');
+    });
+  });
+
+  describe('Inicio y proyecto nuevo', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('Inicio sin proyecto no se puede cerrar; con proyecto si', async () => {
+      const fixture = TestBed.createComponent(App);
+      const app = deEscritorio(fixture.componentInstance);
+      (app.start as unknown as { deps: { hasFileSystem: boolean } }).deps.hasFileSystem = true;
+      TestBed.inject(ProjectService).setProject(null);
+      app.start.show();
+      app.start.close();
+      expect(app.start.open()).toBe(true);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.start__hint')?.textContent).toContain('Elige o crea un proyecto');
+
+      TestBed.inject(ProjectService).setProject({ root: 'C:/J/A', file: 'C:/J/A/A.honey', name: 'A', lastLevel: null });
+      app.start.close();
+      expect(app.start.open()).toBe(false);
+    });
+
+    it('el dialogo de proyecto nuevo muestra la carpeta que va a crear', async () => {
+      const fixture = TestBed.createComponent(App);
+      const app = deEscritorio(fixture.componentInstance);
+      app.proj.newProject();
+      app.proj.newProjectLocation.set('C:\\Juegos HoneyComb\\');
+      app.proj.newProjectName.set('Canción ♡ del Sol');
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('#new-project-title')?.textContent).toContain('Nuevo proyecto');
+      // La carpeta queda en ASCII, como la puede abrir el motor (ver ipc/names.js).
+      expect(app.proj.newProjectFolder()).toBe('C:\\Juegos HoneyComb\\Cancion _ del Sol');
+    });
+
+    it('crear un proyecto lo abre y sigue con el dialogo de nivel nuevo', async () => {
+      const app = deEscritorio(TestBed.createComponent(App).componentInstance);
+      const project = TestBed.inject(ProjectService);
+      TestBed.inject(ProjectService).setProject(null);
+      const nuevo = { root: 'C:/J/La Cripta', file: 'C:/J/La Cripta/La Cripta.honey', name: 'La Cripta', lastLevel: null };
+      const create = vi.spyOn(project, 'createProject').mockResolvedValue({ project: nuevo, copied: [] });
+      vi.spyOn(app.proj, 'refreshProject').mockResolvedValue();
+      vi.spyOn(project, 'readRecovery').mockResolvedValue(null);
+      app.proj.newProject();
+      app.proj.newProjectName.set('La Cripta');
+      await app.proj.confirmNewProject();
+      expect(create).toHaveBeenCalledWith({ name: 'La Cripta', example: false });
+      expect(project.project()).toEqual(nuevo);
+      expect(app.proj.showNewProjectDialog()).toBe(false);
+      expect(app.proj.showNewLevelDialog()).toBe(true);
+      expect(app.proj.newLevelName()).toBe('nivel_1');
+    });
+
+    it('si no se puede crear, el dialogo sigue abierto con el motivo', async () => {
+      const app = deEscritorio(TestBed.createComponent(App).componentInstance);
+      vi.spyOn(TestBed.inject(ProjectService), 'createProject').mockRejectedValue(
+        new Error("Error invoking remote method 'workspace:createProject': Error: Ya existe la carpeta C:/J/X y tiene archivos."),
+      );
+      app.proj.newProject();
+      app.proj.newProjectName.set('X');
+      await app.proj.confirmNewProject();
+      expect(app.proj.showNewProjectDialog()).toBe(true);
+      expect(app.proj.newProjectError()).toBe('Ya existe la carpeta C:/J/X y tiene archivos.');
     });
   });
 

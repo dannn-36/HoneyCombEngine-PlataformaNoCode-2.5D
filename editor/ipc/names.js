@@ -17,13 +17,23 @@ const fsSync = require('node:fs');
  * extension.
  */
 function safeStem(fileName, fallback) {
-  const base = path.basename(fileName, path.extname(fileName));
-  const cleaned = base
+  return safeName(path.basename(fileName, path.extname(fileName)), fallback);
+}
+
+/**
+ * Lo mismo que safeStem para un texto que NO es un nombre de archivo (el
+ * nombre de un juego): no se le quita nada como si fuera la extension, asi
+ * "Juego v1.2" no pierde el ".2". Tampoco devuelve los nombres que Windows
+ * reserva (CON, NUL, COM1...), que no se pueden usar como carpeta.
+ */
+function safeName(text, fallback) {
+  const cleaned = String(text)
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^A-Za-z0-9 _()-]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^[\s_.-]+|[\s_.-]+$/g, '');
+  if (/^(con|prn|aux|nul|com\d|lpt\d)$/i.test(cleaned)) return `${cleaned}_`;
   return cleaned || fallback;
 }
 
@@ -56,4 +66,4 @@ function freeName(folder, name, reserved = new Set()) {
   }
 }
 
-module.exports = { safeStem, safeTextureName, safeSoundName, freeName };
+module.exports = { safeStem, safeName, safeTextureName, safeSoundName, freeName };

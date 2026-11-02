@@ -10,8 +10,8 @@ import { ProjectService } from '../services/project.service';
  *
  * Importar NO esta aca: toda imagen entra por el convertidor
  * (textures/image-converter.controller.ts), que elige archivos sueltos -- nunca
- * una carpeta entera --, los convierte a PNG y los COPIA a assets/textures/ de
- * la carpeta del editor. Cuando termina, llama a reloadLibrary().
+ * una carpeta entera --, los convierte a PNG y los COPIA a assets/textures/ del
+ * proyecto. Cuando termina, llama a reloadLibrary().
  *
  * Elegir una textura para colocar tampoco: eso es arbitrar entre texturas,
  * figuras, objetos y personajes de la paleta, y lo hace App.
@@ -125,9 +125,9 @@ export class TexturesController {
   }
 
   /**
-   * Descarta todas las miniaturas: se abrio el proyecto de nuevo o cambio la
-   * carpeta del editor, y una textura con el mismo nombre puede ser otra
-   * imagen. Las que estan en pantalla se vuelven a pedir solas.
+   * Descarta todas las miniaturas: se abrio el proyecto de nuevo o se cambio
+   * de proyecto, y una textura con el mismo nombre puede ser otra imagen. Las
+   * que estan en pantalla se vuelven a pedir solas.
    */
   invalidate(): void {
     this.generation += 1;

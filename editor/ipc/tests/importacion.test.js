@@ -2,8 +2,9 @@
 // Seguridad: importar un nivel de otra carpeta (ipc/levels.js)
 // =============================================================================
 //
-// Abrir un .json de afuera lo IMPORTA: se copia a levels/ junto con las
-// texturas y sonidos que nombra. Esos nombres salen del JSON, que puede venir
+// Abrir un .json de una carpeta de antes (sin .honey) y elegir "Importar solo
+// este nivel" lo IMPORTA: se copia a levels/ junto con las texturas y sonidos
+// que nombra. Esos nombres salen del JSON, que puede venir
 // de cualquier lado, asi que son datos no confiables: una referencia como
 // "../../secreto.txt" no puede hacer copiar un archivo cualquiera al proyecto
 // (para despues leerlo con el visor), ni escribir fuera de assets/.
@@ -47,7 +48,11 @@ function nivelDeAfuera(referencias, nombre = 'importado.json') {
 
 beforeEach(async () => {
   let elegido = null;
-  entorno = await prepararEntorno({ dialogo: () => ({ canceled: false, filePaths: [elegido] }) });
+  entorno = await prepararEntorno({
+    dialogo: () => ({ canceled: false, filePaths: [elegido] }),
+    // "Importar solo este nivel" (ver askConvertOrImport en ipc/project-root.js).
+    mensaje: (opciones) => opciones.buttons.indexOf('Importar solo este nivel'),
+  });
   origen = path.join(entorno.base, 'descargas');
   entorno.elegir = (archivo) => {
     elegido = archivo;

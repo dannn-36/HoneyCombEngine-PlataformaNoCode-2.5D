@@ -13,9 +13,9 @@
 //
 // Cada prueba trabaja en una carpeta temporal propia:
 //
-//   <base>/proyecto/   la carpeta del editor (levels/, assets/...)
+//   <base>/proyecto/   el proyecto abierto (proyecto.honey, levels/, assets/...)
 //   <base>/fuera/      lo que NO se tiene que poder leer ni escribir
-//   <base>/userData/   la configuracion de Electron (donde se guarda la raiz)
+//   <base>/userData/   la configuracion de Electron (proyectos recientes)
 //
 // Los modulos se cargan de nuevo en cada entorno (se vacia la cache de
 // require): guardan estado propio (la raiz, el plan del convertidor) y una
@@ -102,8 +102,10 @@ class WebContentsDePrueba extends EventEmitter {
  * @param opciones.documents  carpeta Documentos
  * @param opciones.isPackaged como app.isPackaged
  * @param opciones.dialogo    funcion (opciones) => resultado de showOpenDialog
+ * @param opciones.mensaje    funcion (opciones) => boton elegido en showMessageBox.
+ *   Sin ella se elige "Cancelar" (cancelId).
  */
-function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}) {
+function crearElectron({ userData, documents, isPackaged = false, dialogo, mensaje } = {}) {
   const handlers = new Map();
   const ventanas = [];
   const eventosApp = new Map();
@@ -111,6 +113,7 @@ function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}
   const invocadosRenderer = [];
   const escuchasRenderer = [];
   const dialogos = [];
+  const mensajes = [];
   const abiertosShell = [];
 
   let listo;
@@ -133,6 +136,13 @@ function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}
       this.cargado.push({ file });
       return Promise.resolve();
     }
+    isMinimized() {
+      return false;
+    }
+    restore() {}
+    focus() {
+      this.enfocada = (this.enfocada ?? 0) + 1;
+    }
     static getAllWindows() {
       return ventanas;
     }
@@ -150,6 +160,7 @@ function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}
         return path.join(userData, name);
       },
       whenReady: () => whenReady,
+      requestSingleInstanceLock: () => true,
       on(evento, fn) {
         if (!eventosApp.has(evento)) eventosApp.set(evento, []);
         eventosApp.get(evento).push(fn);
@@ -172,9 +183,15 @@ function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}
       },
     },
     dialog: {
-      async showOpenDialog(options) {
+      async showOpenDialog(...args) {
+        const options = args.at(-1);
         dialogos.push(options);
         return dialogo ? dialogo(options) : { canceled: true, filePaths: [] };
+      },
+      async showMessageBox(...args) {
+        const options = args.at(-1);
+        mensajes.push(options);
+        return { response: mensaje ? mensaje(options) : (options.cancelId ?? 0) };
       },
     },
     shell: {
@@ -218,6 +235,7 @@ function crearElectron({ userData, documents, isPackaged = false, dialogo } = {}
     invocadosRenderer,
     escuchasRenderer,
     dialogos,
+    mensajes,
     abiertosShell,
     arrancar: () => listo(),
   };
@@ -253,16 +271,18 @@ function listarArbol(carpeta) {
 // --- El entorno completo del proceso principal ------------------------------------
 
 /**
- * Prepara una carpeta del editor de prueba y registra TODOS los handlers de
- * ipc/ como lo hace main.js.
+ * Prepara un proyecto de prueba (con su .honey), lo deja abierto y registra
+ * TODOS los handlers de ipc/ como lo hace main.js.
  *
  * @param opciones.instalacion 'real' carga ipc/ del repositorio; 'copia' lo
  *   copia a <base>/instalacion/editor/ipc, asi INSTALL_ROOT es una carpeta sin
  *   motor compilado ni schema/ (lo que tenga se arma en la prueba).
  * @param opciones.dialogo     respuesta de dialog.showOpenDialog.
+ * @param opciones.mensaje     boton elegido en dialog.showMessageBox.
  * @param opciones.isPackaged  como app.isPackaged.
+ * @param opciones.sinProyecto true: arranca sin proyecto abierto (como el editor sin doble clic).
  */
-async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = false } = {}) {
+async function prepararEntorno({ instalacion = 'real', dialogo, mensaje, isPackaged = false, sinProyecto = false } = {}) {
   const base = crearBase();
   const root = path.join(base, 'proyecto');
   const fuera = path.join(base, 'fuera');
@@ -271,12 +291,8 @@ async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = fal
   fs.mkdirSync(fuera, { recursive: true });
   fs.mkdirSync(userData, { recursive: true });
   fs.writeFileSync(path.join(fuera, 'secreto.txt'), 'SECRETO');
-  // Con la raiz ya elegida en la configuracion, initWorkspace no siembra la
-  // carpeta con los niveles del repositorio (eso es solo para la de por defecto).
-  fs.writeFileSync(
-    path.join(userData, 'honeycomb-settings.json'),
-    JSON.stringify({ workspaceRoot: root }),
-  );
+  const archivoProyecto = path.join(root, 'proyecto.honey');
+  fs.writeFileSync(archivoProyecto, JSON.stringify({ format: 1, name: 'Proyecto de prueba' }));
 
   let ipcDir = IPC_DIR;
   let installRoot = path.dirname(EDITOR_DIR);
@@ -294,6 +310,7 @@ async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = fal
     documents: path.join(base, 'documentos'),
     isPackaged,
     dialogo,
+    mensaje,
   });
   const lanzados = [];
   const realChildProcess = require('node:child_process');
@@ -328,7 +345,8 @@ async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = fal
   const cargar = (nombre) => require(path.join(ipcDir, nombre));
   const projectRoot = cargar('project-root.js');
   const startup = await projectRoot.initWorkspace();
-  cargar('workspace.js').register(startup);
+  if (!sinProyecto) await projectRoot.openProjectFile(archivoProyecto);
+  const canalesWorkspace = cargar('workspace.js').register(startup);
   cargar('levels.js').register();
   cargar('files.js').register();
   cargar('convert.js').register();
@@ -367,6 +385,8 @@ async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = fal
   return {
     base,
     root,
+    archivoProyecto,
+    canalesWorkspace,
     fuera,
     userData,
     installRoot,
@@ -399,13 +419,8 @@ async function prepararEntorno({ instalacion = 'real', dialogo, isPackaged = fal
  */
 async function cargarMain({ isPackaged = false, existeDist = true, env = {} } = {}) {
   const base = crearBase('hc-main-');
-  const root = path.join(base, 'proyecto');
   const userData = path.join(base, 'userData');
   fs.mkdirSync(userData, { recursive: true });
-  fs.writeFileSync(
-    path.join(userData, 'honeycomb-settings.json'),
-    JSON.stringify({ workspaceRoot: root }),
-  );
 
   const electron = crearElectron({
     userData,

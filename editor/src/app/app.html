@@ -266,7 +266,9 @@
         <div class="modal__body">
           <label class="field">
             <span>Nombre</span>
-            <input class="input" [value]="proj.newLevelName()" (input)="proj.newLevelName.set(str($event))" autofocus />
+            <input class="input" [value]="proj.newLevelName()" autofocus
+                   (input)="proj.newLevelName.set(str($event)); proj.newLevelError.set(null)"
+                   (keydown.enter)="proj.confirmNewLevel()" />
           </label>
 
           <div class="field-row">
@@ -304,10 +306,16 @@
             </select>
           </label>
 
+          @if (project.project(); as current) {
+            <p class="hint">Se crea en levels/ del proyecto «{{ current.name }}».</p>
+          }
           @if (tex.textures().length === 0) {
-            <p class="hint">Las plantillas usan textures/player.png. Abre un proyecto antes de guardar el nivel.</p>
+            <p class="hint">Las plantillas usan textures/player.png.</p>
           } @else {
-            <p class="hint">Usa {{ tex.textures()[0] }} como textura inicial. Puedes cambiarla desde Recursos.</p>
+            <p class="hint">Usa {{ proj.starterTexture() }} como textura inicial. Puedes cambiarla desde Recursos.</p>
+          }
+          @if (proj.newLevelError(); as error) {
+            <p class="hint hint--warn" role="alert">{{ error }}</p>
           }
         </div>
 
@@ -414,9 +422,61 @@
        en segundo plano al arrancar los dejaba en memoria aunque nadie los
        abriera. -->
 
-  <!-- Inicio con los niveles recientes, al abrir el editor: dialogs/start-screen.html -->
+  <!-- Inicio con los proyectos recientes, al abrir el editor: dialogs/start-screen.html -->
   @defer (when start.open()) {
     <app-start-screen />
+  }
+
+  <!-- Proyecto nuevo (vacio o copia del de ejemplo). Va despues de Inicio para
+       quedar encima: se abre desde ahi. La ubicacion la elige el dialogo del
+       sistema; aca solo se escribe el nombre del juego. -->
+  @if (proj.showNewProjectDialog()) {
+    <div class="modal-backdrop" (click)="proj.cancelNewProject()">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="new-project-title"
+               (click)="$event.stopPropagation()">
+        <div class="modal__head">
+          <h2 id="new-project-title">{{ proj.newProjectExample() ? 'Proyecto de ejemplo' : 'Nuevo proyecto' }}</h2>
+          <button class="icon-button" type="button" title="Cerrar" aria-label="Cerrar" (click)="proj.cancelNewProject()"><svg hcIcon="x"></svg></button>
+        </div>
+
+        <div class="modal__body">
+          @if (proj.newProjectExample()) {
+            <p class="hint">Una copia del juego de muestra, con sus niveles, imágenes y sonidos, para ver cómo está hecho y modificarlo sin miedo.</p>
+          }
+          <label class="field">
+            <span>Nombre del juego</span>
+            <input class="input" [value]="proj.newProjectName()" autofocus placeholder="Mi juego"
+                   (input)="proj.newProjectName.set(str($event)); proj.newProjectError.set(null)"
+                   (keydown.enter)="proj.confirmNewProject()" />
+          </label>
+
+          <div class="field">
+            <span>Ubicación</span>
+            <div class="field-row">
+              <input class="input" readonly [value]="proj.newProjectLocation()" [title]="proj.newProjectLocation()" />
+              <!-- flex: none: en .field-row los botones se estiran; este va a su ancho. -->
+              <button class="btn" type="button" style="flex: none" (click)="proj.chooseProjectLocation()"
+                      [disabled]="proj.newProjectBusy()">Elegir…</button>
+            </div>
+          </div>
+
+          @if (proj.newProjectFolder(); as folder) {
+            <p class="hint">Se crea la carpeta <b>{{ folder }}</b> con el archivo de proyecto (.honey), levels/ y assets/.</p>
+          }
+          @if (proj.newProjectError(); as error) {
+            <p class="hint hint--warn" role="alert">{{ error }}</p>
+          }
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn" type="button" (click)="proj.cancelNewProject()" [disabled]="proj.newProjectBusy()">Cancelar</button>
+          <button class="btn btn--primary" type="button" (click)="proj.confirmNewProject()"
+                  [disabled]="proj.newProjectBusy() || !proj.newProjectFolder()">
+            {{ proj.newProjectBusy() ? 'Creando…' : 'Crear proyecto' }}
+          </button>
+        </div>
+      </section>
+    </div>
   }
 
   <!-- Grilla del mapa: agregar o editar: dialogs/room-dialog.html -->
@@ -511,7 +571,7 @@
            (pointercancel)="panels.onResizeEnd($event)"></div>
 
       <!-- Dos vistas del mismo lugar: "Escena" es el arbol de entidades del
-           nivel abierto; "Proyecto", los archivos de la carpeta del editor
+           nivel abierto; "Proyecto", los archivos del proyecto abierto
            (levels/, assets/, schema/). -->
       <!-- tabs--fit: con la columna angosta las pestañas se achican y cortan
            su nombre con "…" en vez de salirse de la columna. -->
@@ -524,7 +584,7 @@
         </button>
         <button class="tab" type="button" role="tab" [class.is-active]="leftEditor() === 'proyecto'"
                 [attr.aria-selected]="leftEditor() === 'proyecto'" (click)="setLeftEditor('proyecto')"
-                title="Archivos de la carpeta del editor">
+                title="Archivos del proyecto">
           <svg hcIcon="folder"></svg><span class="tab__label">Proyecto</span>
         </button>
       </div>
@@ -565,13 +625,13 @@
         </div>
       } @else {
         <div class="dock-col__body filetree">
-          <!-- El arbol es SIEMPRE la carpeta del editor (ver
-               ipc/project-root.js). Abrir escena arranca en levels/, y una de
-               afuera se importa: se copia adentro con sus assets. Nueva carpeta
+          <!-- El arbol es SIEMPRE el proyecto abierto (ver
+               ipc/project-root.js). Abrir arranca en levels/; un nivel de otro
+               proyecto cambia a ese proyecto, y uno suelto se importa. Nueva carpeta
                crea dentro de la ultima carpeta clickeada. -->
           <div class="filetools">
             <button class="btn btn--small" type="button" (click)="proj.openLevelFile()"
-                    title="Abrir un nivel (Ctrl+O). Uno de fuera de la carpeta del editor se copia adentro">
+                    title="Abrir un nivel (Ctrl+O). Uno de otro proyecto cambia a ese proyecto">
               <svg hcIcon="folder-open"></svg>Abrir…
             </button>
             <button class="btn btn--small" type="button" (click)="explorer.createFolder()"
@@ -610,8 +670,7 @@
             </button>
           } @empty {
             <p class="empty">
-              Preparando la carpeta del editor… Si no aparece, revisa la barra de estado o usa
-              Archivo › Cambiar carpeta del editor.
+              No hay ningún proyecto abierto. Crea o abre uno desde Archivo › Inicio.
             </p>
           }
         </div>
@@ -1928,14 +1987,14 @@
                 </button>
                 <button class="btn btn--small" type="button" [disabled]="converter.busy()"
                         (click)="converter.openAndAdd('files')"
-                        title="Elegir imágenes (PNG, JPG, JPEG): se convierten y se copian a assets/textures/ de la carpeta del editor">
+                        title="Elegir imágenes (PNG, JPG, JPEG): se convierten y se copian a assets/textures/ del proyecto">
                   <svg hcIcon="image-plus"></svg>Importar imágenes…
                 </button>
               }
               @case ('sonidos') {
                 <button class="btn btn--small" type="button" [disabled]="snd.busy() || !hasFileSystem"
                         (click)="snd.importSounds()"
-                        title="Elegir sonidos (WAV, OGG, MP3): se copian a assets/sounds/ de la carpeta del editor">
+                        title="Elegir sonidos (WAV, OGG, MP3): se copian a assets/sounds/ del proyecto">
                   <svg hcIcon="plus"></svg>Importar sonidos…
                 </button>
               }

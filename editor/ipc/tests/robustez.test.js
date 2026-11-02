@@ -8,7 +8,7 @@
 //   - Los .tmp de un guardado cortado se borran al arrancar.
 //   - La copia del guardado automatico (ipc/recovery.js).
 //   - La revision del nivel contra el schema (ipc/level-check.js).
-//   - Archivo > Nuevo proyecto (workspace:createProject).
+//   (Abrir, crear y convertir proyectos: ver proyectos.test.js.)
 // =============================================================================
 
 const { describe, it, before, after } = require('node:test');
@@ -70,28 +70,56 @@ describe('honeycomb-settings.json', () => {
   after(() => entorno?.limpiar());
 
   const ajustes = () => path.join(entorno.userData, 'honeycomb-settings.json');
+  const leer = (archivo) => JSON.parse(fs.readFileSync(archivo, 'utf-8'));
 
-  it('cambiar de carpeta lo escribe atomico, con la version anterior en .bak', async () => {
+  it('abrir otro proyecto lo escribe atomico, con la version anterior en .bak', async () => {
     const otra = path.join(entorno.base, 'otra');
-    await entorno.projectRoot.changeWorkspace(otra);
-    assert.equal(JSON.parse(fs.readFileSync(ajustes(), 'utf-8')).workspaceRoot, otra);
-    assert.equal(JSON.parse(fs.readFileSync(`${ajustes()}.bak`, 'utf-8')).workspaceRoot, entorno.root);
+    fs.mkdirSync(otra);
+    fs.writeFileSync(path.join(otra, 'Otra.honey'), JSON.stringify({ format: 1, name: 'Otra' }));
+    await entorno.projectRoot.openProjectFile(path.join(otra, 'Otra.honey'));
+    assert.equal(leer(ajustes()).recentProjects[0].root, otra);
+    assert.equal(leer(`${ajustes()}.bak`).recentProjects[0].root, entorno.root);
     assert.deepEqual(temporalesEn(entorno.userData), []);
   });
 
-  it('si el archivo esta roto, se usa el .bak y no se olvida la carpeta', async () => {
+  it('si el archivo esta roto, se usa el .bak y no se olvidan los recientes', async () => {
     const elegida = path.join(entorno.base, 'elegida');
-    fs.writeFileSync(`${ajustes()}.bak`, JSON.stringify({ workspaceRoot: elegida }));
-    fs.writeFileSync(ajustes(), '{"workspaceRoot": "C:/a med');
-    const { root } = await entorno.projectRoot.initWorkspace();
-    assert.equal(root, elegida);
+    fs.writeFileSync(`${ajustes()}.bak`, JSON.stringify({ recentProjects: [{ root: elegida, name: 'Elegida' }] }));
+    fs.writeFileSync(ajustes(), '{"recentProjects": [{"root": "C:/a med');
+    const recientes = await entorno.projectRoot.listRecentProjects();
+    assert.deepEqual(
+      recientes.map((r) => [r.root, r.name]),
+      [[elegida, 'Elegida']],
+    );
   });
 
-  it('roto y sin .bak, arranca con los valores por defecto', async () => {
+  it('roto y sin .bak, no hay recientes', async () => {
     fs.writeFileSync(ajustes(), 'esto no es json');
     fs.rmSync(`${ajustes()}.bak`, { force: true });
-    const { root } = await entorno.projectRoot.initWorkspace();
-    assert.equal(root, path.join(entorno.base, 'documentos', 'HoneyComb'));
+    assert.deepEqual(await entorno.projectRoot.listRecentProjects(), []);
+  });
+
+  it('la configuracion de antes (una carpeta del editor) aparece en recientes, y se reemplaza al escribir', async () => {
+    const vieja = path.join(entorno.base, 'vieja');
+    const otraVieja = path.join(entorno.base, 'otra-vieja');
+    fs.mkdirSync(path.join(vieja, 'levels'), { recursive: true });
+    fs.writeFileSync(ajustes(), JSON.stringify({ workspaceRoot: vieja, recentWorkspaces: [otraVieja, vieja] }));
+    const recientes = await entorno.projectRoot.listRecentProjects();
+    assert.deepEqual(
+      recientes.map((r) => [r.root, r.exists, r.legacy]),
+      [
+        [vieja, true, true],
+        [otraVieja, false, false],
+      ],
+    );
+    await entorno.projectRoot.openProjectFile(entorno.archivoProyecto);
+    const escritos = leer(ajustes());
+    assert.equal('workspaceRoot' in escritos, false);
+    assert.equal('recentWorkspaces' in escritos, false);
+    assert.deepEqual(
+      escritos.recentProjects.map((r) => r.root),
+      [entorno.root, vieja, otraVieja],
+    );
   });
 });
 
@@ -122,12 +150,12 @@ describe('los .tmp de un guardado cortado se borran', () => {
     assert.equal(fs.existsSync(ajeno), true, 'un .tmp con otro nombre no es del editor');
   });
 
-  it('al arrancar se limpia la carpeta del editor sola', async () => {
+  it('al abrir un proyecto se limpian sus temporales solos', async () => {
     const viejo = path.join(entorno.root, '.items.json.11112222.tmp');
     fs.writeFileSync(viejo, 'x');
     const haceUnaHora = new Date(Date.now() - 60 * 60 * 1000);
     fs.utimesSync(viejo, haceUnaHora, haceUnaHora);
-    await entorno.projectRoot.initWorkspace();
+    await entorno.projectRoot.openProjectFile(entorno.archivoProyecto);
     await entorno.projectRoot.tempCleanup();
     assert.equal(fs.existsSync(viejo), false);
   });
@@ -146,7 +174,7 @@ describe('guardado automatico (recovery:*)', () => {
     assert.equal(await entorno.invocar('recovery:read'), null);
   });
 
-  it('escribe la copia FUERA de la carpeta del editor y la vuelve a leer', async () => {
+  it('escribe la copia FUERA del proyecto y la vuelve a leer', async () => {
     await entorno.invocar('recovery:write', copia);
     const leida = await entorno.invocar('recovery:read');
     assert.deepEqual(leida.level, copia.level);
@@ -163,12 +191,25 @@ describe('guardado automatico (recovery:*)', () => {
     assert.equal(await entorno.invocar('recovery:read'), null);
   });
 
-  it('la copia de una carpeta no se ofrece en otra', async () => {
+  it('la copia de un proyecto no se ofrece en otro', async () => {
     await entorno.invocar('recovery:write', copia);
-    await entorno.projectRoot.changeWorkspace(path.join(entorno.base, 'otro-proyecto'));
+    const otro = path.join(entorno.base, 'otro-proyecto');
+    fs.mkdirSync(otro);
+    fs.writeFileSync(path.join(otro, 'Otro.honey'), '{}');
+    await entorno.projectRoot.openProjectFile(path.join(otro, 'Otro.honey'));
     assert.equal(await entorno.invocar('recovery:read'), null);
-    await entorno.projectRoot.changeWorkspace(entorno.root);
+    await entorno.projectRoot.openProjectFile(entorno.archivoProyecto);
     assert.notEqual(await entorno.invocar('recovery:read'), null);
+  });
+
+  it('sin proyecto abierto no hay copia que leer ni donde escribirla', async () => {
+    entorno.projectRoot.closeProject();
+    try {
+      assert.equal(await entorno.invocar('recovery:read'), null);
+      await entorno.invocar('recovery:write', copia);
+    } finally {
+      await entorno.projectRoot.openProjectFile(entorno.archivoProyecto);
+    }
   });
 
   it('rechaza lo que no es un objeto', async () => {
@@ -220,75 +261,5 @@ describe('level:check revisa el nivel contra el schema', () => {
     const avisos = await entorno.invocar('level:check', JSON.stringify(nivel));
     assert.equal(avisos.length, 9);
     assert.match(avisos.at(-1), /^… y 12 problemas más$/);
-  });
-});
-
-describe('workspace:createProject (Archivo > Nuevo proyecto)', () => {
-  let entorno;
-  let elegida;
-  before(async () => {
-    entorno = await prepararEntorno({ dialogo: () => ({ canceled: false, filePaths: [elegida] }) });
-  });
-  after(() => entorno?.limpiar());
-
-  it('arma la estructura con las imagenes basicas y pasa a trabajar ahi', async () => {
-    elegida = path.join(entorno.base, 'mi-juego');
-    const creado = await entorno.invocar('workspace:createProject');
-    assert.equal(creado.root, elegida);
-    assert.deepEqual(creado.copied.sort(), ['floor.png', 'player.png', 'shapes.png', 'wall.png']);
-    for (const dir of ['levels', 'assets/textures', 'assets/sounds']) {
-      assert.ok(fs.statSync(path.join(elegida, dir)).isDirectory(), dir);
-    }
-    assert.equal(entorno.projectRoot.getProjectRoot(), elegida);
-    const ajustes = JSON.parse(fs.readFileSync(path.join(entorno.userData, 'honeycomb-settings.json'), 'utf-8'));
-    assert.equal(ajustes.workspaceRoot, elegida);
-  });
-
-  it('no usa una carpeta que ya tiene algo', async () => {
-    elegida = path.join(entorno.base, 'con-cosas');
-    fs.mkdirSync(elegida, { recursive: true });
-    fs.writeFileSync(path.join(elegida, 'tarea.docx'), 'mia');
-    const err = await errorDe(entorno.invocar('workspace:createProject'));
-    assert.match(err.message, /no está vacía/);
-    assert.deepEqual(fs.readdirSync(elegida), ['tarea.docx']);
-  });
-});
-
-describe('workspace:openRecent (la pantalla de Inicio)', () => {
-  let entorno;
-  let otra;
-  before(async () => {
-    entorno = await prepararEntorno();
-    otra = path.join(entorno.base, 'otro-proyecto');
-  });
-  after(() => entorno?.limpiar());
-
-  it('no cambia a una carpeta que la UI manda y nunca se eligio', async () => {
-    fs.mkdirSync(path.join(entorno.fuera, 'levels'), { recursive: true });
-    const err = await errorDe(entorno.invocar('workspace:openRecent', entorno.fuera));
-    assert.match(err.message, /no está entre las recientes/);
-    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
-  });
-
-  it('rechaza lo que no es una ruta absoluta', async () => {
-    for (const caso of [undefined, null, 42, {}, ['x'], '', 'levels', '../proyecto']) {
-      assert.ok(await errorDe(entorno.invocar('workspace:openRecent', caso)), `acepto ${JSON.stringify(caso)}`);
-    }
-    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
-  });
-
-  it('vuelve a la carpeta anterior despues de cambiar con el dialogo', async () => {
-    await entorno.projectRoot.changeWorkspace(otra);
-    const pedida = process.platform === 'win32' ? entorno.root.toUpperCase() : entorno.root;
-    assert.equal(await entorno.invocar('workspace:openRecent', pedida), entorno.root);
-    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
-  });
-
-  it('una carpeta reciente que se borro no se vuelve a crear', async () => {
-    fs.rmSync(otra, { recursive: true, force: true });
-    const err = await errorDe(entorno.invocar('workspace:openRecent', otra));
-    assert.match(err.message, /ya no existe/);
-    assert.equal(fs.existsSync(otra), false);
-    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
   });
 });

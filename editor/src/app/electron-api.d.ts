@@ -21,7 +21,7 @@ export type ProjectFileData =
   | { kind: 'binary'; size: number; reason: 'too-large' | 'unsupported' };
 
 /**
- * Lo que paso al importar un nivel de fuera de la carpeta del editor (ver
+ * Lo que paso al importar un nivel suelto al proyecto abierto (ver
  * ipc/levels.js): de donde vino, como se llama la copia en levels/, y que
  * assets se copiaron, ya estaban, o no se encontraron.
  */
@@ -33,15 +33,61 @@ export interface LevelImport {
   missing: string[];
 }
 
-/** Resultado de abrir un nivel con el dialogo. La ruta es relativa a la carpeta del editor. */
+/**
+ * Resultado de abrir un nivel con el dialogo. La ruta es relativa al proyecto
+ * abierto. "project" esta si el nivel era de otro proyecto y el editor se
+ * cambio a ese; "imported", si era un nivel suelto y se copio al abierto.
+ */
 export type OpenLevelResult =
   | { canceled: true }
-  | { canceled: false; relativePath: string; contents: string; imported?: LevelImport };
+  | { canceled: false; relativePath: string; contents: string; imported?: LevelImport; project?: ProjectInfo };
 
-/** La carpeta del editor, y lo que se copio del repositorio si se creo recien. */
-export interface WorkspaceInfo {
+/**
+ * Un proyecto abierto: su carpeta, su archivo .honey, el nombre del juego, y
+ * el ultimo nivel que se edito en el (archivo de levels/), si se sabe.
+ */
+export interface ProjectInfo {
   root: string;
-  seeded: string[];
+  file: string;
+  name: string;
+  lastLevel: string | null;
+}
+
+/**
+ * Una fila de Proyectos recientes (ver ipc/project-root.js). "exists": la
+ * carpeta sigue estando. "legacy": es de antes del .honey, y al abrirla se
+ * ofrece convertirla.
+ */
+export interface RecentProject {
+  root: string;
+  name: string;
+  lastLevel: string | null;
+  openedAt: number;
+  exists: boolean;
+  legacy: boolean;
+}
+
+/**
+ * El proyecto abierto (null: hay que elegir uno en Inicio), donde se crean
+ * los proyectos nuevos, y por que no se pudo abrir el .honey con que se abrio
+ * el editor, si paso.
+ */
+export interface WorkspaceInfo {
+  project: ProjectInfo | null;
+  location: string;
+  error: string | null;
+}
+
+/** Un proyecto nuevo: el nombre del juego, y si es una copia del juego de ejemplo. */
+export interface NewProjectOptions {
+  name: string;
+  example: boolean;
+}
+
+/** El proyecto recien creado, ya abierto, y lo que se copio de la instalacion. */
+export interface CreatedProject {
+  project: ProjectInfo;
+  copied: string[];
 }
 
 /** De donde salen las imagenes del convertidor: un dialogo, o los JPG de assets/textures/. */
@@ -100,34 +146,47 @@ export interface TextureWriteResult {
 }
 
 export interface HoneycombProjectApi {
-  /** Abre un nivel con el dialogo; uno de afuera se importa a levels/. */
+  /** Abre un nivel con el dialogo: uno de otro proyecto cambia a ese; uno suelto se importa a levels/. */
   open(): Promise<OpenLevelResult>;
 
-  /** La carpeta del editor. */
+  /** El proyecto abierto, si hay. */
   workspaceInfo(): Promise<WorkspaceInfo>;
-  /** Elige otra carpeta del editor con un dialogo y la recuerda. Null si se cancelo. */
-  changeWorkspace(): Promise<string | null>;
+  /** Los proyectos recientes, el ultimo primero. */
+  recentProjects(): Promise<RecentProject[]>;
+  /** Quita un proyecto de la lista de recientes (la carpeta no se toca). */
+  forgetRecentProject(root: string): Promise<void>;
   /**
-   * Vuelve a una carpeta del editor reciente (la pantalla de Inicio). Solo
-   * acepta carpetas ya elegidas antes con el dialogo; si no, o si ya no
-   * existe, falla con el motivo. Devuelve la carpeta abierta.
+   * Abre un proyecto eligiendo su .honey con el dialogo (o un .json de un
+   * juego de antes, que se ofrece convertir). Null si se cancelo.
    */
-  openRecentWorkspace(root: string): Promise<string>;
-  /** Abre la carpeta del editor en el explorador del sistema. */
+  openProject(): Promise<ProjectInfo | null>;
+  /**
+   * Vuelve a un proyecto reciente. Solo acepta los de la lista; si es de
+   * antes del .honey pregunta si convertirlo (null si no). Falla con el
+   * motivo si ya no existe.
+   */
+  openRecentProject(root: string): Promise<ProjectInfo | null>;
+  /** Elige con el dialogo donde se crean los proyectos. Null si se cancelo. */
+  chooseProjectsLocation(): Promise<string | null>;
+  /** Crea un proyecto en la ubicacion de proyectos y lo deja abierto. */
+  createProject(options: NewProjectOptions): Promise<CreatedProject>;
+  /** Cierra el proyecto abierto: el editor queda sin proyecto. */
+  closeProject(): Promise<void>;
+  /** Anota el nivel que se esta editando (archivo de levels/) como el ultimo del proyecto. */
+  rememberLevel(level: string): Promise<boolean>;
+  /** Abre la carpeta del proyecto en el explorador del sistema. */
   revealWorkspace(): Promise<void>;
-  /**
-   * Archivo > Nuevo proyecto: elige una carpeta vacia con el dialogo, le arma
-   * la estructura y las imagenes basicas, y la deja como carpeta del editor.
-   * Null si se cancelo.
-   */
-  createProject(): Promise<{ root: string; copied: string[] } | null>;
+  /** Abre el .honey de un doble clic con el editor ya abierto (ver onOpenRequested). Null si no hay. */
+  openRequestedProject(): Promise<ProjectInfo | null>;
+  /** Avisa de un doble clic en un .honey con el editor abierto, con el nombre del archivo. */
+  onOpenRequested(callback: (fileName: string) => void): () => void;
   /** schema/event_catalog.json de la instalacion. */
   readEventCatalog(): Promise<string>;
-  /** La raiz del proyecto, que es siempre la carpeta del editor. */
+  /** La carpeta del proyecto abierto, o null si no hay. */
   ensureRoot(): Promise<string | null>;
-  /** Crea una carpeta (relativa a la carpeta del editor). Falla si ya existe. */
+  /** Crea una carpeta (relativa al proyecto). Falla si ya existe. */
   createDir(relativePath: string): Promise<void>;
-  /** Ruta relativa a la carpeta del editor. */
+  /** Ruta relativa al proyecto. */
   readFile(relativePath: string): Promise<string>;
   writeFile(relativePath: string, contents: string): Promise<void>;
   /** Lista los nombres de archivo (no subcarpetas) dentro de una carpeta relativa a la raiz del proyecto. */
@@ -158,7 +217,7 @@ export interface HoneycombProjectApi {
 
   /** Guarda la copia del nivel sin guardar (ver ipc/recovery.js). */
   writeRecovery(payload: RecoveryPayload): Promise<void>;
-  /** La copia que haya de la carpeta del editor de ahora, o null. */
+  /** La copia que haya del proyecto abierto, o null. */
   readRecovery(): Promise<RecoveryData | null>;
   /** Borra la copia: el nivel se guardo, o se eligio perder los cambios. */
   clearRecovery(): Promise<void>;

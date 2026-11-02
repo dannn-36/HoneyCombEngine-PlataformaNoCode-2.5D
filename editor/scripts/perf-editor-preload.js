@@ -1,8 +1,7 @@
 // Preload de la ventana de medicion de scripts/perf-editor.js. NO es el
 // preload.js del editor: este no habla con ningun proceso principal.
 //
-// Le da al editor una carpeta del editor de SOLO LECTURA: la raiz del
-// repositorio (levels/, assets/, characters.json...), leida directo del disco.
+// Le da al editor un proyecto de SOLO LECTURA: la raiz del repositorio (levels/, assets/, characters.json...), leida directo del disco.
 // Lo que el editor escribe queda en memoria y se pierde al cerrar: medir nunca
 // toca un archivo del proyecto. Asi el editor arranca como en Electron de
 // verdad (lista niveles, carga texturas) y dibuja los sprites reales.
@@ -67,8 +66,25 @@ const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
 
 const api = {
   open: async () => ({ canceled: true }),
-  workspaceInfo: async () => ({ root: ROOT, seeded: [] }),
-  changeWorkspace: async () => null,
+  // El repositorio hace de proyecto abierto, como si se hubiera abierto con
+  // doble clic: el editor arranca sin pasar por Inicio.
+  workspaceInfo: async () => ({
+    project: { root: ROOT, file: path.join(ROOT, 'medicion.honey'), name: 'Medición', lastLevel: null },
+    location: ROOT,
+    error: null,
+  }),
+  recentProjects: async () => [],
+  forgetRecentProject: async () => undefined,
+  openProject: async () => null,
+  openRecentProject: async () => null,
+  chooseProjectsLocation: async () => null,
+  createProject: async () => {
+    throw new Error('medicion: no se crean proyectos');
+  },
+  closeProject: async () => undefined,
+  rememberLevel: async () => false,
+  openRequestedProject: async () => null,
+  onOpenRequested: () => () => undefined,
   revealWorkspace: async () => undefined,
   readEventCatalog: async () => fs.readFileSync(CATALOG, 'utf8'),
   ensureRoot: async () => ROOT,

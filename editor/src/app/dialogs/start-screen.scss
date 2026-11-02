@@ -79,8 +79,7 @@
     }
   }
 
-  /* La carpeta abierta, abajo de todo: de donde salen "Nuevo nivel" y los
-     niveles sin carpeta en la lista. */
+  /* El proyecto abierto, abajo de todo: donde se crea "Nuevo nivel". */
   &__current {
     margin: auto 8px 0;
     padding-top: 10px;
@@ -109,9 +108,14 @@
     padding: 10px 16px;
     border-top: 1px solid var(--line-soft);
   }
+
+  &__hint {
+    color: var(--text-2);
+    font-size: 12px;
+  }
 }
 
-/* Una fila por nivel: icono, nombre y carpeta, y cuando. La X para quitarla
+/* Una fila por proyecto: icono, nombre y carpeta, y cuando. La X para quitarlo
    de la lista aparece al pasar el mouse o con el foco del teclado. */
 .recent {
   display: grid;
@@ -187,8 +191,24 @@
     font-size: 12px;
   }
 
-  &__here {
-    color: var(--detail);
+  /* "abierto", "sin .honey", "no se encuentra": junto al nombre. */
+  &__tag {
+    margin-left: 6px;
+    padding: 0 6px;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    color: var(--text-2);
+    font-size: 11px;
+    font-weight: 500;
+
+    &--here {
+      border-color: currentColor;
+      color: var(--detail);
+    }
+  }
+
+  &__row.is-missing &__title {
+    color: var(--text-2);
   }
 
   &__when {

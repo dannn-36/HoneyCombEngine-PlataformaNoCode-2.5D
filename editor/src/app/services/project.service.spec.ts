@@ -6,7 +6,7 @@
 // Lo que importa aca es la ida y vuelta: lo que se guarda tiene que volver
 // igual al abrirlo.
 
-import { HoneycombProjectApi, OpenLevelResult, ProjectNode } from '../electron-api';
+import { HoneycombProjectApi, OpenLevelResult, ProjectInfo, ProjectNode } from '../electron-api';
 import { defaultGameConfig } from '../core/game-config';
 import { levelForDisk } from '../core/floors';
 import { newItemDraft, normalizeItem } from '../core/items';
@@ -22,6 +22,9 @@ import {
   writeOrConfirm,
 } from './project.service';
 
+/** El proyecto abierto del proyecto de mentira. */
+const PROYECTO: ProjectInfo = { root: 'C:/proyecto', file: 'C:/proyecto/Mi juego.honey', name: 'Mi juego', lastLevel: null };
+
 /** Un proyecto de mentira: archivos en memoria y el resto de la API grabando las llamadas. */
 function fakeProject() {
   const files = new Map<string, string>();
@@ -34,9 +37,16 @@ function fakeProject() {
 
   const api: HoneycombProjectApi = {
     open: vi.fn(async () => openResult),
-    workspaceInfo: vi.fn(async () => ({ root: 'C:/proyecto', seeded: ['levels/test_level.json'] })),
-    changeWorkspace: vi.fn(async () => null),
-    openRecentWorkspace: vi.fn(async (root: string) => root),
+    workspaceInfo: vi.fn(async () => ({ project: PROYECTO, location: 'C:/Juegos HoneyComb', error: null })),
+    recentProjects: vi.fn(async () => []),
+    forgetRecentProject: vi.fn(async () => undefined),
+    openProject: vi.fn(async () => null),
+    openRecentProject: vi.fn(async (root: string) => ({ ...PROYECTO, root })),
+    chooseProjectsLocation: vi.fn(async () => null),
+    closeProject: vi.fn(async () => undefined),
+    rememberLevel: vi.fn(async () => true),
+    openRequestedProject: vi.fn(async () => null),
+    onOpenRequested: vi.fn(() => () => undefined),
     revealWorkspace: vi.fn(async () => undefined),
     readEventCatalog: vi.fn(async () => JSON.stringify({ triggers: [], conditions: [], actions: [] })),
     ensureRoot: vi.fn(async () => 'C:/proyecto'),
@@ -63,7 +73,10 @@ function fakeProject() {
     writeConvertedImage: vi.fn(async () => ({ target: 'foto.png' })),
     resetConvert: vi.fn(async () => undefined),
     writeTexture: vi.fn(async (name: string) => ({ status: 'written' as const, target: name + '.png' })),
-    createProject: vi.fn(async () => null),
+    createProject: vi.fn(async (options: { name: string }) => ({
+      project: { ...PROYECTO, root: 'C:/Juegos HoneyComb/' + options.name, name: options.name },
+      copied: [],
+    })),
     importSounds: vi.fn(async () => ({ canceled: true, imported: [], skipped: [] })),
     checkLevel: vi.fn(async () => []),
     writeRecovery: vi.fn(async () => undefined),
@@ -664,24 +677,52 @@ describe('ProjectService', () => {
     });
   });
 
-  describe('carpeta del editor', () => {
-    it('workspaceInfo recuerda la raiz del proyecto', async () => {
+  describe('proyecto abierto', () => {
+    it('workspaceInfo recuerda el proyecto y su carpeta', async () => {
       expect(service.projectRoot()).toBeNull();
       const info = await service.workspaceInfo();
-      expect(info.seeded).toEqual(['levels/test_level.json']);
+      expect(info.location).toBe('C:/Juegos HoneyComb');
+      expect(service.project()).toEqual(PROYECTO);
       expect(service.projectRoot()).toBe('C:/proyecto');
     });
 
-    it('cancelar el cambio de carpeta deja la raiz como estaba', async () => {
-      await service.ensureRoot();
-      expect(await service.changeWorkspace()).toBeNull();
-      expect(service.projectRoot()).toBe('C:/proyecto');
+    it('sin proyecto al arrancar, no hay raiz', async () => {
+      vi.mocked(fake.api.workspaceInfo).mockResolvedValueOnce({ project: null, location: 'C:/J', error: null });
+      await service.workspaceInfo();
+      expect(service.project()).toBeNull();
+      expect(service.projectRoot()).toBeNull();
     });
 
-    it('elegir otra carpeta la toma como raiz', async () => {
-      vi.mocked(fake.api.changeWorkspace).mockResolvedValueOnce('D:/otro');
-      expect(await service.changeWorkspace()).toBe('D:/otro');
+    it('abrir o crear devuelve el proyecto, pero no lo pone hasta setProject', async () => {
+      await service.workspaceInfo();
+      const opened = await service.openRecentProject('D:/otro');
+      expect(opened?.root).toBe('D:/otro');
+      expect(service.projectRoot()).toBe('C:/proyecto');
+      service.setProject(opened);
       expect(service.projectRoot()).toBe('D:/otro');
+
+      const created = await service.createProject({ name: 'Nuevo', example: false });
+      expect(fake.api.createProject).toHaveBeenCalledWith({ name: 'Nuevo', example: false });
+      expect(created.project.name).toBe('Nuevo');
+    });
+
+    it('cambiar de proyecto olvida lo conocido de los archivos del anterior', async () => {
+      await service.workspaceInfo();
+      fake.files.set('game.json', JSON.stringify({ name: 'A' }));
+      await service.readGameConfig();
+      // Otro programa cambia game.json, pero ahora es OTRO proyecto: no hay
+      // nada que comparar, se escribe sin preguntar.
+      fake.files.set('game.json', JSON.stringify({ name: 'B' }));
+      service.setProject({ ...PROYECTO, root: 'D:/otro' });
+      await expect(service.writeGameConfig(defaultGameConfig())).resolves.toBeUndefined();
+    });
+
+    it('cerrar el proyecto deja el editor sin raiz', async () => {
+      await service.workspaceInfo();
+      await service.closeProject();
+      expect(fake.api.closeProject).toHaveBeenCalled();
+      expect(service.project()).toBeNull();
+      expect(service.projectRoot()).toBeNull();
     });
 
     it('ensureRoot sin raiz no pisa la que habia', async () => {
@@ -689,6 +730,24 @@ describe('ProjectService', () => {
       vi.mocked(fake.api.ensureRoot).mockResolvedValueOnce(null);
       expect(await service.ensureRoot()).toBeNull();
       expect(service.projectRoot()).toBe('C:/proyecto');
+    });
+
+    it('abrir un nivel de otro proyecto no lo anota como conocido hasta que se pone ese proyecto', async () => {
+      await service.workspaceInfo();
+      const contents = JSON.stringify({ name: 'x', grid: GRID, entities: [], events: [] });
+      fake.setOpenResult({
+        canceled: false,
+        relativePath: 'levels/x.json',
+        contents,
+        project: { ...PROYECTO, root: 'D:/otro' },
+      });
+      const opened = await service.openLevelFile();
+      expect(opened?.project?.root).toBe('D:/otro');
+      service.setProject(opened!.project!);
+      service.rememberOpened(opened!.relativePath, opened!.contents);
+      // Cambio por fuera desde que se abrio: guardar pregunta.
+      fake.files.set('levels/x.json', '{"cambiado": true}');
+      await expect(service.saveLevel('x.json', opened!.level)).rejects.toBeInstanceOf(LevelChangedOnDiskError);
     });
 
     it('las operaciones sueltas pasan sus argumentos al proceso principal', async () => {

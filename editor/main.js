@@ -35,7 +35,7 @@ const ipcExport = require('./ipc/export');
 const ipcRecovery = require('./ipc/recovery');
 const ipcSounds = require('./ipc/sounds');
 const ipcLevelCheck = require('./ipc/level-check');
-const { initWorkspace } = require('./ipc/project-root');
+const { initWorkspace, projectFileFromArgs } = require('./ipc/project-root');
 
 const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
 const ANGULAR_BUILD_INDEX = path.join(__dirname, 'dist/editor/browser/index.html');
@@ -159,7 +159,35 @@ function createWindow() {
   }
 }
 
+// Una sola ventana del editor: doble clic en un .honey con el editor ya
+// abierto no abre otro editor, le pide al que esta abierto que cambie a ese
+// proyecto (ver 'second-instance' mas abajo). La segunda instancia se cierra
+// apenas le pasa el pedido a la primera.
+const isPrimaryInstance = app.requestSingleInstanceLock();
+if (!isPrimaryInstance) {
+  app.quit();
+}
+
+/** Los canales de workspace, para pasarle a la UI el .honey de un doble clic. */
+let workspaceChannels = null;
+
+app.on('second-instance', (_event, argv) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.focus();
+  const file = projectFileFromArgs(argv);
+  if (file && workspaceChannels) {
+    // La UI pregunta primero por los cambios sin guardar, y despues pide
+    // abrirlo (workspace:openRequested). La ruta no viaja de ida y vuelta.
+    workspaceChannels.requestOpen(file);
+    win.webContents.send('workspace:open-requested', path.basename(file));
+  }
+});
+
 app.whenReady().then(async () => {
+  if (!isPrimaryInstance) return;
+
   // Sin el menu nativo ("File Edit View Window"): el editor dibuja su propia
   // barra de menus, y con las dos habria dos filas de menus que no se hablan.
   // Lo util que traia el nativo (recargar, herramientas de desarrollo) esta en
@@ -172,19 +200,18 @@ app.whenReady().then(async () => {
     app.setAppUserModelId('HoneyComb.Engine.Editor');
   }
 
-  // La carpeta del editor, lista antes que la ventana: es la raiz de todo lo
-  // que la UI lee y escribe (ver ipc/project-root.js). Si falla (Documentos sin
-  // permiso de escritura, por ejemplo) se reintenta con el primer pedido de la
-  // UI, que ahi si puede mostrar el error.
-  let startup = { root: null, seeded: [] };
+  // Sin proyecto abierto, salvo que el editor se haya abierto con doble clic en
+  // un .honey: entonces ese proyecto queda abierto antes que la ventana (ver
+  // ipc/project-root.js). Si no, la UI muestra Inicio para elegir uno.
+  let startup = { project: null, error: null };
   try {
-    startup = await initWorkspace();
+    startup = await initWorkspace({ argv: process.argv });
   } catch (err) {
-    console.error('[honeycomb] no se pudo preparar la carpeta del editor:', err.message);
+    console.error('[honeycomb] no se pudo preparar el editor:', err.message);
   }
 
   // Antes de abrir la ventana: la UI puede pedir cosas apenas carga.
-  ipcWorkspace.register(startup);
+  workspaceChannels = ipcWorkspace.register(startup);
   ipcLevels.register();
   ipcFiles.register();
   ipcConvert.register();
