@@ -17,6 +17,7 @@ engine/out/
 editor/node_modules/
 editor/dist/
 editor/.angular/
+editor/release/
 
 # IDE / OS
 .vs/

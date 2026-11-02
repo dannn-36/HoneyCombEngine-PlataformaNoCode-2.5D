@@ -25,6 +25,24 @@ La primera vez tarda entre **10 y 25 minutos**: raylib y el motor se compilan de
 
 > **Nota sobre Windows:** el asistente es un `.cmd` y no un `.ps1` a propósito — Windows trae la *ExecutionPolicy* en `Restricted`, así que un `.ps1` no se ejecuta con doble clic. La ventana del asistente está hecha con Windows Forms, que ya viene con el sistema: tiene que poder correr **antes** de que exista Node.js. Si prefieres verlo en la consola: `HoneyComb-Setup.cmd /texto`.
 
+### Instalador para usuarios (`.exe`)
+
+El asistente de arriba arma el **entorno de desarrollo**. Para repartir HoneyComb a quien solo quiere **usarlo**, el repositorio arma además un instalador de Windows normal: quien lo instala no necesita Node.js, CMake ni compilador.
+
+| Qué ejecutar | Resultado |
+| :--- | :--- |
+| Doble clic en **`Crear-Instalador.cmd`** (o `npm run installer` dentro de `editor/`) | `editor/release/HoneyComb-Engine-Setup-<versión>.exe` |
+
+Se arma en la máquina de desarrollo, con lo que dejó el asistente. El script (`editor/scripts/build-installer.js`):
+
+1. Recompila el motor **Debug** y **Release**. Si ya estaban al día, tarda segundos.
+2. Compila la interfaz (`ng build`).
+3. Empaqueta con **electron-builder**. La configuración está en `"build"`, dentro de `editor/package.json`.
+
+El instalador trae el editor, los dos motores ya compilados con sus DLL, `schema/`, y los niveles y recursos del repositorio, que se copian a `Documentos/HoneyComb` la primera vez que se abre el editor. Crea accesos directos en el Escritorio y en el menú Inicio, y se desinstala desde *Configuración › Aplicaciones* sin tocar los proyectos de `Documentos/HoneyComb`.
+
+> En la versión instalada no aparece *Ejecutar › Compilar motor*, porque no hay compilador: para cambiar el motor se recompila acá y se arma un instalador nuevo. El instalador no está firmado, así que la primera vez Windows muestra *«Windows protegió tu PC»*: *Más información › Ejecutar de todas formas*.
+
 ### Después de instalar
 
 | Comando | Para qué |

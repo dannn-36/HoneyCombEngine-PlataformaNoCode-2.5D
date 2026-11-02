@@ -9,6 +9,7 @@ import type {
   EngineMode,
   EngineRunResult,
   EngineStart,
+  EngineStatus,
   GameExportResult,
   LevelImport,
   ProjectFileData,
@@ -601,8 +602,8 @@ export class ProjectService {
     return window.honeycombProject.run(levelPath, mode, start);
   }
 
-  /** Que motores estan compilados. */
-  async engineStatus(): Promise<Record<EngineMode, boolean>> {
+  /** Que motores estan compilados, y si esta instalacion puede compilarlos. */
+  async engineStatus(): Promise<EngineStatus> {
     return window.honeycombProject.engineStatus();
   }
 

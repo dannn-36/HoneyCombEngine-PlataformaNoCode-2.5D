@@ -8,13 +8,17 @@
 // engine-modes.js.
 //
 // Un solo build a la vez: dos ninja sobre la misma carpeta se pisan.
+//
+// La app instalada (la del instalador, ver scripts/build-installer.js) no
+// compila: trae los dos motores ya compilados y no tiene CMake ni compilador.
+// Ahi "canBuild" es false y la UI no ofrece compilar.
 
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { ipcMain } = require('electron');
+const { app, ipcMain } = require('electron');
 
 const { INSTALL_ROOT } = require('./project-root');
-const { MODES, isMode, findEngineExecutable, buildPlan } = require('./engine-modes');
+const { MODES, isMode, findEngineExecutable, buildPlan, buildEnv } = require('./engine-modes');
 
 const ENGINE_DIR = path.join(INSTALL_ROOT, 'engine');
 
@@ -47,15 +51,23 @@ function runStep(cmake, args, env, onLine) {
 }
 
 function register() {
-  // Que motores hay compilados, para que la UI marque el que falta.
+  // Que motores hay compilados, para que la UI marque el que falta, y si esta
+  // instalacion puede compilarlos.
   ipcMain.handle('engine:status', () => ({
     debug: findEngineExecutable([INSTALL_ROOT], 'debug') !== null,
     release: findEngineExecutable([INSTALL_ROOT], 'release') !== null,
+    canBuild: !app.isPackaged,
   }));
 
   ipcMain.handle('engine:build', async (event, mode) => {
     if (!isMode(mode)) {
       return { ok: false, error: 'Modo de motor desconocido.' };
+    }
+    if (app.isPackaged) {
+      return {
+        ok: false,
+        error: 'Esta instalación de HoneyComb trae el motor ya compilado y no puede compilarlo. Si falta, reinstala HoneyComb.',
+      };
     }
     if (building) {
       return { ok: false, error: 'Ya se está compilando el motor. Espera a que termine.' };
@@ -65,14 +77,7 @@ function register() {
       return { ok: false, error: plan.error };
     }
 
-    const env = { ...process.env };
-    const pathKey = Object.keys(env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
-    env[pathKey] = [...plan.extraPath, env[pathKey] ?? ''].join(path.delimiter);
-    if (plan.vcpkgRoot && !env.VCPKG_ROOT) {
-      env.VCPKG_ROOT = plan.vcpkgRoot;
-    }
-    // VS Code exporta esto en su terminal y convierte cualquier Electron hijo en Node.
-    delete env.ELECTRON_RUN_AS_NODE;
+    const env = buildEnv(plan);
 
     const send = (line) => {
       if (!event.sender.isDestroyed()) event.sender.send('engine:build-log', line);

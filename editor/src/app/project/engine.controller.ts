@@ -97,6 +97,12 @@ export class EngineController {
   /** Cuales estan compilados. null mientras no se sepa (sin disco, o antes de preguntar). */
   readonly compiled = signal<Record<EngineMode, boolean> | null>(null);
 
+  /**
+   * false en la app instalada: trae los motores ya compilados y no tiene
+   * compilador, asi que no se ofrece compilar (ver ipc/engine-build.js).
+   */
+  readonly canBuild = signal(true);
+
   /** El que se esta compilando, o null. */
   readonly building = signal<EngineMode | null>(null);
 
@@ -159,7 +165,9 @@ export class EngineController {
       return;
     }
     try {
-      this.compiled.set(await this.project.engineStatus());
+      const { debug, release, canBuild } = await this.project.engineStatus();
+      this.compiled.set({ debug, release });
+      this.canBuild.set(canBuild !== false);
     } catch {
       this.compiled.set(null);
     }
@@ -211,6 +219,10 @@ export class EngineController {
       return;
     }
     let result = await this.project.runLevel(levelPath, mode, start);
+    if (!result.ok && result.missing && !this.canBuild()) {
+      this.deps.note((result.error ?? 'Ese motor no está compilado.') + ' Reinstala HoneyComb para recuperarlo.');
+      return;
+    }
     if (!result.ok && result.missing) {
       const accepted = window.confirm(
         (result.error ?? 'Ese motor no está compilado.') + ' ¿Compilarlo ahora? La primera vez tarda unos minutos.',

@@ -132,4 +132,21 @@ function buildPlan(engineDir, mode) {
   return { cmake, steps, extraPath: [...new Set(extraPath)], vcpkgRoot, target };
 }
 
-module.exports = { MODES, isMode, findEngineExecutable, readCMakeCache, buildPlan };
+/**
+ * Las variables de entorno para correr los pasos de un plan: el PATH con el
+ * compilador y cmake adelante, y VCPKG_ROOT si no estaba. Lo usan el editor
+ * (engine-build.js) y el que arma el instalador (scripts/build-installer.js).
+ */
+function buildEnv(plan, baseEnv = process.env) {
+  const env = { ...baseEnv };
+  const pathKey = Object.keys(env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
+  env[pathKey] = [...plan.extraPath, env[pathKey] ?? ''].join(path.delimiter);
+  if (plan.vcpkgRoot && !env.VCPKG_ROOT) {
+    env.VCPKG_ROOT = plan.vcpkgRoot;
+  }
+  // VS Code exporta esto en su terminal y convierte cualquier Electron hijo en Node.
+  delete env.ELECTRON_RUN_AS_NODE;
+  return env;
+}
+
+module.exports = { MODES, isMode, findEngineExecutable, readCMakeCache, buildPlan, buildEnv };
