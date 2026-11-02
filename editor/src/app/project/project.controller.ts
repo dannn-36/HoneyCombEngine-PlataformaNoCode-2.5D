@@ -14,6 +14,7 @@ import { ExplorerController } from './explorer.controller';
 import { DEFAULT_STARTER_TEXTURE } from '../entities/entity-ops.controller';
 import { GridConfig } from '../models/level.model';
 import { levelFileName } from '../core/file-names';
+import { sameRoot } from '../core/recent-files';
 import type { EngineStart, LevelImport } from '../electron-api';
 import { NamePromptController } from '../ui/name-prompt.controller';
 import { SoundsController } from '../sounds/sounds.controller';
@@ -338,6 +339,43 @@ export class ProjectController {
       this.view.frameAll();
     } catch (error) {
       this.note('No se pudo cambiar la carpeta del editor: ' + this.describe(error));
+    }
+  }
+
+  /**
+   * Abre un nivel reciente (pantalla de Inicio): si es de otra carpeta, pasa
+   * primero a esa carpeta, como "Cambiar carpeta" pero sin el dialogo. Devuelve
+   * "ok", "cancelado" (habia cambios y no se quisieron perder) o el motivo por
+   * el que no se pudo, para mostrarlo junto a la entrada.
+   */
+  async openRecent(root: string, level: string): Promise<'ok' | 'cancelado' | { error: string }> {
+    if (!this.hasFileSystem) {
+      return { error: 'Sin acceso a disco. Abre el editor con "npm run electron".' };
+    }
+    if (!this.confirmDiscard()) {
+      return 'cancelado';
+    }
+    try {
+      const current = this.project.projectRoot();
+      if (!current || !sameRoot(current, root)) {
+        await this.discardRecovery();
+        await this.project.openRecentWorkspace(root);
+        this.levels.createNew('nuevo_nivel');
+        this.lastSavedPath.set(null);
+        this.dirty.set(false);
+        await this.refreshProject();
+        this.view.frameAll();
+      }
+      if (!this.levelFiles().some((file) => file.toLowerCase() === level.toLowerCase())) {
+        return { error: `«${level}» ya no está en levels/ de esa carpeta.` };
+      }
+      await this.levels.load(level);
+      this.dirty.set(false);
+      this.view.frameAll();
+      this.note('Nivel "' + level + '" cargado (' + this.entities().length + ' entidades).');
+      return 'ok';
+    } catch (error) {
+      return { error: this.describe(error) };
     }
   }
 

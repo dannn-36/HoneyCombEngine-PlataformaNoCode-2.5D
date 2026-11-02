@@ -176,10 +176,63 @@ async function initWorkspace() {
 /** Cambia la carpeta del editor y recuerda la eleccion para las proximas veces. */
 async function changeWorkspace(root) {
   await ensureStructure(root);
+  const previous = workspaceRoot;
   workspaceRoot = root;
-  await writeSettings({ ...(await readSettings()), workspaceRoot: root });
+  const settings = await readSettings();
+  // La que se deja tambien queda en la lista: la de por defecto nunca se elige
+  // con el dialogo, y sin esto no se podria volver a ella desde Inicio.
+  const recent = rememberWorkspace(rememberWorkspace(settings.recentWorkspaces, previous), root);
+  await writeSettings({ ...settings, workspaceRoot: root, recentWorkspaces: recent });
   cleanTempFiles([[root, 4]]);
   return root;
+}
+
+// --- Carpetas recientes (la pantalla de Inicio) -------------------------------
+//
+// La UI nunca elige a que carpeta cambiar: eso lo hace la persona en el
+// dialogo del sistema (workspace:change). La pantalla de Inicio solo puede
+// VOLVER a una carpeta que ya se eligio asi, o a la que estaba abierta, y que
+// el proceso principal anoto aca. Una ruta que mande la UI y no este en la
+// lista se rechaza.
+
+/** Cuantas carpetas se recuerdan. */
+const RECENT_WORKSPACES_LIMIT = 20;
+
+/** true si son la misma carpeta (en Windows, sin distinguir mayusculas). */
+function samePath(a, b) {
+  const left = path.resolve(a);
+  const right = path.resolve(b);
+  return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+
+/** La lista con "root" primero y sin repetir. Una lista rota se trata como vacia. */
+function rememberWorkspace(list, root) {
+  const current = Array.isArray(list) ? list.filter((entry) => typeof entry === 'string' && entry) : [];
+  if (typeof root !== 'string' || !root) return current;
+  return [root, ...current.filter((entry) => !samePath(entry, root))].slice(0, RECENT_WORKSPACES_LIMIT);
+}
+
+/**
+ * Vuelve a una carpeta reciente. "requested" llega de la UI: solo se usa para
+ * buscarla en la lista, y lo que se abre es la ruta guardada. Tiene que seguir
+ * existiendo y tener levels/ (una carpeta borrada no se vuelve a crear vacia).
+ */
+async function openRecentWorkspace(requested) {
+  if (typeof requested !== 'string' || !requested || !path.isAbsolute(requested)) {
+    throw new Error('Carpeta no válida.');
+  }
+  const known = [workspaceRoot, ...rememberWorkspace((await readSettings()).recentWorkspaces)];
+  const match = known.find((entry) => typeof entry === 'string' && samePath(entry, requested));
+  if (!match) {
+    throw new Error('Esa carpeta no está entre las recientes. Ábrela con Archivo › Cambiar carpeta del editor.');
+  }
+  try {
+    const stat = await fs.stat(path.join(match, 'levels'));
+    if (!stat.isDirectory()) throw new Error();
+  } catch {
+    throw new Error(`La carpeta ${match} ya no existe o no tiene levels/.`);
+  }
+  return changeWorkspace(match);
 }
 
 /**
@@ -248,6 +301,7 @@ module.exports = {
   INSTALL_ROOT,
   initWorkspace,
   changeWorkspace,
+  openRecentWorkspace,
   createProject,
   getProjectRoot,
   ensureProjectRoot,

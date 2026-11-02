@@ -69,7 +69,9 @@
 import {
   Component,
   ElementRef,
+  Injector,
   ViewEncapsulation,
+  afterNextRender,
   computed,
   effect,
   forwardRef,
@@ -99,6 +101,8 @@ import { TunnelDialog } from './dialogs/tunnel-dialog';
 import { CharactersDialog } from './dialogs/characters-dialog';
 import { ItemEditorDialog } from './dialogs/item-editor-dialog';
 import { TransitionDialog } from './dialogs/transition-dialog';
+import { StartScreen } from './dialogs/start-screen';
+import { StartController } from './start/start.controller';
 import { ConverterDialog } from './dialogs/converter-dialog';
 import { PuzzleDialog } from './dialogs/puzzle-dialog';
 import { GameConfigDialog } from './dialogs/game-config-dialog';
@@ -265,6 +269,7 @@ const ARROW_NUDGES: Record<string, { col: number; row: number }> = {
     CharactersDialog,
     ItemEditorDialog,
     TransitionDialog,
+    StartScreen,
     ConverterDialog,
     PuzzleDialog,
     GameConfigDialog,
@@ -298,6 +303,7 @@ export class App {
   readonly theme = inject(ThemeService);
 
   readonly levels = inject(LevelService);
+  private readonly injector = inject(Injector);
 
   readonly selection = inject(SelectionService);
 
@@ -643,6 +649,13 @@ export class App {
     sounds: this.snd,
   });
 
+  /** La pantalla de Inicio con los niveles recientes. Ver start/start.controller.ts. */
+  readonly start: StartController = new StartController({
+    proj: this.proj,
+    hasFileSystem: this.hasFileSystem,
+    dirty: this.dirty,
+  });
+
   /**
    * Archivo › Configuración del juego…: ventana, portada, pantallas, HUD y
    * variables de la partida, en game.json. Ver game/game-config.controller.ts.
@@ -661,8 +674,9 @@ export class App {
 
   constructor() {
     // La carpeta del editor se abre sola al arrancar: ya no hay que elegir
-    // ninguna (ver ipc/project-root.js).
-    void this.proj.openWorkspace();
+    // ninguna (ver ipc/project-root.js). Despues, la pantalla de Inicio con
+    // los niveles recientes, como en Premiere o GameMaker.
+    void this.proj.openWorkspace().then(() => this.start.openAtStartup());
     // Para marcar en la barra el motor que todavia no esta compilado.
     void this.engine.refresh();
 
@@ -822,6 +836,18 @@ export class App {
         id: 'archivo',
         label: 'Archivo',
         items: [
+          { kind: 'action', label: 'Inicio…', disabled: !this.hasFileSystem, run: () => this.start.show() },
+          {
+            kind: 'submenu',
+            label: 'Abrir reciente',
+            emptyLabel: 'Todavía no hay niveles recientes',
+            items: this.start.rows().map((row) => ({
+              kind: 'action' as const,
+              label: row.here ? row.title : row.title + '  ·  ' + row.folder,
+              run: () => void this.start.openRecent(row.entry),
+            })),
+          },
+          separator,
           { kind: 'action', label: 'Nuevo nivel…', shortcut: 'Ctrl+N', run: () => this.proj.newLevel() },
           { kind: 'action', label: 'Abrir nivel…', shortcut: 'Ctrl+O', run: () => void this.proj.openLevelFile() },
           {
@@ -1293,6 +1319,12 @@ export class App {
       return;
     }
     // Un dialogo abierto se lleva todos los atajos: solo responde a Escape.
+    if (this.start.open()) {
+      if (event.key === 'Escape') {
+        this.start.close();
+      }
+      return;
+    }
     if (this.proj.showNewLevelDialog()) {
       if (event.key === 'Escape') {
         this.proj.cancelNewLevel();
@@ -1507,6 +1539,30 @@ export class App {
   showDock(workspace: Workspace): void {
     this.workspace.set(workspace);
     this.panels.dockOpen.set(true);
+  }
+
+  /**
+   * Abre la pestaña Eventos filtrada por el objeto elegido y, si se pide uno,
+   * lo trae a la vista y lo resalta. El dock puede estar plegado o en otra
+   * pestaña, asi que se espera a que Angular dibuje la lista antes de buscarlo.
+   */
+  openEntityEvents(index: number | null): void {
+    this.ev.reveal(index);
+    this.showDock('eventos');
+    if (index !== null) {
+      afterNextRender(
+        () => document.getElementById('event-' + index)?.scrollIntoView({ block: 'nearest' }),
+        { injector: this.injector },
+      );
+    }
+  }
+
+  /** "+ Evento" del inspector: un evento que ya nombra al objeto, abierto en el dock. */
+  newEntityEvent(id: string): void {
+    const index = this.ev.addEventFor(id);
+    if (index !== null) {
+      this.openEntityEvents(index);
+    }
   }
 
   /**

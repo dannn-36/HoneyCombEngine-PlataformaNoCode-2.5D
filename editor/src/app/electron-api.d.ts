@@ -107,6 +107,12 @@ export interface HoneycombProjectApi {
   workspaceInfo(): Promise<WorkspaceInfo>;
   /** Elige otra carpeta del editor con un dialogo y la recuerda. Null si se cancelo. */
   changeWorkspace(): Promise<string | null>;
+  /**
+   * Vuelve a una carpeta del editor reciente (la pantalla de Inicio). Solo
+   * acepta carpetas ya elegidas antes con el dialogo; si no, o si ya no
+   * existe, falla con el motivo. Devuelve la carpeta abierta.
+   */
+  openRecentWorkspace(root: string): Promise<string>;
   /** Abre la carpeta del editor en el explorador del sistema. */
   revealWorkspace(): Promise<void>;
   /**

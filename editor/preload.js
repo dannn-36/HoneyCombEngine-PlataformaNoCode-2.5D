@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('honeycombProject', {
   // ipc/project-root.js): cual es, cambiarla, y mostrarla en el sistema.
   workspaceInfo: () => ipcRenderer.invoke('workspace:info'),
   changeWorkspace: () => ipcRenderer.invoke('workspace:change'),
+  // Inicio: volver a una carpeta reciente. El proceso principal solo acepta
+  // las que ya se eligieron con el dialogo (ver ipc/project-root.js).
+  openRecentWorkspace: (root) => ipcRenderer.invoke('workspace:openRecent', root),
   // Archivo > Nuevo proyecto: una carpeta vacia con la estructura y las
   // imagenes basicas, que pasa a ser la carpeta del editor.
   createProject: () => ipcRenderer.invoke('workspace:createProject'),

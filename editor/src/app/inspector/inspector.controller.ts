@@ -2,7 +2,7 @@ import { computed, inject } from '@angular/core';
 
 import { cameraOf } from '../core/camera';
 import { ENGINE_PLAYER_ID, characterOf, defaultStatsFor } from '../core/characters';
-import { ParamTypeLookup, eventsUsingEntity, renameEntityInEvents } from '../core/entity-refs';
+import { ParamTypeLookup, renameEntityInEvents } from '../core/entity-refs';
 import { SHAPES, shapeDef, usesShapeSheet } from '../core/iso-shapes';
 import { isStripRect, stripRect } from '../core/sprite-frames';
 import { CameraConfig, EntityStats, GridConfig, LevelEntity } from '../models/level.model';
@@ -72,11 +72,6 @@ export class InspectorController {
           : this.catalog.findAction(stepType);
     return entry?.params[param]?.type;
   };
-
-  /** Cuantos eventos del nivel nombran a esta entidad. */
-  eventCount(id: string): number {
-    return eventsUsingEntity(this.levels.level().events, id, this.paramType).length;
-  }
 
   /** true si es la entidad que el motor mueve con las flechas. */
   isEnginePlayer(entity: LevelEntity): boolean {

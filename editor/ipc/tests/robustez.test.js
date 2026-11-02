@@ -253,3 +253,42 @@ describe('workspace:createProject (Archivo > Nuevo proyecto)', () => {
     assert.deepEqual(fs.readdirSync(elegida), ['tarea.docx']);
   });
 });
+
+describe('workspace:openRecent (la pantalla de Inicio)', () => {
+  let entorno;
+  let otra;
+  before(async () => {
+    entorno = await prepararEntorno();
+    otra = path.join(entorno.base, 'otro-proyecto');
+  });
+  after(() => entorno?.limpiar());
+
+  it('no cambia a una carpeta que la UI manda y nunca se eligio', async () => {
+    fs.mkdirSync(path.join(entorno.fuera, 'levels'), { recursive: true });
+    const err = await errorDe(entorno.invocar('workspace:openRecent', entorno.fuera));
+    assert.match(err.message, /no está entre las recientes/);
+    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
+  });
+
+  it('rechaza lo que no es una ruta absoluta', async () => {
+    for (const caso of [undefined, null, 42, {}, ['x'], '', 'levels', '../proyecto']) {
+      assert.ok(await errorDe(entorno.invocar('workspace:openRecent', caso)), `acepto ${JSON.stringify(caso)}`);
+    }
+    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
+  });
+
+  it('vuelve a la carpeta anterior despues de cambiar con el dialogo', async () => {
+    await entorno.projectRoot.changeWorkspace(otra);
+    const pedida = process.platform === 'win32' ? entorno.root.toUpperCase() : entorno.root;
+    assert.equal(await entorno.invocar('workspace:openRecent', pedida), entorno.root);
+    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
+  });
+
+  it('una carpeta reciente que se borro no se vuelve a crear', async () => {
+    fs.rmSync(otra, { recursive: true, force: true });
+    const err = await errorDe(entorno.invocar('workspace:openRecent', otra));
+    assert.match(err.message, /ya no existe/);
+    assert.equal(fs.existsSync(otra), false);
+    assert.equal(entorno.projectRoot.getProjectRoot(), entorno.root);
+  });
+});

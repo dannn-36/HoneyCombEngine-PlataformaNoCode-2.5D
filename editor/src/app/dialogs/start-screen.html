@@ -1,0 +1,115 @@
+<!-- Inicio: lo primero que se ve al abrir el editor. A la izquierda crear o
+     abrir; a la derecha los niveles recientes. Ver start/start.controller.ts. -->
+@if (start.open()) {
+  <div class="modal-backdrop" (click)="start.close()">
+    <section class="modal start" role="dialog" aria-modal="true" aria-labelledby="start-title"
+             (click)="$event.stopPropagation()">
+      <div class="modal__head">
+        <div class="start__brand">
+          <img class="start__logo" [src]="brandLogo()" alt="" />
+          <h2 id="start-title">HoneyComb</h2>
+        </div>
+        <button class="icon-button" type="button" title="Cerrar (Esc)" aria-label="Cerrar" (click)="start.close()">
+          <svg hcIcon="x"></svg>
+        </button>
+      </div>
+
+      <div class="start__body">
+        <nav class="start__actions" aria-label="Empezar">
+          <h3 class="start__label">Nivel</h3>
+          <button class="start__action" type="button" (click)="start.run('nuevo-nivel')">
+            <svg hcIcon="file-plus"></svg>Nuevo nivel…
+          </button>
+          <button class="start__action" type="button" (click)="start.run('abrir-nivel')">
+            <svg hcIcon="folder-open"></svg>Abrir nivel…
+          </button>
+
+          <h3 class="start__label">Proyecto</h3>
+          <button class="start__action" type="button" (click)="start.run('nuevo-proyecto')"
+                  title="Una carpeta vacía con la estructura y las imágenes básicas">
+            <svg hcIcon="folder-plus"></svg>Nuevo proyecto…
+          </button>
+          <button class="start__action" type="button" (click)="start.run('abrir-carpeta')"
+                  title="Elegir otra carpeta del editor">
+            <svg hcIcon="folder"></svg>Abrir carpeta…
+          </button>
+
+          @if (start.currentFolder(); as folder) {
+            <p class="start__current" [title]="proj.levelFiles().length + ' niveles en levels/'">
+              Carpeta abierta<br /><b>{{ folder }}</b>
+            </p>
+          }
+        </nav>
+
+        <div class="start__list">
+          @if (start.rows().length > 0) {
+            <h3 class="start__label">Recientes</h3>
+            <ul class="recent" aria-label="Niveles recientes">
+              @for (row of start.rows(); track row.entry.root + '|' + row.entry.level) {
+                @let failed = start.failure()?.entry === row.entry ? start.failure() : null;
+                <li class="recent__row" [class.is-failed]="failed">
+                  <button class="recent__open" type="button" [disabled]="start.busy() !== null"
+                          [attr.aria-busy]="start.busy() === row.entry"
+                          (click)="start.openRecent(row.entry)"
+                          [title]="'Abrir ' + row.entry.level + ' de ' + row.entry.root">
+                    <svg class="recent__icon" hcIcon="map"></svg>
+                    <span class="recent__text">
+                      <span class="recent__title">{{ row.title }}</span>
+                      <span class="recent__path">
+                        @if (row.here) {
+                          <span class="recent__here">esta carpeta</span>
+                        } @else {
+                          {{ row.folder }}
+                        }
+                        · {{ row.entry.root }}
+                      </span>
+                    </span>
+                    <span class="recent__when">{{ start.busy() === row.entry ? 'Abriendo…' : row.when }}</span>
+                  </button>
+                  <button class="ibtn recent__forget" type="button" (click)="start.forget(row.entry)"
+                          title="Quitar de la lista (el archivo no se borra)" aria-label="Quitar de la lista">
+                    <svg hcIcon="x"></svg>
+                  </button>
+                  @if (failed) {
+                    <p class="recent__error" role="alert">
+                      <svg hcIcon="triangle-alert"></svg>{{ failed.message }}
+                    </p>
+                  }
+                </li>
+              }
+            </ul>
+          } @else if (start.folderLevels().length > 0) {
+            <!-- La primera vez no hay recientes: los niveles de la carpeta abierta. -->
+            <h3 class="start__label">Niveles de esta carpeta</h3>
+            <ul class="recent" aria-label="Niveles de esta carpeta">
+              @for (level of start.folderLevels(); track level) {
+                <li class="recent__row">
+                  <button class="recent__open" type="button" (click)="start.openFolderLevel(level)">
+                    <svg class="recent__icon" hcIcon="map"></svg>
+                    <span class="recent__text">
+                      <span class="recent__title">{{ levelTitle(level) }}</span>
+                      <span class="recent__path">levels/{{ level }}</span>
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <div class="empty">
+              <p class="empty__title">Todavía no hay niveles recientes</p>
+              <p>Los niveles que abras o guardes aparecen aquí, para seguir donde los dejaste.</p>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="modal__actions start__foot">
+        <label class="check">
+          <input type="checkbox" [checked]="start.showOnStartup()" (change)="start.setShowOnStartup(checked($event))" />
+          <span>Mostrar al iniciar</span>
+        </label>
+        <button class="btn" type="button" (click)="start.close()">Seguir sin abrir</button>
+      </div>
+    </section>
+  </div>
+}

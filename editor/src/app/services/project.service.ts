@@ -177,6 +177,17 @@ export class ProjectService {
     return root;
   }
 
+  /**
+   * Vuelve a una carpeta del editor reciente (pantalla de Inicio). Falla si el
+   * proceso principal no la tiene anotada o si ya no existe.
+   */
+  async openRecentWorkspace(root: string): Promise<string> {
+    const opened = await window.honeycombProject.openRecentWorkspace(root);
+    this.projectRoot.set(opened);
+    this.knownText.clear();
+    return opened;
+  }
+
   /** Abre la carpeta del editor en el explorador de archivos del sistema. */
   async revealWorkspace(): Promise<void> {
     return window.honeycombProject.revealWorkspace();

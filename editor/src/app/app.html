@@ -414,6 +414,11 @@
        en segundo plano al arrancar los dejaba en memoria aunque nadie los
        abriera. -->
 
+  <!-- Inicio con los niveles recientes, al abrir el editor: dialogs/start-screen.html -->
+  @defer (when start.open()) {
+    <app-start-screen />
+  }
+
   <!-- Grilla del mapa: agregar o editar: dialogs/room-dialog.html -->
   @defer (when map.roomDraft()) {
     <app-room-dialog />
@@ -1178,26 +1183,50 @@
                 }
               </section>
 
-              <!-- EVENTOS: el puente con la logica del nivel. Solo cuenta y
-                   lleva a la pestaña Eventos del dock; no edita nada aca. -->
-              @let usedIn = inspector.eventCount(entity.id);
+              <!-- EVENTOS: los eventos que nombran a este objeto, en una linea
+                   cada uno. Se editan en la pestaña Eventos del dock: un clic
+                   la abre filtrada por este objeto y con ese evento a la vista. -->
+              @let related = ev.relatedIndexes();
               <section class="panel">
                 <button class="panel__head" type="button" [attr.aria-expanded]="!panels.isCollapsed('obj-events')" (click)="panels.togglePanel('obj-events')">
                   <svg class="panel__arrow" [class.panel__arrow--collapsed]="panels.isCollapsed('obj-events')" hcIcon="chevron-down"></svg>
                   Eventos
-                  @if (usedIn > 0) {
-                    <span class="tab__count">{{ usedIn }}</span>
+                  @if (related.length > 0) {
+                    <span class="tab__count">{{ related.length }}</span>
                   }
                 </button>
                 @if (!panels.isCollapsed('obj-events')) {
                   <div class="panel__body">
-                    <p class="hint hint--field">
-                      {{ usedIn === 0 ? 'Ningún evento usa este objeto todavía.' : usedIn === 1 ? 'Lo usa 1 evento del nivel.' : 'Lo usan ' + usedIn + ' eventos del nivel.' }}
-                      Un evento dice qué pasa en el juego: “cuando el jugador toca este objeto, desaparece”.
-                    </p>
-                    <button class="btn btn--small" type="button" (click)="showDock('eventos')">
-                      <svg hcIcon="zap"></svg>{{ usedIn === 0 ? 'Abrir Eventos' : 'Ver en Eventos' }}
-                    </button>
+                    @if (related.length === 0) {
+                      <p class="hint hint--field">
+                        Ningún evento usa este objeto todavía. Un evento dice qué pasa en el juego:
+                        “cuando el jugador toca este objeto, desaparece”.
+                      </p>
+                    } @else {
+                      <ul class="evlist" aria-label="Eventos que usan este objeto">
+                        @for (index of related; track index) {
+                          <li>
+                            <button class="evlist__item" type="button" (click)="openEntityEvents(index)"
+                                    [title]="'Abrir el evento ' + (index + 1) + ' en el panel Eventos'">
+                              <span class="evlist__num">{{ index + 1 }}</span>
+                              <span class="evlist__text">{{ ev.summary(ev.events()[index]) }}</span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                    <div class="field-row">
+                      <button class="btn btn--small" type="button" (click)="newEntityEvent(entity.id)"
+                              title="Crear un evento que ya apunta a este objeto">
+                        <svg hcIcon="plus"></svg>Evento
+                      </button>
+                      @if (related.length > 0) {
+                        <button class="btn btn--small" type="button" (click)="openEntityEvents(null)"
+                                title="Ver y editar solo los eventos de este objeto en el panel Eventos">
+                          <svg hcIcon="zap"></svg>Editar en Eventos
+                        </button>
+                      }
+                    </div>
                   </div>
                 }
               </section>
@@ -1867,7 +1896,7 @@
                 [attr.aria-selected]="workspace() === tab.id" (click)="onDockTab(tab.id)">
           <svg [hcIcon]="tab.icon"></svg>{{ workspaceLabels[tab.id] }}
           @if (tab.id === 'eventos') {
-            <span class="tab__count">{{ ev.events().length }}</span>
+            <span class="tab__count">{{ ev.visibleEvents().length }}</span>
           }
         </button>
       }
@@ -1913,6 +1942,23 @@
             }
           }
           @case ('eventos') {
+            <!-- De entrada, solo los eventos que nombran al objeto elegido en el
+                 mapa (ninguno si no hay nada elegido); al lado, todos los del
+                 nivel. El filtro sigue a la seleccion. -->
+            <div class="seg" role="group" aria-label="Qué eventos se muestran">
+              <button class="tool tool--clip" type="button" [class.is-active]="ev.filtering()"
+                      [attr.aria-pressed]="ev.filtering()" (click)="ev.scope.set('objeto')"
+                      [title]="ev.selectedId() ? 'Solo los eventos que usan «' + ev.selectedId() + '»' : 'Los eventos del objeto que elijas en el mapa'">
+                @if (ev.selectedId(); as id) {
+                  <span class="tool__text">De «{{ id }}»</span>({{ ev.relatedIndexes().length }})
+                } @else {
+                  Del objeto (0)
+                }
+              </button>
+              <button class="tool" type="button" [class.is-active]="!ev.filtering()"
+                      [attr.aria-pressed]="!ev.filtering()" (click)="ev.scope.set('todos')"
+                      title="Todos los eventos del nivel">Todos ({{ ev.events().length }})</button>
+            </div>
             <button class="btn btn--small" type="button" (click)="puzzle.open()"
                     title="Armar los eventos de una sala que bloquea el paso hasta resolverla">Puzzle de sala…</button>
             <button class="btn btn--small btn--primary" type="button" (click)="ev.addEvent()">
@@ -2309,8 +2355,12 @@
               }
             </ng-template>
 
-            @for (event of ev.events(); track $index; let eventIndex = $index) {
-              <article class="event">
+            <!-- eventIndex es la posicion real en el nivel, no la de la lista:
+                 filtrada por un objeto, la lista salta eventos. -->
+            @for (item of ev.visibleEvents(); track item.index) {
+              @let event = item.event;
+              @let eventIndex = item.index;
+              <article class="event" [id]="'event-' + eventIndex" [class.is-focused]="ev.focused() === eventIndex">
                 <div class="event__row">
                   <span class="badge badge--trigger"><svg hcIcon="zap"></svg>Cuando</span>
                   <select class="select-lone" [value]="event.trigger.type" aria-label="Disparador"
@@ -2323,6 +2373,11 @@
                     *ngTemplateOutlet="stepParams; context: { $implicit: event.trigger, stepKind: 'trigger', eventIndex: eventIndex, stepIndex: 0 }" />
 
                   <div class="event__spacer"></div>
+                  @if (ev.isStale(eventIndex)) {
+                    <span class="event__note" title="Se sigue viendo porque lo estás editando; al elegir otro objeto deja de aparecer acá">
+                      <svg hcIcon="triangle-alert"></svg>Ya no usa «{{ ev.selectedId() }}»
+                    </span>
+                  }
                   <button class="ibtn ibtn--danger" type="button" (click)="ev.removeEvent(eventIndex)"
                           title="Quitar el evento" aria-label="Quitar el evento">
                     <svg hcIcon="trash-2"></svg>
@@ -2379,14 +2434,32 @@
                 </div>
               </article>
             } @empty {
-              <div class="empty">
-                <p class="empty__title">Este nivel todavía no tiene eventos</p>
-                <p>
-                  Un evento es “Cuando pasa algo, Si se cumple esto, Entonces haz aquello”. Crea uno con
-                  <b>+ Evento</b>: hay {{ ev.triggers().length }} disparadores, {{ ev.conditions().length }}
-                  condiciones y {{ ev.actions().length }} acciones para elegir.
-                </p>
-              </div>
+              @if (ev.filtering() && !ev.selectedId()) {
+                <div class="empty">
+                  <p class="empty__title">Elige un objeto en el mapa para ver sus eventos</p>
+                  <p>
+                    Aquí aparecen los eventos que usan el objeto elegido. Para ver los
+                    {{ ev.events().length }} eventos del nivel, pasa a <b>Todos</b>.
+                  </p>
+                </div>
+              } @else if (ev.filtering()) {
+                <div class="empty">
+                  <p class="empty__title">Ningún evento usa «{{ ev.selectedId() }}»</p>
+                  <p>
+                    Con <b>+ Evento</b> se crea uno que ya apunta a este objeto, o vuelve a <b>Todos</b>
+                    para ver los {{ ev.events().length }} eventos del nivel.
+                  </p>
+                </div>
+              } @else {
+                <div class="empty">
+                  <p class="empty__title">Este nivel todavía no tiene eventos</p>
+                  <p>
+                    Un evento es “Cuando pasa algo, Si se cumple esto, Entonces haz aquello”. Crea uno con
+                    <b>+ Evento</b>: hay {{ ev.triggers().length }} disparadores, {{ ev.conditions().length }}
+                    condiciones y {{ ev.actions().length }} acciones para elegir.
+                  </p>
+                </div>
+              }
             }
           </div>
         }

@@ -36,6 +36,7 @@ function fakeProject() {
     open: vi.fn(async () => openResult),
     workspaceInfo: vi.fn(async () => ({ root: 'C:/proyecto', seeded: ['levels/test_level.json'] })),
     changeWorkspace: vi.fn(async () => null),
+    openRecentWorkspace: vi.fn(async (root: string) => root),
     revealWorkspace: vi.fn(async () => undefined),
     readEventCatalog: vi.fn(async () => JSON.stringify({ triggers: [], conditions: [], actions: [] })),
     ensureRoot: vi.fn(async () => 'C:/proyecto'),

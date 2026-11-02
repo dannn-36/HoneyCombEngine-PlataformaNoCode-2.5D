@@ -47,6 +47,7 @@ const API_ESPERADA = [
   'listEntries',
   'onEngineBuildLog',
   'open',
+  'openRecentWorkspace',
   'readConvertImage',
   'readEventCatalog',
   'readFile',

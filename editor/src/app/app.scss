@@ -2057,6 +2057,94 @@ app-puzzle-dialog {
   &__spacer {
     flex: 1;
   }
+
+  /* Editado con la lista filtrada, ya no nombra al objeto: se sigue viendo
+     hasta elegir otro, con este aviso (icono y texto, no solo color). */
+  &__note {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--warn);
+    font-size: 12px;
+
+    .icon {
+      width: 13px;
+      height: 13px;
+    }
+  }
+
+  /* El evento que se abrio desde el inspector: el borde se enciende y se
+     apaga solo, para encontrarlo sin que quede marcado. */
+  transition: border-color 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out);
+
+  &.is-focused {
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 1px var(--accent-line);
+    transition-duration: 0.12s;
+  }
+}
+
+/* Eventos de un objeto, en el inspector: una linea por evento, con su numero
+   en la lista del nivel. Clic: lo abre en la pestaña Eventos del dock. */
+.evlist {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+
+    &:hover {
+      border-color: var(--line);
+      background: var(--surface-3);
+    }
+  }
+
+  &__num {
+    flex: none;
+    min-width: 18px;
+    color: var(--text-2);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  &__text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* "De «nombre largo»" en el filtro del dock: el nombre se corta con "…" y el
+   numero queda entero. */
+.tool--clip {
+  max-width: 220px;
+  gap: 2px;
+
+  > .tool__text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* Cuando / Si / Entonces. El color separa la causa del efecto de un vistazo, y

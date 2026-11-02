@@ -13,7 +13,13 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const { ipcMain, dialog, shell, BrowserWindow } = require('electron');
 
-const { INSTALL_ROOT, changeWorkspace, createProject, ensureProjectRoot } = require('./project-root');
+const {
+  INSTALL_ROOT,
+  changeWorkspace,
+  createProject,
+  ensureProjectRoot,
+  openRecentWorkspace,
+} = require('./project-root');
 
 /**
  * @param startup lo que devolvio initWorkspace() al arrancar. "seeded" se
@@ -39,6 +45,10 @@ function register(startup) {
     if (canceled || filePaths.length === 0) return null;
     return changeWorkspace(filePaths[0]);
   });
+
+  // Inicio > un reciente: volver a una carpeta que ya se eligio antes con el
+  // dialogo. La ruta de la UI solo se busca en la lista (ver project-root.js).
+  ipcMain.handle('workspace:openRecent', (_event, root) => openRecentWorkspace(root));
 
   // Archivo > Nuevo proyecto: elegir (o crear) una carpeta VACIA, armarle la
   // estructura con las imagenes basicas, y pasar a trabajar ahi. Devuelve la
