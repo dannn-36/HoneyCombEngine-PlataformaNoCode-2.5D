@@ -750,7 +750,14 @@ describe('ProjectService', () => {
       await expect(service.saveLevel('x.json', opened!.level)).rejects.toBeInstanceOf(LevelChangedOnDiskError);
     });
 
+    it('readFileData sin proyecto abierto falla sin ir al proceso principal', async () => {
+      service.setProject(null);
+      await expect(service.readFileData('assets/textures/a.png')).rejects.toThrow(/ningún proyecto abierto/);
+      expect(fake.api.readFileData).not.toHaveBeenCalled();
+    });
+
     it('las operaciones sueltas pasan sus argumentos al proceso principal', async () => {
+      service.setProject(PROYECTO);
       await service.revealWorkspace();
       await service.createDir('levels/mundo_2');
       await service.listEntries('assets');

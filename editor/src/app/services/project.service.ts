@@ -379,8 +379,19 @@ export class ProjectService {
     return window.honeycombProject.listEntries(relativeDir);
   }
 
-  /** Lee un archivo cualquiera del proyecto para mirarlo en el visor. */
+  /**
+   * Lee un archivo cualquiera del proyecto para mirarlo en el visor.
+   *
+   * Sin proyecto abierto falla aca, sin ir al proceso principal: las
+   * miniaturas, los sprites del viewport y los sonidos piden imagenes solos
+   * (por ejemplo justo despues de Cerrar proyecto), y cada pedido rechazado
+   * alla deja un "Error occurred in handler" en la consola de Electron. Quien
+   * llama ya atrapa el error y deja el marcador de "sin imagen".
+   */
   async readFileData(relativePath: string): Promise<ProjectFileData> {
+    if (!this.projectRoot()) {
+      throw new Error('No hay ningún proyecto abierto. Crea o abre uno desde Archivo › Inicio.');
+    }
     return window.honeycombProject.readFileData(relativePath);
   }
 
